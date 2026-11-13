@@ -325,9 +325,7 @@ pub fn script(plan: &Plan) -> String {
     }
     s.push_str(&format!(
         "{}\n",
-        sh_command(&plan.game)
-            .replacen("cd ", "cd ", 1)
-            .replacen(" && env", " && exec env", 1)
+        sh_command(&plan.game).replacen(" && env", " && exec env", 1)
     ));
     s
 }

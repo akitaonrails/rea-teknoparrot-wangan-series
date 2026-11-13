@@ -296,8 +296,22 @@ mod tests {
         .unwrap();
         assert!(p.files[0].1.contains("width = 3840\nheight = 2160"));
         // the loader parses the whole file or nothing: every field it requires must be there
-        for k in ["fullscreen", "input_emu", "card_emu", "block_sudo", "ignore_custom_ioctls", "dongle", "deadzone"] {
-            assert!(p.files[0].1.lines().any(|l| l.starts_with(&format!("{k} = "))), "{k}");
+        for k in [
+            "fullscreen",
+            "input_emu",
+            "card_emu",
+            "block_sudo",
+            "ignore_custom_ioctls",
+            "dongle",
+            "deadzone",
+        ] {
+            assert!(
+                p.files[0]
+                    .1
+                    .lines()
+                    .any(|l| l.starts_with(&format!("{k} = "))),
+                "{k}"
+            );
         }
         // the loader unwraps keyconfig.toml at start: it must always be written, every key present
         let keys = &p.files[1].1;

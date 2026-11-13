@@ -79,10 +79,8 @@ pub struct Settings {
     /// 0–20, gamescope's FSR/NIS sharpness (0 = sharpest).
     pub sharpness: u8,
     pub fullscreen: bool,
-    /// Stick/wheel dead zone around the centre, 0.0–0.3.
+    /// Pad stick dead zone around the centre, 0.0–0.3 (all games).
     pub deadzone: f32,
-    /// 1.0 = linear; above 1 softens the centre for pads.
-    pub steer_curve: f32,
 }
 
 impl Default for Settings {
@@ -94,7 +92,6 @@ impl Default for Settings {
             sharpness: 5,
             fullscreen: true,
             deadzone: 0.05,
-            steer_curve: 1.4,
         }
     }
 }
@@ -106,7 +103,6 @@ const KEYS: &[&str] = &[
     "sharpness",
     "fullscreen",
     "deadzone",
-    "steer_curve",
 ];
 
 impl Settings {
@@ -148,12 +144,6 @@ impl Settings {
                     .filter(|x| (0.0..=0.3).contains(x))
                     .map(|x| s.deadzone = x)
                     .is_some(),
-                "steer_curve" => v
-                    .parse::<f32>()
-                    .ok()
-                    .filter(|x| (1.0..=3.0).contains(x))
-                    .map(|x| s.steer_curve = x)
-                    .is_some(),
                 _ => true, // unknown keys are kept, not an error
             };
             if !ok {
@@ -171,7 +161,6 @@ impl Settings {
             "sharpness" => self.sharpness.to_string(),
             "fullscreen" => self.fullscreen.to_string(),
             "deadzone" => format!("{:.2}", self.deadzone),
-            "steer_curve" => format!("{:.2}", self.steer_curve),
             _ => unreachable!(),
         }
     }
@@ -211,16 +200,6 @@ fn parse_bool(v: &str) -> Option<bool> {
     }
 }
 
-/// Pad steering: dead zone, then a power curve, sign kept.
-pub fn shape_steer(x: f32, deadzone: f32, curve: f32) -> f32 {
-    let a = x.abs();
-    if a <= deadzone {
-        return 0.0;
-    }
-    let t = ((a - deadzone) / (1.0 - deadzone)).clamp(0.0, 1.0);
-    t.powf(curve).copysign(x)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,14 +225,5 @@ mod tests {
             Settings::parse("output = 99x99\nsharpness = 50\nfullscreen = maybe\nnonsense");
         assert_eq!(s, Settings::default());
         assert_eq!(p.len(), 4, "{p:?}");
-    }
-
-    #[test]
-    fn steer_shape_has_dead_zone_and_keeps_ends() {
-        assert_eq!(shape_steer(0.04, 0.05, 1.4), 0.0);
-        assert_eq!(shape_steer(1.0, 0.05, 1.4), 1.0);
-        assert_eq!(shape_steer(-1.0, 0.05, 1.4), -1.0);
-        let half = shape_steer(0.5, 0.05, 1.4);
-        assert!(half > 0.0 && half < 0.5);
     }
 }

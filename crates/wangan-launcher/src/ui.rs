@@ -408,6 +408,7 @@ impl App {
                     self.input.send(Command::Attach {
                         block: prepared.block.clone(),
                         cabinet: game.cabinet,
+                        deadzone: crate::load_settings(&self.paths, game.slug).deadzone,
                     });
                     let paths = self.paths.clone();
                     let (tx, rx) = mpsc::channel();

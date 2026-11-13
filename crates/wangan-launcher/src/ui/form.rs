@@ -15,18 +15,16 @@ pub enum Row {
     Fullscreen,
     Render,
     Deadzone,
-    SteerCurve,
 }
 
 impl Row {
-    pub const ALL: [Row; 7] = [
+    pub const ALL: [Row; 6] = [
         Row::Output,
         Row::Upscaler,
         Row::Sharpness,
         Row::Fullscreen,
         Row::Render,
         Row::Deadzone,
-        Row::SteerCurve,
     ];
 
     pub fn label(self) -> &'static str {
@@ -37,7 +35,6 @@ impl Row {
             Row::Fullscreen => "Fullscreen",
             Row::Render => "Game render size",
             Row::Deadzone => "Dead zone",
-            Row::SteerCurve => "Steering curve",
         }
     }
 
@@ -50,8 +47,7 @@ impl Row {
             Row::Render => {
                 "The size the game draws at. Bigger is sharper and needs a stronger GPU."
             }
-            Row::Deadzone => "How far the wheel or stick moves before the car starts to steer.",
-            Row::SteerCurve => "Softens steering near the centre, so a pad steers gently.",
+            Row::Deadzone => "How far a controller stick moves before the car starts to steer.",
         }
     }
 }
@@ -77,8 +73,6 @@ pub const N2_DEFAULT: Size = Size::new(1280, 720);
 
 const RENDER_FIXED: &str = "This game draws at its own size; the upscaler sizes it to your screen.";
 const SHARPNESS_OFF: &str = "Only FSR 1 and NVIDIA Image Scaling use sharpness.";
-const DEADZONE_OFF: &str = "This game doesn't use the launcher's dead zone yet.";
-const CURVE_OFF: &str = "No game uses this yet; it arrives with pad tuning.";
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Form {
@@ -150,8 +144,6 @@ impl Form {
                 Some(SHARPNESS_OFF)
             }
             Row::Render if !n2 => Some(RENDER_FIXED),
-            Row::Deadzone if !n2 => Some(DEADZONE_OFF),
-            Row::SteerCurve => Some(CURVE_OFF),
             _ => None,
         }
     }
@@ -169,7 +161,6 @@ impl Form {
                 _ => size_name(ES3B_SIZE),
             },
             Row::Deadzone => format!("{:.0}%", s.deadzone * 100.0),
-            Row::SteerCurve => format!("{:.1}", s.steer_curve),
         }
     }
 
@@ -190,10 +181,6 @@ impl Form {
             Row::Deadzone => {
                 let pct = (s.deadzone * 100.0).round() as i32 + d;
                 s.deadzone = pct.clamp(0, 30) as f32 / 100.0;
-            }
-            Row::SteerCurve => {
-                let tenths = (s.steer_curve * 10.0).round() as i32 + d;
-                s.steer_curve = tenths.clamp(10, 30) as f32 / 10.0;
             }
         }
         self.settings != before
@@ -293,7 +280,7 @@ mod tests {
         assert_eq!(es3b.disabled(Row::Render), Some(RENDER_FIXED));
         assert_eq!(es3b.value(Row::Render), "1360 × 768");
         assert!(!es3b.adjust(Row::Render, 1, false));
-        assert!(es3b.disabled(Row::Deadzone).is_some());
+        assert!(es3b.disabled(Row::Deadzone).is_none());
         assert!(es3b.adjust(Row::Fullscreen, 1, false));
         assert!(!es3b.settings.fullscreen);
     }

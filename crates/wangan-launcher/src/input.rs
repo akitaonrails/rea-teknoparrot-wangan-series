@@ -41,7 +41,12 @@ pub struct Snapshot {
 }
 
 pub enum Command {
-    Attach { block: PathBuf, cabinet: Cabinet },
+    /// Start writing the block; `deadzone` is the pad stick dead zone, 0–0.3.
+    Attach {
+        block: PathBuf,
+        cabinet: Cabinet,
+        deadzone: f32,
+    },
     Detach,
 }
 
@@ -107,7 +112,7 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
         }
     };
     let mut devices = Devices::new(&sdl, HapticPolicy::default());
-    let pad_settings = PadSettings::new(default_pad_map());
+    let mut pad_settings = PadSettings::new(default_pad_map());
     let wheel_settings = WheelSettings::default();
     let mut profile: Option<(DeviceId, WheelProfile<Button>)> = None;
     let mut translator = Translator::default();
@@ -116,8 +121,13 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
     loop {
         loop {
             match rx.try_recv() {
-                Ok(Command::Attach { block, cabinet }) => {
+                Ok(Command::Attach {
+                    block,
+                    cabinet,
+                    deadzone,
+                }) => {
                     translator = Translator::default();
+                    pad_settings.stick_deadzone = stick_deadzone(deadzone);
                     writer = OpenOptions::new()
                         .write(true)
                         .open(&block)
@@ -195,5 +205,22 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
             };
         }
         std::thread::sleep(TICK);
+    }
+}
+
+/// The settings' dead zone (0–0.3 of the stick's travel) in raw stick units.
+pub fn stick_deadzone(fraction: f32) -> u16 {
+    (fraction.clamp(0.0, 0.3) * 32767.0).round() as u16
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dead_zone_converts_to_raw_units() {
+        assert_eq!(stick_deadzone(0.0), 0);
+        assert_eq!(stick_deadzone(0.05), 1638);
+        assert_eq!(stick_deadzone(0.9), 9830);
     }
 }
