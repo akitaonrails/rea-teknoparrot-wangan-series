@@ -152,3 +152,30 @@ Reproducible builds (byte-identical twice). Patches: `patches/clang-cl/*`
   *E0551*. The fork hooks COM3 for the steering board; nothing answers it.
   Like MT6's *E2212 STR PCB Link error*, this needs a steering-board
   emulator whose protocol we have not found documented.
+
+## MT6 and 6RR fixed (2026-11-13)
+
+- **MT6 root cause** (REA + diagnostic build): the game's boost.context
+  `make_fcontext` (0x140CEE280) never initialises frame+0xB8;
+  `jump_fcontext` (0x140CEE2F0) loads it into the TEB's `SubSystemTib`
+  (gs:[0x18]). Windows ignores that field; Wine's ntdll uses it, when
+  non-zero, to find the current directory. OpenParrot's legacy module runs
+  `LoadGameData` inside a fresh coroutine, so its relative `fopen` faulted
+  (logged: `slotB8=0x100`, `SubSystemTib=0x100`, then the AV at
+  ntdll+0x5C0E6). Fix: `patches/openparrot/0002` hooks `make_fcontext`
+  (found by a unique byte pattern) and zeroes the slot.
+  Open: saves are written/read back without crashing, but the game does not
+  yet show restored progress (it creates a new car each time).
+- **6RR root cause**: with no `setting.lua.gz` the game writes defaults with
+  `mForceFeedback = 1` (steering check waits for an FFB board on COM1,
+  0x140742d18) and `mIcCardVender = 1` (IC-card vendor check NG → E0551 at
+  0x140732970). `patches/openparrot-wmmt/0001` seeds the game's own default
+  `setting.lua` with both at 0 when missing (never overwrites), and ports
+  6R's terminal-link jump fix to 6RR (+0x744552 → +0x744627, original bytes
+  checked). 6RR's module ignores TeknoParrot's FreePlay, so play is on
+  credits: the launcher's Start button inserts a coin. AMAuthd is started
+  first.
+- **Through the launcher, silent** (`PULSE_SERVER`/`PIPEWIRE_REMOTE` pointed
+  nowhere), components from the self-built DLLs: 6RR race 133 km/h, MT6 race
+  104 km/h with steering, MT5 and 6R unchanged (races at 103 and 86 km/h).
+  Screenshots `.work/out/batch-*/`.

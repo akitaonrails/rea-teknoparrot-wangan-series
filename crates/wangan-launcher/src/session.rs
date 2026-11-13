@@ -75,11 +75,19 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
     })
 }
 
+fn op_dir<'a>(game: &Game, c: &'a runtime::Components) -> &'a Path {
+    if game.id == wangan_core::catalog::GameId::Mt6rr {
+        &c.openparrot_6rr
+    } else {
+        &c.openparrot
+    }
+}
+
 fn check_components(game: &Game, c: &runtime::Components) -> Result<()> {
     let need: Vec<PathBuf> = match game.route {
         Route::Es3b => vec![
-            c.openparrot.join("OpenParrot64.dll"),
-            c.openparrot.join("OpenParrotLoader64.exe"),
+            op_dir(game, c).join("OpenParrot64.dll"),
+            op_dir(game, c).join("OpenParrotLoader64.exe"),
             c.dxvk.join("d3d11.dll"),
             c.io_board.join("wangan-io.exe"),
         ],

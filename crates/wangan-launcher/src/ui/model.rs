@@ -521,16 +521,16 @@ mod tests {
     #[test]
     fn tile_state_from_catalog_and_library() {
         let mt3 = catalog::by_slug("mt3").unwrap();
-        let mt6 = catalog::by_slug("mt6").unwrap();
+        let blocked = catalog::by_slug("wangan-r").unwrap();
         assert_eq!(TileState::of(mt3, false, false), TileState::Looking);
         assert_eq!(TileState::of(mt3, true, true), TileState::Ready);
         assert_eq!(TileState::of(mt3, true, false), TileState::NotInLibrary);
         assert!(matches!(
-            TileState::of(mt6, true, true),
+            TileState::of(blocked, true, true),
             TileState::Blocked(_)
         ));
         assert!(matches!(
-            TileState::of(mt6, false, false),
+            TileState::of(blocked, false, false),
             TileState::Blocked(_)
         ));
         assert_eq!(TileState::NotInLibrary.badge(), Some("Not found"));

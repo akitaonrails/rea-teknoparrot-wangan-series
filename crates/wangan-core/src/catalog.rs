@@ -65,11 +65,6 @@ pub struct Game {
     pub support: Support,
 }
 
-const MT6_BLOCKED: &str =
-    "Crashes under Wine right after the card prompt (memory corruption before the first save); being investigated.";
-const MT6RR_BLOCKED: &str =
-    "Stops at the steering-board check (E0551); the launcher can't answer that board yet.";
-
 pub const GAMES: &[Game] = &[
     Game {
         id: GameId::WanganR,
@@ -183,7 +178,7 @@ pub const GAMES: &[Game] = &[
             label: "1.03.04 (Export)",
         }],
         cabinet: Cabinet::Wmmt5,
-        support: Support::Blocked(MT6_BLOCKED),
+        support: Support::Ready,
     },
     Game {
         id: GameId::Mt6r,
@@ -215,7 +210,7 @@ pub const GAMES: &[Game] = &[
             label: "3.05.03 (Japan)",
         }],
         cabinet: Cabinet::Wmmt6RR,
-        support: Support::Blocked(MT6RR_BLOCKED),
+        support: Support::Ready,
     },
 ];
 
@@ -293,6 +288,9 @@ mod tests {
             .filter(|g| g.support == Support::Ready)
             .map(|g| g.slug)
             .collect();
-        assert_eq!(ready, ["mt3", "mt3dxp", "mt5", "mt5dxp", "mt6r"]);
+        assert_eq!(
+            ready,
+            ["mt3", "mt3dxp", "mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
+        );
     }
 }

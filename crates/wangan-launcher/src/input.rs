@@ -176,7 +176,9 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
         let controls = translator.step(&read);
         if let Some(w) = writer.as_mut() {
             w.seq = w.seq.wrapping_add(1);
-            let bytes = controls.to_snapshot(w.cabinet, [0; 4], w.seq).encode();
+            let bytes = controls
+                .to_snapshot(w.cabinet, [translator.coins(), 0, 0, 0], w.seq)
+                .encode();
             // byte 57 (quit) is the session's; write the rest
             let _ = w.file.write_all_at(&bytes[..wangan_jvs::shared::QUIT], 0);
         } else {

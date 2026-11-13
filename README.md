@@ -19,8 +19,8 @@ games folder: each game runs from a private folder that links to your dump.
 | Maximum Tune 5 (5.00, Japan) | Namco ES3B | Wine + DXVK + OpenParrot + this launcher's I/O board | plays |
 | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays |
 | Maximum Tune 6R (Japan) | Namco ES3B | same | plays |
-| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same | blocked: crashes after the card prompt under Wine |
-| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | same, with OpenParrot_WMMT's 6RR module | blocked: steering-board check (E0551) |
+| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays |
+| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | same, with OpenParrot_WMMT's 6RR module and this project's fix | plays (credits: press Start for a coin) |
 | Maximum Tune (3.07 Rev B) | Sega Chihiro | needs four Chihiro media-board files you supply | waiting for files |
 | Wangan Midnight R | Namco System 246 | needs a System 246 BIOS you supply | waiting for files |
 
@@ -39,6 +39,11 @@ with its SHA-256 so you can report it.
   shoulders or paddles, wheel detection from the SDK's known-wheel table.
 - **Intro movies under Wine.** The 5/6 series crashed on their first movie;
   the launcher's Wine prefix gets the two settings that make them play.
+- **MT6 and 6RR under Wine.** MT6 crashed after the card prompt: the game's
+  coroutine code leaves a TEB field uninitialised that only Wine reads. 6RR
+  waited forever for a force-feedback board and an IC-card unit its default
+  settings enable. Both are fixed by patches to OpenParrot built from source
+  (`patches/`, `scripts/build-openparrot.sh`).
 - **4K on the native games.** MT3/3DX+ draw at up to 3840×2160.
 - **Clean exit.** Closing the game stops the game, then the I/O board, then
   Wine, in that order, so the cabinet never shows a board error.
@@ -69,6 +74,7 @@ Every option in the window has the same flag (`--help`).
 | Y | View change |
 | X | Intrude |
 | Back | Insert card |
+| Start | Insert coin (6RR) |
 | A | Test menu enter |
 
 ## Where things are

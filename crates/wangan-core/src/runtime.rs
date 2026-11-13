@@ -72,6 +72,9 @@ pub fn list(dir: &Path) -> io::Result<Vec<Item>> {
 pub struct Components {
     /// OpenParrot64.dll, OpenParrotLoader64.exe, iDmacDrv64.dll, bngrw.dll
     pub openparrot: PathBuf,
+    /// The same files built from valkyrieasyraf/OpenParrot_WMMT with
+    /// `patches/openparrot-wmmt` (the only build with a working 6RR module).
+    pub openparrot_6rr: PathBuf,
     /// d3d11.dll, dxgi.dll (x64)
     pub dxvk: PathBuf,
     /// wangan-io.exe
@@ -111,13 +114,27 @@ pub fn plan(
     c: &Components,
 ) -> Vec<Op> {
     match game.route {
-        Route::Es3b => plan_es3b(src, items, network_items, rt, c),
+        Route::Es3b => {
+            let op = if game.id == crate::catalog::GameId::Mt6rr {
+                &c.openparrot_6rr
+            } else {
+                &c.openparrot
+            };
+            plan_es3b(src, items, network_items, rt, c, op)
+        }
         Route::NativeN2 => plan_n2(src, items, rt, c),
         Route::Chihiro | Route::System246 => vec![],
     }
 }
 
-fn plan_es3b(src: &Path, items: &[Item], data_jp: &[Item], rt: &Path, c: &Components) -> Vec<Op> {
+fn plan_es3b(
+    src: &Path,
+    items: &[Item],
+    data_jp: &[Item],
+    rt: &Path,
+    c: &Components,
+    op: &Path,
+) -> Vec<Op> {
     let mut ops = vec![Op::Dir(rt.to_path_buf())];
     for it in items {
         if es3b_skip(&it.name) {
@@ -160,7 +177,7 @@ fn plan_es3b(src: &Path, items: &[Item], data_jp: &[Item], rt: &Path, c: &Compon
         "bngrw.dll",
     ] {
         ops.push(Op::Refresh {
-            from: c.openparrot.join(f),
+            from: op.join(f),
             to: rt.join(f),
             exec: false,
         });
@@ -389,6 +406,7 @@ mod tests {
     fn comps(base: &Path) -> Components {
         Components {
             openparrot: base.join("op"),
+            openparrot_6rr: base.join("op6rr"),
             dxvk: base.join("dxvk"),
             io_board: base.join("io"),
             wal: base.join("wal"),
@@ -468,6 +486,26 @@ mod tests {
     }
 
     #[test]
+    fn six_rr_takes_the_fork_build_and_the_others_upstream() {
+        let src = Path::new("/g");
+        let rt = Path::new("/rt");
+        let items = vec![item("wmn6r.exe", false, 33_000_000)];
+        let c = comps(Path::new("/c"));
+        let rr = plan(game(GameId::Mt6rr), src, &items, &[], rt, &c);
+        let r = plan(game(GameId::Mt6r), src, &items, &[], rt, &c);
+        let dll = |ops: &[Op]| {
+            ops.iter().find_map(|o| match o {
+                Op::Refresh { from, to, .. } if to.ends_with("OpenParrot64.dll") => {
+                    Some(from.clone())
+                }
+                _ => None,
+            })
+        };
+        assert_eq!(dll(&rr), Some(PathBuf::from("/c/op6rr/OpenParrot64.dll")));
+        assert_eq!(dll(&r), Some(PathBuf::from("/c/op/OpenParrot64.dll")));
+    }
+
+    #[test]
     fn apply_keeps_game_written_files_and_refreshes_ours() {
         let t = tempfile::tempdir().unwrap();
         let src = t.path().join("src");
@@ -494,6 +532,7 @@ mod tests {
         let items = list(&src).unwrap();
         let comps = Components {
             openparrot: c.join("op"),
+            openparrot_6rr: c.join("op6rr"),
             dxvk: c.join("dxvk"),
             io_board: c.join("io"),
             wal: c.join("wal"),

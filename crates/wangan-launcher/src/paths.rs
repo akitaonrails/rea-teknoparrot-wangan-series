@@ -62,6 +62,7 @@ impl Paths {
     pub fn runtime_components(&self) -> Components {
         Components {
             openparrot: self.components.join("openparrot"),
+            openparrot_6rr: self.components.join("openparrot-6rr"),
             dxvk: self.components.join("dxvk"),
             io_board: self.components.join("io"),
             wal: self.components.join("wal"),

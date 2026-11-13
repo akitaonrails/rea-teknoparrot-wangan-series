@@ -154,7 +154,8 @@ pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan>
                 env: wine_env.clone(),
                 cwd: rt.to_path_buf(),
             }];
-            if game.id == GameId::Mt6 {
+            // the auth daemon first, as TeknoParrot does for 6; 6RR needs it too (docs/RUNTIME_NOTES.md)
+            if matches!(game.id, GameId::Mt6 | GameId::Mt6rr) {
                 helpers.push(Command {
                     program: "wine".into(),
                     args: vec![
@@ -263,6 +264,20 @@ mod tests {
         );
         assert_eq!(&p.gamescope[..4], ["-w", "1360", "-h", "768"]);
         assert!(p.gamescope.windows(2).any(|w| w == ["-F", "fsr"]));
+    }
+
+    #[test]
+    fn six_rr_also_starts_amauthd_first() {
+        let p = plan(
+            game(GameId::Mt6rr),
+            Path::new("/rt/mt6rr"),
+            Path::new("/pfx"),
+            &Settings::default(),
+        )
+        .unwrap();
+        assert_eq!(p.helpers.len(), 2);
+        assert!(p.helpers[1].args[2].ends_with(r"AMCUS\AMAuthd.exe"));
+        assert!(p.files[0].1.contains("[Resolution]\nRES=1360x768"));
     }
 
     #[test]

@@ -18,6 +18,8 @@ pub enum Button {
     MenuUp,
     MenuDown,
     Enter,
+    /// A coin (6RR plays on credits).
+    Coin,
 }
 
 impl Control for Button {
@@ -32,6 +34,7 @@ impl Control for Button {
         Button::MenuUp,
         Button::MenuDown,
         Button::Enter,
+        Button::Coin,
     ];
 
     fn key(self) -> &'static str {
@@ -46,6 +49,7 @@ impl Control for Button {
             Button::MenuUp => "menu_up",
             Button::MenuDown => "menu_down",
             Button::Enter => "enter",
+            Button::Coin => "coin",
         }
     }
 
@@ -61,6 +65,7 @@ impl Control for Button {
             Button::MenuUp => "Test menu up",
             Button::MenuDown => "Test menu down",
             Button::Enter => "Test menu enter",
+            Button::Coin => "Insert coin",
         }
     }
 
@@ -81,6 +86,7 @@ pub fn default_pad_map() -> PadMap<Button> {
         (Action::Press(Button::Intrude), &[PadInput::X]),
         (Action::Press(Button::Card), &[PadInput::Back]),
         (Action::Press(Button::Enter), &[PadInput::A]),
+        (Action::Press(Button::Coin), &[PadInput::Start]),
     ])
 }
 
@@ -90,11 +96,17 @@ pub fn default_pad_map() -> PadMap<Button> {
 pub struct Translator {
     shifter: Shifter,
     last: u32,
+    coins: u16,
 }
 
 impl Translator {
     pub fn gear(&self) -> u8 {
         self.shifter.gear()
+    }
+
+    /// Coins inserted since the game started (slot 1).
+    pub fn coins(&self) -> u16 {
+        self.coins
     }
 
     pub fn step(&mut self, r: &Read) -> Controls {
@@ -105,6 +117,9 @@ impl Translator {
         }
         if edge(Button::GearDown) {
             self.shifter.down();
+        }
+        if edge(Button::Coin) {
+            self.coins = self.coins.wrapping_add(1);
         }
         self.last = r.buttons;
         Controls {
@@ -136,6 +151,20 @@ mod tests {
             assert_eq!(seen & b.bit(), 0);
             seen |= b.bit();
         }
+    }
+
+    #[test]
+    fn a_coin_counts_once_per_press() {
+        let mut t = Translator::default();
+        let coin = Read {
+            buttons: Button::Coin.bit(),
+            ..Read::default()
+        };
+        t.step(&coin);
+        t.step(&coin);
+        t.step(&Read::default());
+        t.step(&coin);
+        assert_eq!(t.coins(), 2);
     }
 
     #[test]
