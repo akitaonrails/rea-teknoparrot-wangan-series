@@ -95,3 +95,16 @@ files there), big files and data folders symlinked.
 
 GE-Proton 8-26 was tried for comparison: white screen and a page fault —
 not used.
+
+### Per game (2026-11-13, same setup; ini generated from TeknoParrot's GameProfile the way `ConfigurationWriter` writes it)
+
+| Game | Result | Notes |
+|---|---|---|
+| MT5 (Japan 5.00) | **race played** | Japanese menus, episode 1, Yokohama route |
+| MT5DX+ (Export) | **race played** | see above |
+| MT6R (Japan) | **race played** | wheel range 20–236; no AMAuthd needed |
+| MT6 (Export 1.03.04) | **blocked** | AMAuthd started first through the loader, as TeknoParrot does. A writable, empty `TP/` folder is required (OpenParrot redirects the game's save paths there); with it, boot and the Banapass prompt work. With `Banapass Connection=0` OpenParrot picks its *legacy* module, which crashes right after "Not Use Card": `SaveGameData()` in `WMMT6_LEG.cpp` calls `fwrite(carData, 1, 0xE0, file)` on the `FILE*` it closed a line earlier (should be `carSave`). With `Banapass Connection=1` the normal module stops at *E2212 STR PCB Link error* (steering board). Needs an OpenParrot build with the fix (MSVC toolchain). |
+| MT6RR | not run | upstream OpenParrot has no 6RR module; valkyrieasyraf/OpenParrot_WMMT does (needs an MSVC build) |
+| TeknoParrot core | not usable | `BudgieLoader.exe <game>` exits within seconds when started without TeknoParrotUI |
+
+Runtime rules learned: dgVoodoo leftovers (`D3D8/D3D9/DDraw/D3DImm.dll`), `bngrw.dll(.bak)` from the dump and `[SYSTEM]`/`data_jp_ori` are left out; OpenParrot's own `bngrw.dll` (OpenBanapass) is used; `data_jp/network/` is copied (OpenParrot's WMMT6 module writes certificates there).
