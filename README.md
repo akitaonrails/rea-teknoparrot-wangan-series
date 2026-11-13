@@ -26,11 +26,11 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 |---|---|---|---|---|
 | Maximum Tune 3 (Export) | Namco N2 | natively, with WanganArcadeLoader (patched) | plays | no (Linux game) |
 | Maximum Tune 3DX+ (Export) | Namco N2 | same | plays, up to 4K | no (Linux game) |
-| Maximum Tune 5 (5.00, Japan) | Namco ES3B | OpenParrot + this launcher's I/O board | plays | see release notes |
-| Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | see release notes |
-| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | see release notes |
-| Maximum Tune 6R (Japan) | Namco ES3B | same | plays | see release notes |
-| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | see release notes |
+| Maximum Tune 5 (5.00, Japan) | Namco ES3B | OpenParrot + this launcher's I/O board | plays | played under Wine |
+| Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | played under Wine |
+| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
+| Maximum Tune 6R (Japan) | Namco ES3B | same | plays | played under Wine |
+| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
 | Maximum Tune (3.07 Rev B) | Sega Chihiro | needs four Chihiro media-board files you supply | waiting for files | waiting for files |
 | Wangan Midnight R | Namco System 246 | needs a System 246 BIOS you supply | waiting for files | waiting for files |
 
@@ -112,14 +112,19 @@ these games up for this project (see [docs/RESEARCH.md](docs/RESEARCH.md)).
 1. Download the Linux `.tar.gz` from
    [Releases](https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases)
    and unpack it anywhere.
-2. Install from your distribution: **gamescope**, a **Vulkan** driver, and
+2. Install from your distribution: **gamescope**, a **Vulkan** driver,
    **32-bit OpenGL** for MT3/3DX+ (Arch: `lib32-nvidia-utils` or
-   `lib32-mesa`; Debian/Ubuntu: `libgl1:i386`). Wine is bundled.
+   `lib32-mesa`; Debian/Ubuntu: `libgl1:i386`), and GStreamer's libav
+   plugin for the intro movies (Arch: `gst-libav`; Debian/Ubuntu:
+   `gstreamer1.0-libav`). Wine, DXVK, the loaders and SDL2 are bundled.
 3. Run `./wangan-launcher` and choose the folder that holds your game
    folders. The first start of an MT5/MT6 game creates the Wine prefix and
    takes a minute.
 
 ### Windows
+
+The Windows build was played through its Windows code path under Wine
+(MT5DX+ and MT6 races); it has not been run on a real Windows PC yet.
 
 1. Download the Windows `.zip` from
    [Releases](https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases)

@@ -179,3 +179,19 @@ Reproducible builds (byte-identical twice). Patches: `patches/clang-cl/*`
   nowhere), components from the self-built DLLs: 6RR race 133 km/h, MT6 race
   104 km/h with steering, MT5 and 6R unchanged (races at 103 and 86 km/h).
   Screenshots `.work/out/batch-*/`.
+
+## Release packages (CI-built, 2026-11-13)
+
+Built by `.github/workflows/release.yml` from pinned sources (OpenParrot and
+OpenParrot_WMMT with MSVC on a Windows runner; WanganArcadeLoader and the
+launcher on Debian bookworm; portable Wine 11.21 with a minimal FFmpeg 4.4.5
+for its `winedmo`). Played headless and silent:
+
+| Package | Game | Result |
+|---|---|---|
+| Linux `.tar.gz`, unpacked, fresh data folder, bundled Wine | MT6 | race (96 km/h) with the CI-built DLL; bundled `winedmo.so` and `libavformat.so.58` loaded |
+| same | MT3DX+ | race on the Daikoku line (92 km/h) with the CI-built loader |
+| Windows `.zip`, run under Wine (Windows code path: board and loader started directly) | MT6 | race (105 km/h); leftovers in the runtime stopped on exit |
+| Windows launcher (local build) under Wine | MT5DX+ | race (103 km/h); board quit after the game |
+
+Not run: 6RR from the packages; the Windows build on a real Windows PC.

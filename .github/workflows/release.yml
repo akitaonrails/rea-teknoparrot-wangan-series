@@ -1,6 +1,6 @@
 # Builds the full release packages for Linux and Windows from pinned
 # sources and pinned downloads (packaging/components.pins,
-# packaging/sources.sh). A manual run (or a push to the `release` branch)
+# packaging/sources.sh). A manual run
 # uploads them as workflow artifacts;
 # pushing a tag vX.Y.Z (matching the workspace version) also publishes a
 # GitHub release with the packages, the source archive and SHA256SUMS.
@@ -9,8 +9,6 @@ name: Release
 on:
   push:
     tags: ["v*"]
-    # the packaging branch: every push builds the packages (artifacts only)
-    branches: [release]
   workflow_dispatch:
 
 permissions:
