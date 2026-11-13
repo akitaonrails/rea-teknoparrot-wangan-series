@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wangan-jvs", "crates/wangan-io", "crates/wangan-core"]
+members = ["crates/wangan-jvs", "crates/wangan-io", "crates/wangan-core", "crates/wangan-launcher"]
 resolver = "3"
 
 [workspace.package]
@@ -8,6 +8,12 @@ edition = "2024"
 rust-version = "1.95"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/akitaonrails/rea-teknoparrot-wangan-series"
+
+[workspace.dependencies]
+# The shared launcher SDK, pinned to a release tag (rea-launcher-sdk docs/playbooks/sdk-change.md).
+rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.8.2" }
+rea-launcher-native = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.8.2", default-features = false, features = ["child", "sdl"] }
+rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.8.2" }
 
 [profile.release]
 opt-level = "s"

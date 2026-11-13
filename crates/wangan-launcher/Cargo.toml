@@ -1,0 +1,25 @@
+[package]
+name = "wangan-launcher"
+description = "One launcher for the Wangan Midnight arcade series"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "wangan-launcher"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+eframe = { version = "0.37.0", default-features = false, features = ["glow", "x11", "wayland"] }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+rea-launcher.workspace = true
+rea-launcher-native.workspace = true
+wangan-core = { path = "../wangan-core" }
+wangan-jvs = { path = "../wangan-jvs" }
+
+[dev-dependencies]
+rea-launcher-ui.workspace = true
+tempfile = "3"
