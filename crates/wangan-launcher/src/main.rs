@@ -5,11 +5,12 @@ mod log;
 mod paths;
 mod session;
 mod ui;
+mod winproc;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use wangan_core::catalog::{self, Support};
+use wangan_core::catalog::{self, Platform, Support};
 use wangan_core::library::{self, Found, HashCache};
 use wangan_core::settings::Settings;
 
@@ -25,13 +26,13 @@ wangan-launcher — Wangan Midnight arcade series
   wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
   wangan-launcher --game <game> <options>   save options for a game without starting it
   Options (saved in that game's settings, same as the window):
-      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160
-      --upscaler <fsr|nis|linear|nearest>
-      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest
-      --fullscreen <on|off>
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
       --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
       --deadzone <0-0.3>               controller stick dead zone
-      --headless                       run it in an invisible display (tests)
+      --headless                       run it in an invisible display (tests; Linux)
       --no-input                       leave the input block to another program (tests)
   wangan-launcher --help               this text
 ";
@@ -48,6 +49,15 @@ struct Args {
 }
 
 fn parse() -> Result<Option<Args>, String> {
+    parse_args(std::env::args().skip(1), Platform::HOST)
+}
+
+/// The command line; options the window shows as off on this platform are
+/// refused here with the same reason (window and CLI in parity).
+fn parse_args(
+    mut it: impl Iterator<Item = String>,
+    platform: Platform,
+) -> Result<Option<Args>, String> {
     let mut a = Args {
         library: None,
         list: false,
@@ -57,19 +67,26 @@ fn parse() -> Result<Option<Args>, String> {
         game: None,
         options: vec![],
     };
-    let mut it = std::env::args().skip(1);
     while let Some(x) = it.next() {
         match x.as_str() {
             "--help" | "-h" => return Ok(None),
             "--library" => a.library = Some(it.next().ok_or("--library needs a folder")?.into()),
             "--list" => a.list = true,
             "--play" => a.play = Some(it.next().ok_or("--play needs a game")?),
+            "--headless" if platform == Platform::Windows => {
+                return Err(format!("--headless: {}", ui::form::NO_GAMESCOPE));
+            }
             "--headless" => a.headless = true,
             "--no-input" => a.no_input = true,
             "--game" => a.game = Some(it.next().ok_or("--game needs a game")?),
             "--output" | "--upscaler" | "--sharpness" | "--fullscreen" | "--render"
             | "--deadzone" => {
                 let key = &x[2..];
+                if let Some(why) = ui::form::Row::from_key(key)
+                    .and_then(|row| ui::form::platform_off(row, platform))
+                {
+                    return Err(format!("{x}: {why}"));
+                }
                 let value = it.next().ok_or(format!("{x} needs a value"))?;
                 let line = format!("{key} = {value}");
                 let (_, problems) = Settings::parse(&line);
@@ -126,7 +143,7 @@ fn main() -> ExitCode {
         for e in &found {
             match &e.found {
                 Found::Known { game, edition } => {
-                    let state = match game.support {
+                    let state = match game.support_here() {
                         Support::Ready => "ready".to_string(),
                         Support::Blocked(why) => format!("not yet: {why}"),
                     };
@@ -193,8 +210,8 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
         eprintln!("unknown game {slug}");
         return ExitCode::from(2);
     };
-    if let Support::Blocked(why) = game.support {
-        eprintln!("{} can't start yet: {why}", game.title);
+    if let Support::Blocked(why) = game.support_here() {
+        eprintln!("{} can't start: {why}", game.title);
         return ExitCode::FAILURE;
     }
     let Some(root) = library else {
@@ -239,5 +256,37 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
             eprintln!("{e:#}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(s: &str) -> impl Iterator<Item = String> {
+        s.split_whitespace()
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+
+    #[test]
+    fn gamescope_options_are_refused_on_windows_with_the_windows_reason() {
+        for opt in [
+            "--output 1920x1080",
+            "--upscaler fsr",
+            "--sharpness 3",
+            "--fullscreen on",
+            "--headless",
+        ] {
+            let line = format!("--play mt5 {opt}");
+            let e = parse_args(args(&line), Platform::Windows).err().expect(opt);
+            assert!(e.ends_with(ui::form::NO_GAMESCOPE), "{e}");
+            assert!(parse_args(args(&line), Platform::Linux).is_ok(), "{opt}");
+        }
+        let a = parse_args(args("--game mt5 --deadzone 0.1"), Platform::Windows)
+            .unwrap()
+            .unwrap();
+        assert_eq!(a.options, ["deadzone = 0.1"]);
     }
 }

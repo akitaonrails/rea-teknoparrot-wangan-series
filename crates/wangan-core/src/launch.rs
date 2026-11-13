@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::catalog::{Game, GameId, Route};
+use crate::catalog::{Game, GameId, Platform, Route};
 use crate::settings::{Settings, Size};
 
 /// A process to start.
@@ -33,6 +33,37 @@ pub struct Plan {
     pub wine_prefix: Option<PathBuf>,
     /// Native size the game draws at.
     pub game_size: Size,
+}
+
+/// How the launcher starts the Windows games on this system.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Host {
+    /// Linux: under Wine, inside gamescope. `wine` is the program to run
+    /// (the bundled Wine's `bin/wine`, or `wine` from PATH); `wine_env` is
+    /// added to every Wine process (the bundled Wine's library path).
+    Linux {
+        wine: String,
+        wine_env: Vec<(String, String)>,
+    },
+    /// Windows: the I/O board and OpenParrot's loader run directly.
+    Windows,
+}
+
+impl Host {
+    /// Wine from PATH.
+    pub fn system_wine() -> Self {
+        Host::Linux {
+            wine: "wine".into(),
+            wine_env: vec![],
+        }
+    }
+
+    pub fn platform(&self) -> Platform {
+        match self {
+            Host::Linux { .. } => Platform::Linux,
+            Host::Windows => Platform::Windows,
+        }
+    }
 }
 
 /// Where the input block lives inside a runtime.
@@ -124,17 +155,88 @@ fn gamescope_args(s: &Settings, game: Size) -> Vec<String> {
     a
 }
 
+fn es3b_exe(id: GameId) -> &'static str {
+    match id {
+        GameId::Mt5 | GameId::Mt5dxp => "wmn5r.exe",
+        _ => "wmn6r.exe",
+    }
+}
+
 /// ES3B native size (all five games render 1360×768).
 pub const ES3B_SIZE: Size = Size::new(1360, 768);
 
+/// The ES3B processes as Windows runs them: the board, the auth daemon
+/// through the loader (MT6, 6RR), then the game through the loader. Full
+/// paths, because Windows looks for a program beside the launcher, not in
+/// the runtime. No gamescope: the game sets its own screen mode.
+fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
+    let run = |program: &str, args: Vec<String>| Command {
+        program: native_path(&rt.join(program)),
+        args,
+        env: vec![],
+        cwd: rt.to_path_buf(),
+    };
+    let mut helpers = vec![run(
+        "wangan-io.exe",
+        vec![
+            "--block".into(),
+            native_path(&block_path(rt)),
+            "--log".into(),
+            native_path(&rt.join("wangan-io.log")),
+        ],
+    )];
+    if matches!(game.id, GameId::Mt6 | GameId::Mt6rr) {
+        helpers.push(run(
+            "OpenParrotLoader64.exe",
+            vec![
+                "OpenParrot64".into(),
+                native_path(&rt.join("AMCUS").join("AMAuthd.exe")),
+            ],
+        ));
+    }
+    Some(Plan {
+        files: vec![(
+            rt.join("teknoparrot.ini"),
+            teknoparrot_ini(game.id)?.to_string(),
+        )],
+        helpers,
+        game: run(
+            "OpenParrotLoader64.exe",
+            vec![
+                "OpenParrot64".into(),
+                native_path(&rt.join(es3b_exe(game.id))),
+            ],
+        ),
+        gamescope: vec![],
+        wine_prefix: None,
+        game_size: ES3B_SIZE,
+    })
+}
+
+fn native_path(p: &Path) -> String {
+    p.to_string_lossy().into_owned()
+}
+
+/// [`plan_on`] with Wine from PATH (Linux).
 pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan> {
+    plan_on(game, rt, prefix, s, &Host::system_wine())
+}
+
+pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host) -> Option<Plan> {
+    let (wine, extra_env) = match host {
+        Host::Linux { wine, wine_env } => (wine.as_str(), wine_env.as_slice()),
+        Host::Windows => {
+            return match game.route {
+                Route::Es3b => plan_es3b_windows(game, rt),
+                // Linux programs (catalog::N2_LINUX_ONLY), and the blocked routes
+                _ => None,
+            };
+        }
+    };
     match game.route {
         Route::Es3b => {
-            let exe = match game.id {
-                GameId::Mt5 | GameId::Mt5dxp => "wmn5r.exe",
-                _ => "wmn6r.exe",
-            };
-            let wine_env = vec![
+            let exe = es3b_exe(game.id);
+            let mut wine_env = vec![
                 (
                     "WINEPREFIX".to_string(),
                     prefix.to_string_lossy().into_owned(),
@@ -142,8 +244,9 @@ pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan>
                 ("WINEDEBUG".to_string(), "-all".to_string()),
                 ("WINEDLLOVERRIDES".to_string(), "d3d11,dxgi=n,b".to_string()),
             ];
+            wine_env.extend(extra_env.iter().cloned());
             let mut helpers = vec![Command {
-                program: "wine".into(),
+                program: wine.into(),
                 args: vec![
                     "wangan-io.exe".into(),
                     "--block".into(),
@@ -157,7 +260,7 @@ pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan>
             // the auth daemon first, as TeknoParrot does for 6; 6RR needs it too (docs/RUNTIME_NOTES.md)
             if matches!(game.id, GameId::Mt6 | GameId::Mt6rr) {
                 helpers.push(Command {
-                    program: "wine".into(),
+                    program: wine.into(),
                     args: vec![
                         "OpenParrotLoader64.exe".into(),
                         "OpenParrot64".into(),
@@ -174,7 +277,7 @@ pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan>
                 )],
                 helpers,
                 game: Command {
-                    program: "wine".into(),
+                    program: wine.into(),
                     args: vec![
                         "OpenParrotLoader64.exe".into(),
                         "OpenParrot64".into(),
@@ -360,20 +463,111 @@ mod tests {
                 "{k}"
             );
         }
-        assert_eq!(p.game.program, "/rt/mt3dxp/main");
+        let rt = Path::new("/rt/mt3dxp");
+        assert_eq!(p.game.program, rt.join("main").to_string_lossy());
         assert!(
             p.game
                 .env
                 .contains(&("LD_PRELOAD".into(), "libwal_3dxp.so".into()))
         );
-        assert!(
-            p.game
-                .env
-                .contains(&("WANGAN_INPUT_BLOCK".into(), "/rt/mt3dxp/input.block".into()))
-        );
+        assert!(p.game.env.contains(&(
+            "WANGAN_INPUT_BLOCK".into(),
+            rt.join("input.block").to_string_lossy().into_owned()
+        )));
         assert!(!p.gamescope.contains(&"-f".to_string()));
         assert!(!p.gamescope.contains(&"--sharpness".to_string()));
         assert!(p.wine_prefix.is_none());
+    }
+
+    #[test]
+    fn bundled_wine_runs_every_wine_process_with_its_environment() {
+        let host = Host::Linux {
+            wine: "/pkg/components/wine/bin/wine".into(),
+            wine_env: vec![(
+                "LD_LIBRARY_PATH".into(),
+                "/pkg/components/wine/lib/ffmpeg".into(),
+            )],
+        };
+        let p = plan_on(
+            game(GameId::Mt6),
+            Path::new("/rt/mt6"),
+            Path::new("/pfx"),
+            &Settings::default(),
+            &host,
+        )
+        .unwrap();
+        for c in p.helpers.iter().chain([&p.game]) {
+            assert_eq!(c.program, "/pkg/components/wine/bin/wine");
+            assert!(c.env.contains(&(
+                "LD_LIBRARY_PATH".into(),
+                "/pkg/components/wine/lib/ffmpeg".into()
+            )));
+            assert!(c.env.iter().any(|(k, _)| k == "WINEPREFIX"));
+        }
+    }
+
+    #[test]
+    fn windows_runs_the_board_and_the_loader_directly() {
+        let rt = Path::new("/rt/mt6rr");
+        let at = |f: &str| rt.join(f).to_string_lossy().into_owned();
+        let p = plan_on(
+            game(GameId::Mt6rr),
+            rt,
+            Path::new("/pfx"),
+            &Settings::default(),
+            &Host::Windows,
+        )
+        .unwrap();
+        // board first, then the auth daemon, both by full path, no Wine
+        assert_eq!(p.helpers.len(), 2);
+        assert_eq!(p.helpers[0].program, at("wangan-io.exe"));
+        assert_eq!(
+            p.helpers[0].args,
+            [
+                "--block".to_string(),
+                at("input.block"),
+                "--log".to_string(),
+                at("wangan-io.log")
+            ]
+        );
+        assert_eq!(p.helpers[1].program, at("OpenParrotLoader64.exe"));
+        assert!(p.helpers[1].args[1].ends_with("AMAuthd.exe"));
+        assert_eq!(p.game.program, at("OpenParrotLoader64.exe"));
+        assert_eq!(p.game.args, ["OpenParrot64".to_string(), at("wmn6r.exe")]);
+        for c in p.helpers.iter().chain([&p.game]) {
+            assert!(c.env.is_empty(), "no Wine variables: {:?}", c.env);
+            assert_eq!(c.cwd, rt);
+        }
+        assert!(p.gamescope.is_empty());
+        assert!(p.wine_prefix.is_none());
+        assert!(p.files[0].0.ends_with("teknoparrot.ini"));
+        assert!(p.files[0].1.contains("[Resolution]\nRES=1360x768"));
+    }
+
+    #[test]
+    fn windows_has_no_n2_plan() {
+        for id in [GameId::Mt3, GameId::Mt3dxp, GameId::WanganR] {
+            assert!(
+                plan_on(
+                    game(id),
+                    Path::new("/rt"),
+                    Path::new("/pfx"),
+                    &Settings::default(),
+                    &Host::Windows
+                )
+                .is_none()
+            );
+        }
+        let mt5 = plan_on(
+            game(GameId::Mt5),
+            Path::new("/rt"),
+            Path::new("/pfx"),
+            &Settings::default(),
+            &Host::Windows,
+        )
+        .unwrap();
+        assert_eq!(mt5.helpers.len(), 1);
+        assert!(mt5.game.args[1].ends_with("wmn5r.exe"));
     }
 
     #[test]

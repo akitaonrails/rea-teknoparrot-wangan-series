@@ -4,7 +4,6 @@
 //! it). Between games it sends menu navigation to the window.
 
 use std::fs::OpenOptions;
-use std::os::unix::fs::FileExt;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
@@ -180,7 +179,7 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
                 .to_snapshot(w.cabinet, [translator.coins(), 0, 0, 0], w.seq)
                 .encode();
             // byte 57 (quit) is the session's; write the rest
-            let _ = w.file.write_all_at(&bytes[..wangan_jvs::shared::QUIT], 0);
+            let _ = write_front(&w.file, &bytes[..wangan_jvs::shared::QUIT]);
         } else {
             let bits = list
                 .iter()
@@ -213,6 +212,28 @@ fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>)
 /// The settings' dead zone (0–0.3 of the stick's travel) in raw stick units.
 pub fn stick_deadzone(fraction: f32) -> u16 {
     (fraction.clamp(0.0, 0.3) * 32767.0).round() as u16
+}
+
+/// Write `b` at the start of the block, in place (the board or the loader
+/// maps the same file).
+fn write_front(f: &std::fs::File, b: &[u8]) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::FileExt;
+        f.write_all_at(b, 0)
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileExt;
+        let mut done = 0;
+        while done < b.len() {
+            match f.seek_write(&b[done..], done as u64)? {
+                0 => return Err(std::io::ErrorKind::WriteZero.into()),
+                n => done += n,
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

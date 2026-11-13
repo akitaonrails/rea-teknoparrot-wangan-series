@@ -338,7 +338,7 @@ pub enum TileState {
 
 impl TileState {
     pub fn of(game: &Game, scanned: bool, in_library: bool) -> Self {
-        match (game.support, scanned, in_library) {
+        match (game.support_here(), scanned, in_library) {
             (Support::Blocked(why), _, _) => TileState::Blocked(why),
             (_, false, _) => TileState::Looking,
             (_, true, false) => TileState::NotInLibrary,
@@ -520,11 +520,21 @@ mod tests {
 
     #[test]
     fn tile_state_from_catalog_and_library() {
-        let mt3 = catalog::by_slug("mt3").unwrap();
+        let mt5 = catalog::by_slug("mt5").unwrap();
         let blocked = catalog::by_slug("wangan-r").unwrap();
-        assert_eq!(TileState::of(mt3, false, false), TileState::Looking);
-        assert_eq!(TileState::of(mt3, true, true), TileState::Ready);
-        assert_eq!(TileState::of(mt3, true, false), TileState::NotInLibrary);
+        assert_eq!(TileState::of(mt5, false, false), TileState::Looking);
+        assert_eq!(TileState::of(mt5, true, true), TileState::Ready);
+        assert_eq!(TileState::of(mt5, true, false), TileState::NotInLibrary);
+        // the N2 games are Linux programs: locked, with the reason, on Windows
+        let mt3 = catalog::by_slug("mt3").unwrap();
+        assert_eq!(
+            TileState::of(mt3, true, true),
+            if cfg!(windows) {
+                TileState::Blocked(catalog::N2_LINUX_ONLY)
+            } else {
+                TileState::Ready
+            }
+        );
         assert!(matches!(
             TileState::of(blocked, true, true),
             TileState::Blocked(_)

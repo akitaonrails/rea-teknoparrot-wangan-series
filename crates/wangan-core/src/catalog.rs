@@ -41,6 +41,27 @@ pub enum Support {
     Blocked(&'static str),
 }
 
+/// The system the launcher runs on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Platform {
+    /// Wine and gamescope for the Windows games, the N2 games natively.
+    Linux,
+    /// The Windows games directly; no N2 games.
+    Windows,
+}
+
+impl Platform {
+    /// The platform this build of the launcher is for.
+    pub const HOST: Platform = if cfg!(windows) {
+        Platform::Windows
+    } else {
+        Platform::Linux
+    };
+}
+
+/// Why the N2 games are not offered on Windows.
+pub const N2_LINUX_ONLY: &str = "Maximum Tune 3 and 3DX+ are Linux programs (Namco N2 board); they run only in the Linux build of the launcher.";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Edition {
     pub sha256: &'static str,
@@ -63,6 +84,21 @@ pub struct Game {
     pub editions: &'static [Edition],
     pub cabinet: Cabinet,
     pub support: Support,
+}
+
+impl Game {
+    /// Whether the game can start on `platform`, and why not.
+    pub fn support_on(&self, platform: Platform) -> Support {
+        match (self.support, self.route, platform) {
+            (Support::Ready, Route::NativeN2, Platform::Windows) => Support::Blocked(N2_LINUX_ONLY),
+            (s, _, _) => s,
+        }
+    }
+
+    /// [`Game::support_on`] for the platform this launcher was built for.
+    pub fn support_here(&self) -> Support {
+        self.support_on(Platform::HOST)
+    }
 }
 
 pub const GAMES: &[Game] = &[
@@ -279,6 +315,34 @@ mod tests {
         assert_eq!(game(GameId::Mt6r).cabinet, Cabinet::Wmmt6RR);
         assert_eq!(game(GameId::Mt6rr).cabinet, Cabinet::Wmmt6RR);
         assert_eq!(game(GameId::Mt5dxp).cabinet, Cabinet::Wmmt5);
+    }
+
+    #[test]
+    fn n2_games_are_linux_only() {
+        let ready_on = |p: Platform| -> Vec<&str> {
+            GAMES
+                .iter()
+                .filter(|g| g.support_on(p) == Support::Ready)
+                .map(|g| g.slug)
+                .collect()
+        };
+        assert_eq!(
+            ready_on(Platform::Windows),
+            ["mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
+        );
+        assert_eq!(
+            game(GameId::Mt3).support_on(Platform::Windows),
+            Support::Blocked(N2_LINUX_ONLY)
+        );
+        assert_eq!(
+            game(GameId::Mt3dxp).support_on(Platform::Linux),
+            Support::Ready
+        );
+        // a game blocked everywhere keeps its own reason
+        assert_eq!(
+            game(GameId::Mt1).support_on(Platform::Windows),
+            game(GameId::Mt1).support
+        );
     }
 
     #[test]

@@ -47,11 +47,11 @@ fn unknown_option_and_bad_value_exit_2() {
         Some(2)
     );
     let bad = launcher(t.path())
-        .args(["--game", "mt5", "--upscaler", "dlss"])
+        .args(["--game", "mt5", "--deadzone", "0.9"])
         .output()
         .unwrap();
     assert_eq!(bad.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&bad.stderr).contains("bad value for --upscaler"));
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("bad value for --deadzone"));
     assert_eq!(
         launcher(t.path())
             .args(["--game", "nope", "--output", "1920x1080"])
@@ -72,21 +72,23 @@ fn options_are_saved_like_the_window_saves_them() {
         "# mine\nsharpness = 7\n",
     )
     .unwrap();
-    let st = launcher(t.path())
-        .args([
-            "--game",
-            "mt3dxp",
+    // gamescope's options exist on Linux only (the window shows them off on Windows)
+    let gamescope: &[&str] = if cfg!(windows) {
+        &[]
+    } else {
+        &[
             "--output",
             "2560x1440",
             "--upscaler",
             "nis",
             "--fullscreen",
             "off",
-            "--render",
-            "3840x2160",
-            "--deadzone",
-            "0.1",
-        ])
+        ]
+    };
+    let st = launcher(t.path())
+        .args(["--game", "mt3dxp"])
+        .args(gamescope)
+        .args(["--render", "3840x2160", "--deadzone", "0.1"])
         .status()
         .unwrap();
     assert!(st.success());
@@ -94,9 +96,18 @@ fn options_are_saved_like_the_window_saves_them() {
     let (s, problems) = wangan_core::settings::Settings::parse(&text);
     assert!(problems.is_empty(), "{problems:?}");
     assert!(text.starts_with("# mine\nsharpness = 7\n"), "{text}");
-    assert_eq!(s.output.to_string(), "2560x1440");
-    assert_eq!(s.upscaler.key(), "nis");
-    assert!(!s.fullscreen);
+    if cfg!(windows) {
+        let off = launcher(t.path())
+            .args(["--game", "mt5", "--output", "2560x1440"])
+            .output()
+            .unwrap();
+        assert_eq!(off.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&off.stderr).contains("gamescope on Linux"));
+    } else {
+        assert_eq!(s.output.to_string(), "2560x1440");
+        assert_eq!(s.upscaler.key(), "nis");
+        assert!(!s.fullscreen);
+    }
     assert_eq!(s.render.unwrap().to_string(), "3840x2160");
     assert!((s.deadzone - 0.1).abs() < 1e-6);
     assert_eq!(s.sharpness, 7);

@@ -1,10 +1,14 @@
 //! Where the launcher keeps things.
 //!
-//! - data (`$WANGAN_DATA`, else `$XDG_DATA_HOME/rea-wangan`, else
-//!   `~/.local/share/rea-wangan`): `launcher.cfg`, `settings/`, `runtimes/`
-//!   (one per game, saves included), `prefix/` (Wine), `launcher.log`;
+//! - data (`$WANGAN_DATA`, else on Linux `$XDG_DATA_HOME/rea-wangan` or
+//!   `~/.local/share/rea-wangan`, on Windows `%LOCALAPPDATA%\rea-wangan`):
+//!   `launcher.cfg`, `settings/`, `runtimes/` (one per game, saves
+//!   included), `prefix/` (Wine, Linux only), `launcher.log`;
 //! - components (`$WANGAN_COMPONENTS`, else `components/` beside the
-//!   program): `openparrot/`, `dxvk/`, `io/`, `wal/`, `art/`, `fonts/`.
+//!   program): `openparrot/`, `openparrot-6rr/`, `dxvk/`, `io/`, `wal/`,
+//!   `art/`, `fonts/`, and on Linux the bundled `wine/`;
+//! - Wine (Linux): `$WANGAN_WINE` (a Wine folder with `bin/wine`), else the
+//!   package's `components/wine/`, else `wine` from PATH.
 
 use std::path::{Path, PathBuf};
 
@@ -14,19 +18,15 @@ use wangan_core::runtime::Components;
 pub struct Paths {
     pub data: PathBuf,
     pub components: PathBuf,
+    /// The Wine folder to use (`bin/wine`, `bin/wineserver`); `None`: PATH.
+    pub wine: Option<PathBuf>,
 }
 
 impl Paths {
     pub fn discover() -> Self {
         let data = std::env::var_os("WANGAN_DATA")
             .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                let base = std::env::var_os("XDG_DATA_HOME")
-                    .map(PathBuf::from)
-                    .filter(|p| p.is_absolute())
-                    .unwrap_or_else(|| home().join(".local/share"));
-                base.join("rea-wangan")
-            });
+            .unwrap_or_else(default_data);
         let components = std::env::var_os("WANGAN_COMPONENTS")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
@@ -35,7 +35,15 @@ impl Paths {
                     .and_then(|e| e.parent().map(|p| p.join("components")))
                     .unwrap_or_else(|| PathBuf::from("components"))
             });
-        Self { data, components }
+        let wine = pick_wine(
+            std::env::var_os("WANGAN_WINE").map(PathBuf::from),
+            &components,
+        );
+        Self {
+            data,
+            components,
+            wine,
+        }
     }
 
     pub fn config(&self) -> PathBuf {
@@ -70,6 +78,40 @@ impl Paths {
     }
 }
 
+#[cfg(not(windows))]
+fn default_data() -> PathBuf {
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .unwrap_or_else(|| home().join(".local/share"));
+    base.join("rea-wangan")
+}
+
+#[cfg(windows)]
+fn default_data() -> PathBuf {
+    std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .unwrap_or_else(|| home().join("AppData").join("Local"))
+        .join("rea-wangan")
+}
+
+/// The Wine to run: `$WANGAN_WINE` when set (a folder with `bin/wine`),
+/// else the package's `components/wine` when it has `bin/wine`, else none
+/// (`wine` from PATH).
+pub fn pick_wine(env: Option<PathBuf>, components: &Path) -> Option<PathBuf> {
+    if let Some(dir) = env.filter(|d| !d.as_os_str().is_empty()) {
+        return Some(dir);
+    }
+    let bundled = components.join("wine");
+    bundled
+        .join("bin")
+        .join("wine")
+        .is_file()
+        .then_some(bundled)
+}
+
+#[cfg(not(windows))]
 fn home() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
@@ -101,9 +143,36 @@ pub fn write_library(cfg: &Path, dir: &Path) -> std::io::Result<()> {
     std::fs::rename(tmp, cfg)
 }
 
+#[cfg(windows)]
+fn home() -> PathBuf {
+    std::env::var_os("USERPROFILE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wine_is_the_override_then_the_bundled_one_then_path() {
+        let t = tempfile::tempdir().unwrap();
+        let comps = t.path().join("components");
+        assert_eq!(pick_wine(None, &comps), None, "nothing bundled: PATH");
+        std::fs::create_dir_all(comps.join("wine/bin")).unwrap();
+        assert_eq!(
+            pick_wine(None, &comps),
+            None,
+            "a folder without bin/wine is not a Wine"
+        );
+        std::fs::write(comps.join("wine/bin/wine"), b"").unwrap();
+        assert_eq!(pick_wine(None, &comps), Some(comps.join("wine")));
+        assert_eq!(
+            pick_wine(Some("/opt/wine".into()), &comps),
+            Some(PathBuf::from("/opt/wine"))
+        );
+        assert_eq!(pick_wine(Some("".into()), &comps), Some(comps.join("wine")));
+    }
 
     #[test]
     fn library_round_trip_keeps_other_lines() {

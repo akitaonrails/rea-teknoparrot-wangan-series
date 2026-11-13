@@ -1,5 +1,10 @@
-# Windows builds link with LLD (rea-launcher-sdk STANDARDS "Windows builds
-# link with LLD"): GNU ld mis-links Rust import tables.
+# The Windows builds (the launcher, the I/O board) link with LLD: GNU ld
+# 2.47 mis-links the import tables of Rust Windows binaries and the program
+# crashes on its first call into a missing import (rea-launcher-sdk
+# docs/STANDARDS.md, "Windows builds link with LLD"). SDL2's import library
+# for the launcher comes from dist/sdl2 (packaging/sdl2.pin), passed with -L
+# by scripts/build-launcher.sh.
+
 [target.x86_64-pc-windows-gnu]
 linker = "x86_64-w64-mingw32-gcc"
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use wangan_core::catalog::Route;
+use wangan_core::catalog::{Platform, Route};
 use wangan_core::launch::ES3B_SIZE;
 use wangan_core::settings::{Settings, Size, Upscaler};
 
@@ -36,6 +36,23 @@ impl Row {
             Row::Render => "Game render size",
             Row::Deadzone => "Dead zone",
         }
+    }
+
+    /// The command-line option that sets this row (`--<key>`), as in the
+    /// settings file.
+    pub fn key(self) -> &'static str {
+        match self {
+            Row::Output => "output",
+            Row::Upscaler => "upscaler",
+            Row::Sharpness => "sharpness",
+            Row::Fullscreen => "fullscreen",
+            Row::Render => "render",
+            Row::Deadzone => "deadzone",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Option<Row> {
+        Row::ALL.into_iter().find(|r| r.key() == key)
     }
 
     pub fn description(self) -> &'static str {
@@ -73,11 +90,24 @@ pub const N2_DEFAULT: Size = Size::new(1280, 720);
 
 const RENDER_FIXED: &str = "This game draws at its own size; the upscaler sizes it to your screen.";
 const SHARPNESS_OFF: &str = "Only FSR 1 and NVIDIA Image Scaling use sharpness.";
+/// gamescope's options on Windows, where the game sets its own screen mode.
+pub const NO_GAMESCOPE: &str = "On Windows the game sets its own screen mode (full screen, 1360 × 768); this option is for gamescope on Linux.";
+
+/// Why a row can't be used on `platform` at all, whatever the game.
+pub fn platform_off(row: Row, platform: Platform) -> Option<&'static str> {
+    match (row, platform) {
+        (Row::Output | Row::Upscaler | Row::Sharpness | Row::Fullscreen, Platform::Windows) => {
+            Some(NO_GAMESCOPE)
+        }
+        _ => None,
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Form {
     pub settings: Settings,
     pub route: Route,
+    pub platform: Platform,
 }
 
 fn size_name(s: Size) -> String {
@@ -133,11 +163,22 @@ fn pick<T: Copy + PartialEq>(all: &[T], cur: T, d: i32, wrap: bool) -> T {
 
 impl Form {
     pub fn new(settings: Settings, route: Route) -> Self {
-        Self { settings, route }
+        Self::on(settings, route, Platform::HOST)
+    }
+
+    pub fn on(settings: Settings, route: Route, platform: Platform) -> Self {
+        Self {
+            settings,
+            route,
+            platform,
+        }
     }
 
     /// Why a row can't be changed for this game now, if it can't.
     pub fn disabled(&self, row: Row) -> Option<&'static str> {
+        if let Some(why) = platform_off(row, self.platform) {
+            return Some(why);
+        }
         let n2 = self.route == Route::NativeN2;
         match row {
             Row::Sharpness if !matches!(self.settings.upscaler, Upscaler::Fsr | Upscaler::Nis) => {
@@ -204,7 +245,30 @@ mod tests {
     use super::*;
 
     fn n2() -> Form {
-        Form::new(Settings::default(), Route::NativeN2)
+        Form::on(Settings::default(), Route::NativeN2, Platform::Linux)
+    }
+
+    #[test]
+    fn windows_turns_the_gamescope_rows_off_with_a_reason() {
+        let mut f = Form::on(Settings::default(), Route::Es3b, Platform::Windows);
+        for row in [Row::Output, Row::Upscaler, Row::Sharpness, Row::Fullscreen] {
+            assert_eq!(f.disabled(row), Some(NO_GAMESCOPE), "{row:?}");
+            assert!(!f.adjust(row, 1, true), "{row:?} must not change");
+        }
+        assert_eq!(f.settings, Settings::default());
+        assert!(f.disabled(Row::Deadzone).is_none());
+        assert!(f.adjust(Row::Deadzone, 1, false));
+        // the same rows are on for Linux
+        let l = Form::on(Settings::default(), Route::Es3b, Platform::Linux);
+        assert!(l.disabled(Row::Output).is_none() && l.disabled(Row::Fullscreen).is_none());
+    }
+
+    #[test]
+    fn every_row_has_a_command_line_key() {
+        for row in Row::ALL {
+            assert_eq!(Row::from_key(row.key()), Some(row));
+        }
+        assert_eq!(Row::from_key("nonsense"), None);
     }
 
     #[test]
@@ -276,7 +340,7 @@ mod tests {
         f.adjust(Row::Render, 1, false);
         assert_eq!(f.settings.render, Some(Size::new(1920, 1080)));
 
-        let mut es3b = Form::new(Settings::default(), Route::Es3b);
+        let mut es3b = Form::on(Settings::default(), Route::Es3b, Platform::Linux);
         assert_eq!(es3b.disabled(Row::Render), Some(RENDER_FIXED));
         assert_eq!(es3b.value(Row::Render), "1360 × 768");
         assert!(!es3b.adjust(Row::Render, 1, false));
@@ -287,8 +351,12 @@ mod tests {
 
     #[test]
     fn every_row_has_words_and_disabled_rows_say_why() {
-        for route in [Route::NativeN2, Route::Es3b] {
-            let f = Form::new(Settings::default(), route);
+        for (route, platform) in [
+            (Route::NativeN2, Platform::Linux),
+            (Route::Es3b, Platform::Linux),
+            (Route::Es3b, Platform::Windows),
+        ] {
+            let f = Form::on(Settings::default(), route, platform);
             for row in Row::ALL {
                 assert!(!row.label().is_empty() && row.description().ends_with('.'));
                 assert!(!f.value(row).is_empty());

@@ -3,7 +3,7 @@
 //! 720 lines and zoomed to the window (it runs on 4K TVs), driven by the
 //! mouse, the keyboard or a pad.
 
-mod form;
+pub mod form;
 mod model;
 mod theme;
 

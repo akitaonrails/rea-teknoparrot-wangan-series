@@ -1,14 +1,19 @@
 //! One game run: prepare the runtime and the Wine prefix, start gamescope
 //! with the helpers and the game, wait, and leave nothing behind.
+//!
+//! On Windows there is no Wine, prefix or gamescope: the helpers and the
+//! game start directly, and after the game the board is told to quit and
+//! anything still running from the runtime folder is stopped.
 
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use wangan_core::catalog::{Game, Route};
-use wangan_core::launch::{self, Plan};
+use wangan_core::launch::{self, Host, Plan};
 use wangan_core::library::Entry;
 use wangan_core::runtime;
 use wangan_core::settings::Settings;
@@ -45,10 +50,15 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
     } else {
         vec![]
     };
+    if let wangan_core::catalog::Support::Blocked(why) = game.support_here() {
+        bail!("{} can't start here: {why}", game.title);
+    }
     let comps = paths.runtime_components();
-    check_components(game, &comps)?;
+    let host = host(paths);
+    check_components(game, &comps, &host)?;
     let ops = runtime::plan(game, &entry.dir, &items, &jp_items, &rt, &comps);
     runtime::apply(&ops).context("building the runtime folder")?;
+    #[cfg(unix)]
     if game.route == Route::NativeN2 {
         runtime::apply(&runtime::plan_libso(
             &entry.dir.join("libso"),
@@ -56,7 +66,7 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
         )?)?;
         link_nvidia_glx32(&rt.join("glfix"))?;
     }
-    let plan = launch::plan(game, &rt, &paths.prefix(), settings)
+    let plan = launch::plan_on(game, &rt, &paths.prefix(), settings, &host)
         .context("this game has no launch route yet")?;
     for (path, text) in &plan.files {
         write_atomic(path, text.as_bytes())?;
@@ -83,14 +93,62 @@ fn op_dir<'a>(game: &Game, c: &'a runtime::Components) -> &'a Path {
     }
 }
 
-fn check_components(game: &Game, c: &runtime::Components) -> Result<()> {
+/// How this launcher starts the Windows games: directly on Windows; on
+/// Linux under the bundled (or chosen) Wine, else `wine` from PATH.
+pub fn host(paths: &Paths) -> Host {
+    if cfg!(windows) {
+        return Host::Windows;
+    }
+    match &paths.wine {
+        None => Host::system_wine(),
+        Some(dir) => {
+            let ffmpeg = dir.join("lib").join("ffmpeg");
+            Host::Linux {
+                wine: dir.join("bin").join("wine").to_string_lossy().into_owned(),
+                wine_env: wine_lib_env(
+                    ffmpeg.is_dir().then_some(ffmpeg.as_path()),
+                    std::env::var("LD_LIBRARY_PATH").ok().as_deref(),
+                ),
+            }
+        }
+    }
+}
+
+/// The bundled Wine's FFmpeg (for `winedmo`, the movie demuxer: the
+/// FFmpeg 4 libraries its build links against) goes first on the library
+/// path of every Wine process.
+pub fn wine_lib_env(ffmpeg: Option<&Path>, current: Option<&str>) -> Vec<(String, String)> {
+    let Some(ff) = ffmpeg else {
+        return vec![];
+    };
+    let mut v = ff.to_string_lossy().into_owned();
+    if let Some(c) = current.filter(|c| !c.is_empty()) {
+        v.push(':');
+        v.push_str(c);
+    }
+    vec![("LD_LIBRARY_PATH".into(), v)]
+}
+
+fn wine_bin(paths: &Paths, name: &str) -> PathBuf {
+    match &paths.wine {
+        Some(dir) => dir.join("bin").join(name),
+        None => PathBuf::from(name),
+    }
+}
+
+fn check_components(game: &Game, c: &runtime::Components, host: &Host) -> Result<()> {
     let need: Vec<PathBuf> = match game.route {
-        Route::Es3b => vec![
-            op_dir(game, c).join("OpenParrot64.dll"),
-            op_dir(game, c).join("OpenParrotLoader64.exe"),
-            c.dxvk.join("d3d11.dll"),
-            c.io_board.join("wangan-io.exe"),
-        ],
+        Route::Es3b => {
+            let mut v = vec![
+                op_dir(game, c).join("OpenParrot64.dll"),
+                op_dir(game, c).join("OpenParrotLoader64.exe"),
+                c.io_board.join("wangan-io.exe"),
+            ];
+            if matches!(host, Host::Linux { .. }) {
+                v.push(c.dxvk.join("d3d11.dll"));
+            }
+            v
+        }
         Route::NativeN2 => vec![c.wal.join("libwal_3dxp.so"), c.wal.join("libopenal.so")],
         _ => vec![],
     };
@@ -111,6 +169,7 @@ fn check_components(game: &Game, c: &runtime::Components) -> Result<()> {
 /// glvnd looks for `libGLX_nvidia.so.0`; some 32-bit driver installs only
 /// carry the versioned file (docs/RUNTIME_NOTES.md). Nothing to do without
 /// a 32-bit NVIDIA driver.
+#[cfg(unix)]
 fn link_nvidia_glx32(dir: &Path) -> Result<()> {
     fs::create_dir_all(dir)?;
     let Ok(rd) = fs::read_dir("/usr/lib32") else {
@@ -149,7 +208,7 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 /// Create and fix up the shared Wine prefix once (per [`PREFIX_VERSION`]).
-pub fn prepare_prefix(paths: &Paths) -> Result<()> {
+pub fn prepare_prefix(paths: &Paths, wine_env: &[(String, String)]) -> Result<()> {
     let pfx = paths.prefix();
     let marker = pfx.join(".rea-wangan-prefix");
     if fs::read_to_string(&marker).ok().as_deref() == Some(PREFIX_VERSION) {
@@ -157,62 +216,54 @@ pub fn prepare_prefix(paths: &Paths) -> Result<()> {
     }
     fs::create_dir_all(&pfx)?;
     log::line(paths, "creating the Wine prefix");
-    wine(&pfx, &["wineboot", "-u"])?;
-    wineserver_wait(&pfx);
+    let wine = |args: &[&str]| run_wine(paths, wine_env, &pfx, args);
+    wine(&["wineboot", "-u"])?;
+    wineserver_wait(paths, &pfx);
     // no crash dialog over the game
-    wine(
-        &pfx,
-        &[
-            "reg",
-            "add",
-            r"HKCU\Software\Wine\WineDbg",
-            "/v",
-            "ShowCrashDialog",
-            "/t",
-            "REG_DWORD",
-            "/d",
-            "0",
-            "/f",
-        ],
-    )?;
+    wine(&[
+        "reg",
+        "add",
+        r"HKCU\Software\Wine\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f",
+    ])?;
     // movies: Wine's FFmpeg source (compressed WMV, as Windows) …
-    wine(
-        &pfx,
-        &[
-            "reg",
-            "add",
-            r"HKCU\Software\Wine\MediaFoundation",
-            "/v",
-            "DisableGstByteStreamHandler",
-            "/t",
-            "REG_DWORD",
-            "/d",
-            "1",
-            "/f",
-        ],
-    )?;
-    wineserver_wait(&pfx);
+    wine(&[
+        "reg",
+        "add",
+        r"HKCU\Software\Wine\MediaFoundation",
+        "/v",
+        "DisableGstByteStreamHandler",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "1",
+        "/f",
+    ])?;
+    wineserver_wait(paths, &pfx);
     // … and a WMV decoder registered for MF RGB32 (docs/RUNTIME_NOTES.md)
     let reg = fs::read_to_string(pfx.join("system.reg")).unwrap_or_default();
     let current = wmv_output_types(&reg).unwrap_or_default();
     let fixed = with_mf_rgb32(&current);
     let hex: String = fixed.iter().map(|b| format!("{b:02x}")).collect();
-    wine(
-        &pfx,
-        &[
-            "reg",
-            "add",
-            WMV_MFT_KEY,
-            "/v",
-            "OutputTypes",
-            "/t",
-            "REG_BINARY",
-            "/d",
-            &hex,
-            "/f",
-        ],
-    )?;
-    wineserver_wait(&pfx);
+    wine(&[
+        "reg",
+        "add",
+        WMV_MFT_KEY,
+        "/v",
+        "OutputTypes",
+        "/t",
+        "REG_BINARY",
+        "/d",
+        &hex,
+        "/f",
+    ])?;
+    wineserver_wait(paths, &pfx);
     fs::write(&marker, PREFIX_VERSION)?;
     Ok(())
 }
@@ -271,11 +322,14 @@ pub fn wmv_output_types(reg: &str) -> Option<Vec<u8>> {
     Some(bytes)
 }
 
-fn wine(pfx: &Path, args: &[&str]) -> Result<()> {
-    let st = Command::new("wine")
+fn run_wine(paths: &Paths, env: &[(String, String)], pfx: &Path, args: &[&str]) -> Result<()> {
+    let st = Command::new(wine_bin(paths, "wine"))
         .args(args)
+        .envs(env.iter().map(|(k, v)| (k, v)))
         .env("WINEPREFIX", pfx)
         .env("WINEDEBUG", "-all")
+        // no Mono/Gecko install prompts: the games need neither
+        .env("WINEDLLOVERRIDES", "mscoree,mshtml=")
         .env_remove("DISPLAY")
         .env_remove("WAYLAND_DISPLAY")
         .stdout(std::process::Stdio::null())
@@ -288,15 +342,15 @@ fn wine(pfx: &Path, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn wineserver_wait(pfx: &Path) {
-    let _ = Command::new("wineserver")
+fn wineserver_wait(paths: &Paths, pfx: &Path) {
+    let _ = Command::new(wine_bin(paths, "wineserver"))
         .arg("-w")
         .env("WINEPREFIX", pfx)
         .status();
 }
 
-fn wineserver_kill(pfx: &Path) {
-    let _ = Command::new("wineserver")
+fn wineserver_kill(paths: &Paths, pfx: &Path) {
+    let _ = Command::new(wine_bin(paths, "wineserver"))
         .arg("-k")
         .env("WINEPREFIX", pfx)
         .status();
@@ -360,8 +414,15 @@ pub fn run(
     display: Display,
     on_start: impl FnOnce(u32),
 ) -> Result<std::process::ExitStatus> {
+    if p.plan.gamescope.is_empty() {
+        return run_direct(paths, game, p, on_start);
+    }
     if p.plan.wine_prefix.is_some() {
-        prepare_prefix(paths)?;
+        let env = match host(paths) {
+            Host::Linux { wine_env, .. } => wine_env,
+            Host::Windows => vec![],
+        };
+        prepare_prefix(paths, &env)?;
     }
     let mut cmd = gamescope_command(&p.plan, display, &p.runtime)?;
     let log_file = fs::OpenOptions::new()
@@ -375,28 +436,148 @@ pub fn run(
     on_start(child.id());
     let status = child.wait()?;
     log::line(paths, &format!("{} ended: {status}", game.slug));
-    finish(p);
+    finish(paths, p);
     Ok(status)
 }
 
-/// Game first, then the board, then Wine (stopping the board while the
-/// game runs shows E0303 on the cabinet screen).
-pub fn finish(p: &Prepared) {
-    if let Ok(mut f) = fs::OpenOptions::new().write(true).open(&p.block) {
+/// A planned process as a direct child (Windows): its own folder, no
+/// console window.
+fn direct_command(c: &launch::Command) -> Command {
+    let mut cmd = Command::new(&c.program);
+    cmd.args(&c.args)
+        .current_dir(&c.cwd)
+        .envs(c.env.iter().map(|(k, v)| (k, v)));
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd
+}
+
+/// Windows: the helpers (board, auth daemon), a pause after each as
+/// TeknoParrotUI makes, then the loader, which waits for the game.
+fn run_direct(
+    paths: &Paths,
+    game: &Game,
+    p: &Prepared,
+    on_start: impl FnOnce(u32),
+) -> Result<std::process::ExitStatus> {
+    let log_file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(paths.data.join(format!("{}.log", game.slug)))?;
+    log::line(paths, &format!("starting {} (direct)", game.slug));
+    let mut helpers = Vec::new();
+    let started = (|| -> Result<std::process::Child> {
+        for h in &p.plan.helpers {
+            let mut c = direct_command(h);
+            c.stdout(log_file.try_clone()?)
+                .stderr(log_file.try_clone()?);
+            helpers.push(
+                rea_launcher_native::child::spawn_tied(&mut c)
+                    .with_context(|| format!("starting {}", h.program))?,
+            );
+            std::thread::sleep(Duration::from_secs(2));
+        }
+        let mut c = direct_command(&p.plan.game);
+        c.stdout(log_file.try_clone()?)
+            .stderr(log_file.try_clone()?);
+        rea_launcher_native::child::spawn_tied(&mut c)
+            .with_context(|| format!("starting {}", p.plan.game.program))
+    })();
+    let mut child = match started {
+        Ok(c) => c,
+        Err(e) => {
+            finish_direct(paths, p, &mut helpers);
+            return Err(e);
+        }
+    };
+    on_start(child.id());
+    let status = child.wait()?;
+    log::line(paths, &format!("{} ended: {status}", game.slug));
+    finish_direct(paths, p, &mut helpers);
+    Ok(status)
+}
+
+/// Tell the board to quit (the game has ended: the stop order of
+/// [`finish`]), give the helpers a moment, then stop what is left: the
+/// helpers, and whatever else runs from the runtime folder (the auth daemon
+/// the loader started).
+fn finish_direct(paths: &Paths, p: &Prepared, helpers: &mut [std::process::Child]) {
+    signal_quit(&p.block);
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while Instant::now() < deadline && helpers.iter_mut().any(|h| matches!(h.try_wait(), Ok(None)))
+    {
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    for h in helpers.iter_mut() {
+        if matches!(h.try_wait(), Ok(None)) {
+            let _ = h.kill();
+            let _ = h.wait();
+        }
+    }
+    #[cfg(windows)]
+    {
+        let n = crate::winproc::kill_under(&p.runtime);
+        if n > 0 {
+            log::line(
+                paths,
+                &format!("stopped {n} leftover process(es) in the runtime"),
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = paths;
+}
+
+fn signal_quit(block: &Path) {
+    if let Ok(mut f) = fs::OpenOptions::new().write(true).open(block) {
         use std::io::{Seek, SeekFrom};
         let _ = f
             .seek(SeekFrom::Start(QUIT as u64))
             .and_then(|_| f.write_all(&[1]));
     }
+}
+
+/// Game first, then the board, then Wine (stopping the board while the
+/// game runs shows E0303 on the cabinet screen).
+pub fn finish(paths: &Paths, p: &Prepared) {
+    signal_quit(&p.block);
     if let Some(pfx) = &p.plan.wine_prefix {
-        std::thread::sleep(std::time::Duration::from_millis(300));
-        wineserver_kill(pfx);
+        std::thread::sleep(Duration::from_millis(300));
+        wineserver_kill(paths, pfx);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bundled_ffmpeg_goes_first_on_the_library_path() {
+        let ff = Path::new("/pkg/components/wine/lib/ffmpeg");
+        assert_eq!(wine_lib_env(None, Some("/x")), vec![]);
+        assert_eq!(
+            wine_lib_env(Some(ff), None),
+            vec![(
+                "LD_LIBRARY_PATH".into(),
+                "/pkg/components/wine/lib/ffmpeg".into()
+            )]
+        );
+        assert_eq!(
+            wine_lib_env(Some(ff), Some("/usr/lib/x")),
+            vec![(
+                "LD_LIBRARY_PATH".into(),
+                "/pkg/components/wine/lib/ffmpeg:/usr/lib/x".into()
+            )]
+        );
+        assert_eq!(
+            wine_lib_env(Some(ff), Some(""))[0].1,
+            "/pkg/components/wine/lib/ffmpeg"
+        );
+    }
 
     #[test]
     fn rgb32_is_added_once() {

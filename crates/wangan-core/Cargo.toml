@@ -12,5 +12,9 @@ wangan-jvs = { path = "../wangan-jvs" }
 sha2 = "0.10"
 rea-launcher.workspace = true
 
+# Directory junctions for the runtime folder (no administrator rights needed)
+[target.'cfg(windows)'.dependencies]
+junction = "2"
+
 [dev-dependencies]
 tempfile = "3"

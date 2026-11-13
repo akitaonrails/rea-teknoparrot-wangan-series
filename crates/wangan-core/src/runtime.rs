@@ -3,7 +3,9 @@
 //! The player's game folder is read-only (it may be on a network share).
 //! The runtime holds symlinks to the big read-only files, copies of the few
 //! files the game or its loader writes, empty save folders, and the
-//! launcher's components. [`plan`] decides from a listing of the game
+//! launcher's components. On Windows, where a symlink needs administrator
+//! rights or developer mode, a linked folder is a directory junction and a
+//! linked file is a copy, refreshed when the game folder's file changes. [`plan`] decides from a listing of the game
 //! folder; [`apply`] carries it out without ever overwriting a file the
 //! game wrote (saves, backups) — only launcher-owned files are refreshed.
 //! Every rule here was seen to matter in docs/RUNTIME_NOTES.md.
@@ -12,7 +14,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::catalog::{Game, Route};
+use crate::catalog::{Game, Platform, Route};
 
 /// Files below this size in an ES3B folder's top level are copied: the
 /// game rewrites its backup files (`F*/G*/BK_*`) there.
@@ -105,6 +107,7 @@ fn es3b_skip(name: &str) -> bool {
         || name.ends_with(".jpg")
 }
 
+/// [`plan_on`] for the platform this launcher was built for.
 pub fn plan(
     game: &Game,
     src: &Path,
@@ -113,6 +116,21 @@ pub fn plan(
     rt: &Path,
     c: &Components,
 ) -> Vec<Op> {
+    plan_on(game, src, items, network_items, rt, c, Platform::HOST)
+}
+
+/// The runtime for `game` on `platform`. Windows runs the games on its own
+/// Direct3D 11, so DXVK goes in on Linux only; the N2 games have no
+/// Windows runtime.
+pub fn plan_on(
+    game: &Game,
+    src: &Path,
+    items: &[Item],
+    network_items: &[Item],
+    rt: &Path,
+    c: &Components,
+    platform: Platform,
+) -> Vec<Op> {
     match game.route {
         Route::Es3b => {
             let op = if game.id == crate::catalog::GameId::Mt6rr {
@@ -120,8 +138,13 @@ pub fn plan(
             } else {
                 &c.openparrot
             };
-            plan_es3b(src, items, network_items, rt, c, op)
+            let mut ops = plan_es3b(src, items, network_items, rt, c, op);
+            if platform == Platform::Windows {
+                ops.retain(|o| !matches!(o, Op::Refresh { from, .. } if from.starts_with(&c.dxvk)));
+            }
+            ops
         }
+        Route::NativeN2 if platform == Platform::Windows => vec![],
         Route::NativeN2 => plan_n2(src, items, rt, c),
         Route::Chihiro | Route::System246 => vec![],
     }
@@ -332,19 +355,7 @@ pub fn apply(ops: &[Op]) -> io::Result<()> {
     for op in ops {
         match op {
             Op::Dir(d) => fs::create_dir_all(d)?,
-            Op::Link { target, at } => {
-                if fs::symlink_metadata(at).is_ok() {
-                    if fs::read_link(at).ok().as_deref() == Some(target.as_path()) {
-                        continue;
-                    }
-                    if fs::symlink_metadata(at)?.file_type().is_symlink() {
-                        fs::remove_file(at)?;
-                    } else {
-                        continue; // a real file/folder the game made: keep it
-                    }
-                }
-                std::os::unix::fs::symlink(target, at)?;
-            }
+            Op::Link { target, at } => link(target, at)?,
             Op::CopyOnce { from, to } => {
                 if fs::symlink_metadata(to).is_err() && from.exists() {
                     copy_atomic(from, to)?;
@@ -363,14 +374,125 @@ pub fn apply(ops: &[Op]) -> io::Result<()> {
                 if !same {
                     copy_atomic(from, to)?;
                 }
+                #[cfg(unix)]
                 if *exec {
                     use std::os::unix::fs::PermissionsExt;
                     fs::set_permissions(to, fs::Permissions::from_mode(0o755))?;
                 }
+                #[cfg(not(unix))]
+                let _ = exec;
             }
         }
     }
     Ok(())
+}
+
+/// A symlink `at` → `target`; an existing real file or folder (the game
+/// made it) is kept.
+#[cfg(unix)]
+fn link(target: &Path, at: &Path) -> io::Result<()> {
+    if let Ok(m) = fs::symlink_metadata(at) {
+        if fs::read_link(at).ok().as_deref() == Some(target) {
+            return Ok(());
+        }
+        if !m.file_type().is_symlink() {
+            return Ok(()); // a real file/folder the game made: keep it
+        }
+        fs::remove_file(at)?;
+    }
+    std::os::unix::fs::symlink(target, at)
+}
+
+/// Windows: a folder becomes a directory junction (no administrator rights
+/// needed), a file a copy kept in step with the game folder's.
+#[cfg(windows)]
+fn link(target: &Path, at: &Path) -> io::Result<()> {
+    if target.is_dir() {
+        junction_dir(target, at)
+    } else {
+        mirror_file(target, at)
+    }
+}
+
+#[cfg(windows)]
+fn junction_dir(target: &Path, at: &Path) -> io::Result<()> {
+    if let Ok(m) = fs::symlink_metadata(at) {
+        if !m.file_type().is_symlink() {
+            return Ok(()); // a real folder the game made: keep it
+        }
+        if junction::get_target(at).ok().as_deref() == Some(target) {
+            return Ok(());
+        }
+        // a junction or symlink to somewhere else: drop the link, never what it points to
+        fs::remove_dir(at).or_else(|_| fs::remove_file(at))?;
+    }
+    junction::create(target, at).or_else(|e| {
+        // a junction can't point at a network share; a directory symlink
+        // can, where the player allowed them (developer mode)
+        std::os::windows::fs::symlink_dir(target, at).map_err(|_| {
+            io::Error::new(
+                e.kind(),
+                format!(
+                    "cannot link {} into the runtime folder ({e}); \
+                     a game folder on a network share needs Windows developer mode",
+                    target.display()
+                ),
+            )
+        })
+    })
+}
+
+/// What [`mirror_file`] does with the runtime's copy of a game file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mirror {
+    /// Missing, or the game folder's file changed: copy it.
+    Copy,
+    /// A link left by an older layout: replace it with a copy.
+    Replace,
+    /// Same size and modification time as the source.
+    Keep,
+}
+
+/// Decide from the two files' metadata (`at` is `None` when missing).
+pub fn mirror_action(src: &fs::Metadata, at: Option<&fs::Metadata>) -> Mirror {
+    match at {
+        None => Mirror::Copy,
+        Some(m) if m.file_type().is_symlink() || m.is_dir() => Mirror::Replace,
+        Some(m) if m.len() == src.len() && m.modified().ok() == src.modified().ok() => Mirror::Keep,
+        Some(_) => Mirror::Copy,
+    }
+}
+
+/// Keep `at` a copy of `target` (Windows's stand-in for a file symlink):
+/// copied when missing or when size or modification time differ; the copy
+/// gets the source's modification time.
+pub fn mirror_file(target: &Path, at: &Path) -> io::Result<()> {
+    let src = fs::metadata(target)?;
+    let cur = fs::symlink_metadata(at).ok();
+    match mirror_action(&src, cur.as_ref()) {
+        Mirror::Keep => return Ok(()),
+        Mirror::Replace => {
+            let m = cur.as_ref().expect("Replace has metadata");
+            if m.is_dir() && !m.file_type().is_symlink() {
+                return Ok(()); // a real folder in a file's place: the game's, keep it
+            }
+            fs::remove_file(at).or_else(|_| fs::remove_dir(at))?;
+        }
+        Mirror::Copy => {}
+    }
+    let tmp = at.with_extension("rea-tmp");
+    let _ = fs::remove_file(&tmp);
+    fs::copy(target, &tmp)?;
+    if let Ok(t) = src.modified() {
+        fs::File::options()
+            .write(true)
+            .open(&tmp)?
+            .set_modified(t)?;
+    }
+    if fs::symlink_metadata(at).is_ok() {
+        fs::remove_file(at)?;
+    }
+    fs::rename(&tmp, at)
 }
 
 /// Whole-file swap (never write through an existing link).
@@ -548,6 +670,124 @@ mod tests {
         assert!(rt.join("TP").is_dir());
         // and the source was never written
         assert_eq!(fs::read(src.join("FBK.bin")).unwrap(), b"dump");
+    }
+
+    #[test]
+    fn windows_runtime_leaves_dxvk_out_and_has_no_n2_games() {
+        let src = Path::new("/g");
+        let rt = Path::new("/rt");
+        let items = vec![item("wmn5r.exe", false, 33_000_000)];
+        let c = comps(Path::new("/c"));
+        let dxvk = |ops: &[Op]| {
+            ops.iter()
+                .filter(|o| matches!(o, Op::Refresh { from, .. } if from.starts_with("/c/dxvk")))
+                .count()
+        };
+        let linux = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Platform::Linux);
+        let windows = plan_on(
+            game(GameId::Mt5),
+            src,
+            &items,
+            &[],
+            rt,
+            &c,
+            Platform::Windows,
+        );
+        assert_eq!(dxvk(&linux), 2);
+        assert_eq!(dxvk(&windows), 0);
+        // everything else is the same runtime
+        assert_eq!(linux.len() - 2, windows.len());
+        assert!(windows.contains(&Op::Refresh {
+            from: PathBuf::from("/c/io/wangan-io.exe"),
+            to: rt.join("wangan-io.exe"),
+            exec: false
+        }));
+        let n2 = vec![item("main", false, 9_000_000)];
+        assert!(plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Platform::Windows).is_empty());
+        assert!(!plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Platform::Linux).is_empty());
+    }
+
+    #[test]
+    fn mirrored_files_are_copied_once_and_follow_the_source() {
+        let t = tempfile::tempdir().unwrap();
+        let src = t.path().join("wmn5r.exe");
+        let at = t.path().join("rt.exe");
+        fs::write(&src, b"v1").unwrap();
+        assert_eq!(
+            mirror_action(&fs::metadata(&src).unwrap(), None),
+            Mirror::Copy
+        );
+        mirror_file(&src, &at).unwrap();
+        assert_eq!(fs::read(&at).unwrap(), b"v1");
+        let (s, a) = (fs::metadata(&src).unwrap(), fs::metadata(&at).unwrap());
+        assert_eq!(a.modified().unwrap(), s.modified().unwrap());
+        assert_eq!(mirror_action(&s, Some(&a)), Mirror::Keep);
+        // the game folder's file changes: the copy follows
+        fs::write(&src, b"v2 longer").unwrap();
+        mirror_file(&src, &at).unwrap();
+        assert_eq!(fs::read(&at).unwrap(), b"v2 longer");
+        assert!(!at.with_extension("rea-tmp").exists());
+        // a folder where the file goes is the game's and is kept
+        let dir = t.path().join("dir.exe");
+        fs::create_dir(&dir).unwrap();
+        assert_eq!(
+            mirror_action(
+                &fs::metadata(&src).unwrap(),
+                Some(&fs::metadata(&dir).unwrap())
+            ),
+            Mirror::Replace
+        );
+        mirror_file(&src, &dir).unwrap();
+        assert!(dir.is_dir());
+        // and the source is never written
+        assert_eq!(fs::read(&src).unwrap(), b"v2 longer");
+    }
+
+    /// Links in the runtime: the folder is reachable through it, the source
+    /// is never written, a second apply changes nothing, and a real folder
+    /// the game made in a link's place is kept. Junctions and copies on
+    /// Windows, symlinks elsewhere.
+    #[test]
+    fn links_reach_the_game_folder_and_survive_a_second_apply() {
+        let t = tempfile::tempdir().unwrap();
+        let src = t.path().join("game");
+        let rt = t.path().join("rt");
+        fs::create_dir_all(src.join("data")).unwrap();
+        fs::write(src.join("data/a.bin"), b"data").unwrap();
+        fs::write(src.join("big.exe"), b"exe").unwrap();
+        fs::create_dir_all(src.join("movie")).unwrap();
+        let ops = vec![
+            Op::Dir(rt.clone()),
+            Op::Link {
+                target: src.join("data"),
+                at: rt.join("data"),
+            },
+            Op::Link {
+                target: src.join("big.exe"),
+                at: rt.join("big.exe"),
+            },
+        ];
+        apply(&ops).unwrap();
+        apply(&ops).unwrap();
+        assert_eq!(fs::read(rt.join("data/a.bin")).unwrap(), b"data");
+        assert_eq!(fs::read(rt.join("big.exe")).unwrap(), b"exe");
+        // a link pointing elsewhere is moved, the folder it pointed to untouched
+        let moved = vec![Op::Link {
+            target: src.join("movie"),
+            at: rt.join("data"),
+        }];
+        apply(&moved).unwrap();
+        assert!(rt.join("data").read_dir().unwrap().next().is_none());
+        assert_eq!(fs::read(src.join("data/a.bin")).unwrap(), b"data");
+        // a real folder in a link's place is kept
+        fs::create_dir_all(rt.join("TP")).unwrap();
+        fs::write(rt.join("TP/save"), b"s").unwrap();
+        apply(&[Op::Link {
+            target: src.join("data"),
+            at: rt.join("TP"),
+        }])
+        .unwrap();
+        assert_eq!(fs::read(rt.join("TP/save")).unwrap(), b"s");
     }
 
     #[test]
