@@ -107,7 +107,20 @@ the 4K multi-monitor span; .NET Framework 4.6.2 via winetricks; the native
   MangoHud. Anything above 60 must be shown to keep game speed correct
   before it ships (not verified for any title yet).
 
-## 6. Owner decisions needed (STANDARDS: DRM, licence, public)
+## 6. Owner decisions
+
+Decided by the owner on 2026-11-13:
+
+| # | Decision | Reason |
+|---|---|---|
+| D1 | **DRM exception approved**: the launcher may use the maintained community loaders (OpenParrot_WMMT, WanganArcadeLoader, pcsx2x6, Cxbx-R/TeknoParrot builds) that answer the cabinets' HASP dongle and card-reader checks. The launcher writes no crack of its own, never patches DRM itself, ships no game files and never tells players where to get dumps. | No route runs these arcade dumps otherwise; the owner plays their own dumps. |
+| D2 | **Native-first hybrid runtime**: MT3/3DX+ native Linux (WanganArcadeLoader); MT5–6RR on OpenParrot_WMMT under Wine with our own Rust I/O board fed by SDL; Bayshore locally for saves; Wangan R on the pcsx2x6 Linux AppImage; MT1 on Cxbx-R under Wine (probe first). | Best input/display quality; avoids the parked TeknoParrot-on-Wine treadmill and the closed, unbundleable core. |
+| D3 | **Licence GPL-3.0** for this repository. | Compatible with every open component used; allows porting the GPL I/O-board logic. |
+| D4 | **Original illustrations** for the hub art (no official key art, no game files). | No licensing risk. |
+
+Still open: a Namco System 246 BIOS for Wangan R (the owner must supply it).
+
+### Questions that were put to the owner
 
 1. **Dongle/HASP and card emulation.** Every loader that runs these dumps
    (TeknoParrot core, OpenParrot_WMMT, WanganArcadeLoader) answers the
