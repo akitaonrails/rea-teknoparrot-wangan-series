@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wangan-jvs", "crates/wangan-io"]
+members = ["crates/wangan-jvs", "crates/wangan-io", "crates/wangan-core"]
 resolver = "3"
 
 [workspace.package]

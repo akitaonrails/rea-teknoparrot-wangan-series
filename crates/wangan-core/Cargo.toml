@@ -1,0 +1,15 @@
+[package]
+name = "wangan-core"
+description = "The Wangan Midnight launcher's logic: games, editions, runtime folders, settings and launch plans"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+wangan-jvs = { path = "../wangan-jvs" }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"

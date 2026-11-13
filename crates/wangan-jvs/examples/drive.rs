@@ -27,7 +27,11 @@ fn main() {
     };
     let script = std::fs::read_to_string(&a[3]).expect("script");
     let mut steps: Vec<(f64, Vec<(String, String)>)> = Vec::new();
-    for line in script.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+    for line in script
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+    {
         let mut parts = line.split_whitespace();
         let t: f64 = parts.next().unwrap().parse().expect("time");
         let kv = parts
@@ -47,7 +51,10 @@ fn main() {
     loop {
         let now = start.elapsed().as_secs_f64();
         while next < steps.len() && steps[next].0 <= now {
-            c = Controls { gear: c.gear, ..Controls::default() };
+            c = Controls {
+                gear: c.gear,
+                ..Controls::default()
+            };
             for (k, v) in &steps[next].1 {
                 let f = || v.parse::<f32>().expect("number");
                 let b = || v != "0";
@@ -77,7 +84,12 @@ fn main() {
         s.quit = quit;
         let bytes = s.encode();
         // In place, not rename: the board keeps the file mapped.
-        let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(false).open(&a[1]).expect("block");
+        let mut f = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&a[1])
+            .expect("block");
         f.write_all(&bytes).expect("write");
         drop(f);
         if quit {
