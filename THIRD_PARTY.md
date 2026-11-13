@@ -7,12 +7,20 @@ points the launcher at their own dumps; the launcher reads them in place.
 
 | Component | What it does here | Licence | Source / pin |
 |---|---|---|---|
-| OpenParrot (teknogods) | Loader and game patches for Maximum Tune 5, 5DX+, 6, 6R under Wine (dongle/card emulation: owner decision 2026-11-13, see `docs/RESEARCH.md`) | GPL-3.0 | built from fc8ba63 with `patches/clang-cl/openparrot` + `patches/openparrot/0001-0002`: OpenParrot64.dll sha256 `6d987e925c2029421a192811c2c87d2d8063f875e76b3191910f3174bcbadad1` |
-| OpenParrot_WMMT (valkyrieasyraf) | The Maximum Tune 6RR module | GPL-3.0 | built from a89d064 with `patches/clang-cl/openparrot-wmmt` + `patches/openparrot-wmmt/0001`: OpenParrot64.dll sha256 `2b599aea784af881f23e91b63d42b3a569c56f2772e6550b773a68fdb7c6f8d6` |
+| OpenParrot (teknogods) | Loader and game patches for Maximum Tune 5, 5DX+, 6, 6R (dongle/card emulation: owner decision 2026-11-13, see `docs/RESEARCH.md`) | GPL-3.0 | `OpenParrot64.dll`, `OpenParrotLoader64.exe` built in the release workflow with MSVC from fc8ba63 (`packaging/sources.sh`) + `patches/openparrot/0001-0002`; `iDmacDrv64.dll` from the release asset `OpenParrotx64.zip` sha256 `7da6b385b670734447fc1a56a13fb28361d517b0a4d7a56b24b2ec5c156ae5c0` (`packaging/components.pins`) |
+| OpenParrot_WMMT (valkyrieasyraf) | The Maximum Tune 6RR module | GPL-3.0 | built the same way from a89d064 + `patches/openparrot-wmmt/0001` |
 | OpenBanapass (ProjectAsakura), as `bngrw.dll` in the OpenParrot package | Card reader stand-in | MIT | same archive |
-| DXVK 3.1.1 | Direct3D 11 on Vulkan | zlib | `dxvk-3.1.1.tar.gz` sha256 `40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608` |
-| WanganArcadeLoader (vixen256) | Runs Maximum Tune 3 / 3DX+ natively on Linux (dongle/card emulation: same owner decision) | GPL-3.0 | built from d3fc426 with `patches/wal/0001` (input block): libwal_3dxp.so sha256 `b5bcd16f4b14502e8d189bcb89b2ca225a9f97faef90240c48633bfa0987f8a8`; `libopenal.so`, `gamecontrollerdb.txt` from release `0.5.1` `dist.zip` sha256 `3b04a845015caecbac610ec530cc35bd26ab4a1d2da718c9392fbb92bcbe66c1` |
+| DXVK 3.1.1 | Direct3D 11 on Vulkan under Wine (Linux package) | zlib | `dxvk-3.1.1.tar.gz` sha256 `40565b4a724aadc4433fa4e010b4b23916d9b1f1baeee64e17186db94f54e608` |
+| WanganArcadeLoader (vixen256) | Runs Maximum Tune 3 / 3DX+ natively on Linux (dongle/card emulation: same owner decision) | GPL-3.0 | `libwal_3dxp.so` built from d3fc426 with `patches/wal/0001` (input block) by `scripts/build-wal.sh` on Debian bookworm; `libopenal.so`, `gamecontrollerdb.txt`, `tmp/` from release `0.5.1` `dist.zip` sha256 `3b04a845015caecbac610ec530cc35bd26ab4a1d2da718c9392fbb92bcbe66c1` |
+| Wine 11.21 (WineHQ; Kron4ek's portable WoW64 build) | Runs the Windows games on Linux (`components/wine` in the Linux package) | LGPL-2.1+ | `wine-11.21-amd64-wow64.tar.xz` sha256 `33f3c5b56b1deb8f6725539ea006f27b5d781b3b4ae6a8a1f492d8af4fb9dc83` (the SDK's Wine pin); source: unmodified WineHQ 11.21 |
+| FFmpeg 4.4.5 (libavformat, libavcodec, libavutil) | Wine's movie demuxer (`winedmo`) links against FFmpeg 4; built without GPL parts or external libraries by `scripts/build-ffmpeg.sh` (`components/wine/lib/ffmpeg`) | LGPL-2.1+ | `ffmpeg-4.4.5.tar.xz` sha256 `f9514e0d3515aee5a271283df71636e1d1ff7274b15853bcd84e144be416ab07`; the tarball is in the release's source archive |
+| SDL2 | Pads and wheels | zlib | Windows: `SDL2.dll` from `SDL2-devel-2.32.10-mingw.tar.gz` (`packaging/sdl2.pin`); Linux: Debian bookworm's `libSDL2-2.0.so.0`, in `lib/` |
 | Barlow, Barlow Condensed (The Barlow Project Authors) | Interface typefaces | SIL OFL 1.1 (`assets/fonts/OFL.txt`) | google/fonts `ofl/barlow`, `ofl/barlowcondensed` |
+
+Corresponding source: every release has `WanganLauncher-<version>-source.tar.gz`
+(`scripts/source-archive.sh`): this repository, the three GPL upstream
+trees above at their pinned commits with our patches applied, and the
+FFmpeg source.
 
 ## Code we ported or follow
 
