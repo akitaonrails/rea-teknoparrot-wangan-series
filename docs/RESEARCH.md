@@ -32,7 +32,7 @@ Observations on the dumps:
 - No Namco System 246 BIOS was found in the library or bios folders, and
   neither TeknoParrot's `pcsx2x6` package nor pcsx2x6 upstream bundles one.
   **Wangan R cannot boot until the owner supplies that BIOS.**
-- The ROM share is NFS (`/mnt/terachad`); the project is on btrfs, so
+- The owner's game library is on an NFS share and the project on btrfs, so
   hard-linking a runtime copy is impossible. The runtime must be a symlink
   farm or a copy (9–16 GB per ES3B title).
 
