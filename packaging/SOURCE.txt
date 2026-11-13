@@ -1,0 +1,15 @@
+Source code
+
+This package holds GPL-3.0 programs: the launcher and its I/O board, and
+builds of OpenParrot (teknogods), OpenParrot_WMMT (valkyrieasyraf) and
+WanganArcadeLoader (vixen256) with this project's patches. Their complete
+corresponding source, with the patches applied, is the release asset
+WanganLauncher-<version>-source.tar.gz next to this package:
+
+  https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases
+
+The Linux package also holds Wine 11.21 (LGPL-2.1+, unmodified; see
+licenses/wine/SOURCE.txt) and FFmpeg 4.4.5 libraries (LGPL-2.1+; the
+source tarball is in the same source archive, the configure line in
+licenses/ffmpeg/CONFIGURE.txt). Licences of every component:
+licenses/THIRD_PARTY.md.

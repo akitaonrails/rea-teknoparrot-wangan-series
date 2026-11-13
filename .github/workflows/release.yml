@@ -1,0 +1,229 @@
+# Builds the full release packages for Linux and Windows from pinned
+# sources and pinned downloads (packaging/components.pins,
+# packaging/sources.sh). A manual run uploads them as workflow artifacts;
+# pushing a tag vX.Y.Z (matching the workspace version) also publishes a
+# GitHub release with the packages, the source archive and SHA256SUMS.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # OpenParrot64.dll + OpenParrotLoader64.exe with MSVC, as upstream's
+  # appveyor.yml builds them (the repository's premake5 alpha14 writes
+  # VS2017 projects; msbuild builds them Release x64 with the runner's
+  # VS2022 toolset, v143): teknogods
+  # OpenParrot (MT5-6R) and valkyrieasyraf OpenParrot_WMMT (6RR), each
+  # with our patches.
+  openparrot:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Sources at the pinned commits, with our patches
+        shell: bash
+        run: scripts/fetch-sources.sh "$RUNNER_TEMP/src" openparrot openparrot-wmmt
+      - name: The fixes are in the sources being built
+        shell: bash
+        run: |
+          s="$RUNNER_TEMP/src"
+          git -C "$s/openparrot" diff --stat
+          git -C "$s/openparrot-wmmt" diff --stat
+          grep -n "fwrite(carData, 1, 0xE0, carSave)" "$s/openparrot/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp"
+          grep -n -i "fcontext" "$s/openparrot/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp" | head -5
+          grep -n "mForceFeedback\|mIcCardVender" "$s/openparrot-wmmt/OpenParrot/src/Functions/Games/ES3X/WMMT6RR.cpp" | head -5
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build
+        shell: cmd
+        run: |
+          for %%d in (openparrot openparrot-wmmt) do (
+            pushd "%RUNNER_TEMP%\src\%%d" || exit /b 1
+            premake5.exe vs2017 || exit /b 1
+            msbuild OpenParrot.sln /m /v:minimal /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /t:OpenParrot;OpenParrotLoader || exit /b 1
+            popd
+          )
+      - name: Collect
+        shell: bash
+        run: |
+          set -eu
+          for d in upstream:openparrot wmmt:openparrot-wmmt; do
+            mkdir -p "dist/openparrot/${d%%:*}"
+            b="$RUNNER_TEMP/src/${d#*:}/build/bin/release"
+            cp "$b/OpenParrot64.dll" "$b/OpenParrotLoader64.exe" "dist/openparrot/${d%%:*}/"
+          done
+          (cd dist/openparrot && sha256sum */*)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openparrot-build
+          path: dist/openparrot/
+          if-no-files-found: error
+
+  # The Windows launcher and the I/O board: MinGW-w64 + LLD on Arch, like
+  # the local `gaming` distrobox.
+  windows-programs:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 60
+    steps:
+      - name: System packages
+        run: pacman -Syu --noconfirm --needed git mingw-w64-gcc lld rustup curl
+      - uses: actions/checkout@v5
+      - name: Rust
+        run: rustup default stable && rustup target add x86_64-pc-windows-gnu
+      - name: Build
+        run: scripts/build-launcher.sh windows
+      - name: Imports are complete (LLD)
+        run: sh sdk/packaging/check-imports.sh target/x86_64-pc-windows-gnu/release/wangan-launcher.exe target/x86_64-pc-windows-gnu/release/wangan-io.exe
+      - name: Collect
+        run: |
+          mkdir -p dist/windows
+          cp target/x86_64-pc-windows-gnu/release/wangan-launcher.exe target/x86_64-pc-windows-gnu/release/wangan-io.exe dist/windows/
+          sdl=$(sed -n 's/^dir=//p' packaging/sdl2.pin)
+          cp dist/sdl2/SDL2.dll dist/windows/
+          cp "dist/sdl2/${sdl%/*}/LICENSE.txt" dist/windows/SDL2-LICENSE.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-programs
+          path: dist/windows/
+          if-no-files-found: error
+
+  # The Linux launcher, WanganArcadeLoader (i686) and FFmpeg 4 for the
+  # bundled Wine, on Debian bookworm (glibc 2.36) so they run on older
+  # distributions too.
+  linux-programs:
+    runs-on: ubuntu-24.04
+    container: debian:bookworm
+    timeout-minutes: 90
+    steps:
+      - name: System packages
+        run: |
+          dpkg --add-architecture i386
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential gcc-multilib g++-multilib \
+            cmake pkg-config ca-certificates git curl xz-utils patch \
+            libsdl2-dev libsdl2-dev:i386 libdbus-1-dev:i386 libdecor-0-dev:i386 \
+            libxrandr-dev:i386 libxinerama-dev:i386 libxcursor-dev:i386 libxi-dev:i386 \
+            libgl-dev:i386 libglib2.0-dev:i386 libibus-1.0-dev:i386 libdrm-dev:i386
+      - uses: actions/checkout@v5
+      - name: Rust
+        run: |
+          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Launcher
+        run: |
+          # libSDL2 ships in lib/ beside the program, found through its RUNPATH
+          RUSTFLAGS='-C link-arg=-Wl,-rpath,$ORIGIN/lib' cargo build --release --locked -p wangan-launcher
+          mkdir -p dist/linux/lib
+          cp target/release/wangan-launcher dist/linux/
+          cp -L "$(ldconfig -p | awk '$1 == "libSDL2-2.0.so.0" && /x86-64/ { print $NF; exit }')" dist/linux/lib/
+          cp /usr/share/doc/libsdl2-2.0-0/copyright dist/linux/SDL2-copyright.txt
+          readelf -d dist/linux/wangan-launcher | grep -E "RUNPATH|NEEDED"
+      - name: WanganArcadeLoader
+        run: |
+          rustup target add i686-unknown-linux-gnu
+          scripts/fetch-sources.sh "$RUNNER_TEMP/src" wal
+          scripts/build-wal.sh "$RUNNER_TEMP/src/wal" "$RUNNER_TEMP/wal"
+          cp "$RUNNER_TEMP/wal/libwal_3dxp.so" dist/linux/
+          objdump -T dist/linux/libwal_3dxp.so | grep -o "GLIBC_[0-9.]*" | sort -uV | tail -1
+      - name: FFmpeg 4 for Wine's movie demuxer
+        run: |
+          scripts/build-ffmpeg.sh "$RUNNER_TEMP/ffmpeg"
+          mkdir -p dist/linux/ffmpeg
+          cp -r "$RUNNER_TEMP/ffmpeg/lib" "$RUNNER_TEMP/ffmpeg/CONFIGURE.txt" "$RUNNER_TEMP/ffmpeg/COPYING.LGPLv2.1" dist/linux/ffmpeg/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-programs
+          path: dist/linux/
+          if-no-files-found: error
+
+  packages:
+    needs: [openparrot, windows-programs, linux-programs]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends zip unzip xz-utils
+      - uses: actions/download-artifact@v4
+        with:
+          name: openparrot-build
+          path: dist/openparrot
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-programs
+          path: dist/windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-programs
+          path: dist/linux
+      - name: Linux package
+        run: |
+          chmod +x dist/linux/wangan-launcher
+          scripts/package.sh linux
+      - name: Windows package
+        run: scripts/package.sh windows
+      - name: Source archive
+        run: scripts/source-archive.sh
+      - name: Contents
+        run: |
+          cd dist/pkg
+          ls -l *.tar.gz *.zip
+          tar -tzf WanganLauncher-*-linux-x86_64.tar.gz | grep -v "/components/wine/" | sort
+          unzip -l WanganLauncher-*-windows-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/pkg/WanganLauncher-*-linux-x86_64.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/pkg/WanganLauncher-*-windows-x86_64.zip
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: dist/pkg/WanganLauncher-*-source.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [packages]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag matches the workspace version
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{linux,windows,source}"
+          path: dist/pkg
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist/pkg && sha256sum WanganLauncher-* > SHA256SUMS && cat SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/pkg/WanganLauncher-* dist/pkg/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --title "Wangan Midnight launcher ${GITHUB_REF_NAME#v}" \
+            --notes-file packaging/RELEASE_NOTES.md

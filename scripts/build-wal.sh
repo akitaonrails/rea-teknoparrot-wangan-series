@@ -3,12 +3,15 @@
 #
 # usage: scripts/build-wal.sh <src_dir> <out_dir>
 #
-#   src_dir  a vixen256/WanganArcadeLoader0.5 checkout at d3fc426; never modified
+#   src_dir  a vixen256/WanganArcadeLoader0.5 checkout at d3fc426 (pristine,
+#            or already patched by scripts/fetch-sources.sh); never modified
 #   out_dir  gets a scratch copy (out_dir/src), the cargo target dir
 #            (out_dir/target), libwal_3dxp.so and SHA256SUMS
 #
 # Needs cargo with the i686-unknown-linux-gnu target, cmake, gcc -m32 and the
-# lib32 X11/GL/dbus/wayland packages (run it in the `gaming` distrobox).
+# 32-bit X11/GL/dbus/wayland development packages: Arch's lib32-* (the
+# `gaming` distrobox) or Debian's :i386 multiarch ones (the release build
+# runs on Debian bookworm, so the library needs only glibc 2.36).
 #
 # Build fixes that stay out of the patch (they are about today's toolchain,
 # not about WAL): SDL2 header paths and C standard, a rustc lint, and:
@@ -29,8 +32,10 @@ rm -rf "$s" "$out/retour"
 
 # 1. scratch copy + patches
 cp -a "$src" "$s"; rm -rf "$s/.git"
+already=
+grep -qs WANGAN_INPUT_BLOCK "$s/src/block.rs" && already=1
 for p in "$(realpath "$patches")"/*.patch; do
-  [ -e "$p" ] || continue
+  [ -e "$p" ] && [ -z "$already" ] || continue
   echo "patch: $(basename "$p")"
   # not `git apply`: inside another git work tree it silently skips the files
   patch -p1 --forward --batch -d "$s" < "$p"
@@ -41,13 +46,20 @@ printf '\n[workspace]\n' >> "$s/Cargo.toml"
 
 export CARGO_TARGET_DIR=$out/target
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-# as WAL's makefile: lets pkg-config answer for the 32-bit cross build
-export PKG_CONFIG_SYSROOT_DIR=/usr/lib32/pkgconfig/
+# 32-bit pkg-config files: Arch lib32 or Debian multiarch
+if [ -d /usr/lib/i386-linux-gnu/pkgconfig ]; then
+  lib32=/usr/lib/i386-linux-gnu
+  export PKG_CONFIG_PATH=$lib32/pkgconfig
+else
+  lib32=/usr/lib32
+fi
+# as WAL's makefile and CI: lets pkg-config answer for the 32-bit cross build
+export PKG_CONFIG_SYSROOT_DIR=$lib32/pkgconfig/
 # ...but that also prefixes the include paths the bundled SDL2 gets from
 # pkg-config; WAL's CI copies these headers to /usr/include, we pass them
-CFLAGS="${CFLAGS:-} -I/usr/lib32/dbus-1.0/include"
-for d in dbus-1.0 libdecor-0 libdrm pipewire-0.3 spa-0.2; do
-  CFLAGS="$CFLAGS -I/usr/include/$d"
+CFLAGS="${CFLAGS:-} -I$lib32/dbus-1.0/include -I$lib32/glib-2.0/include"
+for d in dbus-1.0 libdecor-0 libdrm pipewire-0.3 spa-0.2 ibus-1.0 glib-2.0; do
+  if [ -d "/usr/include/$d" ]; then CFLAGS="$CFLAGS -I/usr/include/$d"; fi
 done
 # SDL 2.0.x predates C23 (GCC 15 default) and GCC 14 making this an error
 export CFLAGS="$CFLAGS -std=gnu17 -Wno-error=incompatible-pointer-types"
