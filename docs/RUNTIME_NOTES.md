@@ -120,7 +120,8 @@ by edition hash, input block driven by `examples/drive` (`--no-input`).
 | MT5DX+ | race played (104 km/h), steering input turned the car; clean exit |
 | MT5 | race played (Galant, 104 km/h) |
 | MT6R | race played (91 km/h) |
-| MT3 | boots to the attract loop (the stock loader ignores the input block; race verified earlier with keyboard input) |
+| MT3 | race played from the input block with the patched loader (`patches/wal`, `libwal_3dxp.so` b5bcd16f…f8a8): card creation, name entry by steering, story race, 103 km/h, steering |
+| MT3DX+ | race played from the input block with the patched loader: manual gearbox 1→2→3 on the HUD, 108 km/h, steering both ways; card insert reloads the saved card |
 
 gamescope's FSR output fails in the **headless** backend
 (`SyncobjFdToHandle … failed to create fsr output`), so headless runs use
