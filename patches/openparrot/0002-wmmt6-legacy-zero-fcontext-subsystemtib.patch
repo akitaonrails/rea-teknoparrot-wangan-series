@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: REA <rea@localhost>
+Date: Fri, 13 Nov 2026 15:51:47 -0300
+Subject: [PATCH] WMMT6 legacy: zero the SubSystemTib slot of new boost.context
+ frames
+
+WMMT6 (Export 1.03.04) runs part of its game flow in boost.context
+coroutines. The game's make_fcontext() leaves the frame slot at +0xB8
+uninitialised, and jump_fcontext() loads that slot into the TEB's
+NT_TIB.SubSystemTib (gs:[0x18]) on the first switch into the context.
+Windows ignores that field. Wine's ntdll treats a non-zero SubSystemTib
+as a Win16 TIB and takes the current directory from it in
+RtlGetFullPathName_U, so a relative-path file call inside such a
+coroutine faults on stale stack bytes: LoadGameData's
+fopen("openprogress.sav") right after "Not Use Card" crashes the game
+under Wine.
+
+Hook make_fcontext (found by pattern) and zero the slot, as later
+boost.context releases do ("set fiber-storage to zero").
+---
+ .../src/Functions/Games/ES3X/WMMT6_LEG.cpp    | 24 +++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+index 21929d2..3eab790 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+@@ -719,6 +719,23 @@ static __int64 __fastcall MileageFix(__int64 a1)
+ 	return result;
+ }
+ 
++// The game's coroutines use boost.context. Its make_fcontext() (this build)
++// fills a fresh context frame but leaves the slot at +0xB8 uninitialised,
++// and jump_fcontext() pops that slot into the TEB's NT_TIB.SubSystemTib
++// (gs:[0x18]) when it first switches to the new context. Windows never reads
++// that field; Wine's ntdll takes a non-zero SubSystemTib as a Win16 TIB and
++// reads the current directory from it, so any relative-path file call made
++// inside such a coroutine (fopen("openprogress.sav") in LoadGameData after
++// "Not Use Card") faults on the stale stack bytes. Zero the slot.
++static void* (__fastcall* g_origMakeFcontext)(void*, size_t, void*);
++
++static void* __fastcall MakeFcontextHook(void* sp, size_t size, void* fn)
++{
++	void* ctx = g_origMakeFcontext(sp, size, fn);
++	*(uintptr_t*)((uintptr_t)ctx + 0xB8) = 0;
++	return ctx;
++}
++
+ static InitFunction Wmmt6Func([]()
+ {
+ 	// folder for path redirections
+@@ -763,6 +780,13 @@ static InitFunction Wmmt6Func([]()
+ 	MH_CreateHookApi(L"WS2_32", "bind", Hook_bind, reinterpret_cast<LPVOID*>(&pbind));
+ 	MH_CreateHook((void*)(imageBase + 0x35AAC0), MileageFix, (void**)&g_origMileageFix);
+ 
++	// make_fcontext: mov rax,rcx; sub rax,28h; and rax,-10h; sub rax,128h; mov [rax+118h],r8
++	auto makeFcontext = hook::pattern("48 8B C1 48 83 E8 28 48 83 E0 F0 48 2D 28 01 00 00 4C 89 80 18 01 00 00");
++	if (makeFcontext.size() == 1)
++	{
++		MH_CreateHook(makeFcontext.get_first(), MakeFcontextHook, (void**)&g_origMakeFcontext);
++	}
++
+ 	GenerateDongleData(isTerminal);
+ 
+ 	injector::WriteMemory<uint8_t>(hook::get_pattern("0F 94 C0 84 C0 0F 94 C0 84 C0 75 05 45 32 ? EB", 0x13), 0, true);
