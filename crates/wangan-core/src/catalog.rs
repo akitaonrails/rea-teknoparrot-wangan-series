@@ -99,7 +99,7 @@ pub const GAMES: &[Game] = &[
             label: "3.07 Rev B (Export)",
         }],
         cabinet: Cabinet::Wmmt5,
-        support: Support::Blocked("Chihiro support is not verified yet."),
+        support: Support::Blocked("Needs the four Chihiro media-board files (ic10_g24lc64.bin, pc20_g24lc64.bin, ic11_24lc024.bin, fpr21042_m29w160et.bin), which are not in your library."),
     },
     Game {
         id: GameId::Mt3,
