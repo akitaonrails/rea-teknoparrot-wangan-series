@@ -48,3 +48,50 @@ Runtime layout that worked (the dump is never written):
 
 Not usable: software GL under Xvfb segfaults early in boot (Mesa lib32) —
 the loader needs a real GPU driver.
+
+## Namco ES3B — OpenParrot + our I/O board (Wine 11.21, DXVK 3.1.1)
+
+Loader: teknogods `OpenParrotx64.zip` (release tag `OpenParrotx64`, asset
+built 2026-09-11, SHA-256
+`7da6b385b670734447fc1a56a13fb28361d517b0a4d7a56b24b2ec5c156ae5c0`):
+`OpenParrotLoader64.exe OpenParrot64 "<Z: path to wmn5r.exe>"` (the full
+path is required: the loader takes the working directory from it).
+DXVK 3.1.1 `d3d11.dll`/`dxgi.dll` beside the exe, `WINEDLLOVERRIDES=d3d11,dxgi=n,b`.
+`teknoparrot.ini` written as TeknoParrotUI's `ConfigurationWriter` does.
+Runtime: small top-level files copied (the game rewrites its `F*/G*` backup
+files there), big files and data folders symlinked.
+
+### Findings (MT5DX+ Export, `wmn5r.exe` 738e88b4…2b3a2a)
+
+1. **Without an I/O board** the game stops at boot with *E0301 I/O error1 —
+   Cannot find I/O board*. OpenParrot redirects the JVS port to
+   `\\.\pipe\teknoparrot_jvs`; TeknoParrotUI normally answers it.
+2. **`wangan-io.exe`** (this repository) answers it: reset, address,
+   identity `NBGI.;NA-JV;Ver6.01;JPN,MK3100-1-NA-APR0-A01`, features,
+   main-board id (`NBGI.;WinArc;Ver2.04;JPN`), then the steady poll
+   `20 01 03 / 21 01 / 22 06 / 32 03 … / 70 15 00 FF`. Boot check passes.
+3. **Movies crash the game** under stock Wine: the movie player asks
+   `IMFSourceReader::SetCurrentMediaType` for RGB32; Wine's source hands
+   out decoded YUV and finds no YUV→RGB32 decoder (`0xC00D5212`), the game
+   asserts (`EXCEPTION_BREAKPOINT`). Two prefix settings fix it, both
+   verified together:
+   - `HKCU\Software\Wine\MediaFoundation\DisableGstByteStreamHandler=1`
+     (REG_DWORD): Wine's FFmpeg-based `winedmo` source, which emits the
+     compressed WMV2/WMV3 stream as Windows does;
+   - add `{MFMediaType_Video, MFVideoFormat_RGB32}` to the registered
+     `OutputTypes` of `HKLM\Software\Classes\MediaFoundation\Transforms\82d353df-90bd-4382-8bc2-3f6192b76e34`
+     (WMVideo Decoder MFT). Wine's decoder accepts RGB32
+     (`winegstreamer/video_decoder.c`, `wmv_decoder_output_types`), but
+     `wmvdecod` registers RGB outputs only as the D3DFMT-style
+     `DMOVideoFormat_RGB32`, so `MFTEnumEx(WMV→RGB32)` found nothing.
+   With both, the intro movies, title and attract loop play.
+4. **A full guest race works** with input from the block (gas, gears,
+   steering): Banapass prompt (No) → car select (RX-8) → transmission →
+   story episode 1 → intro → race on the Yokohama Minatomirai route, speed
+   and gear on the HUD follow the inputs (61–85 km/h, 2nd gear).
+5. **Stop order matters:** when the board exits while the game runs, the
+   game shows *E0303 I/O error3 — Check I/O board connection*. The
+   launcher must stop the game first, then the board.
+
+GE-Proton 8-26 was tried for comparison: white screen and a page fault —
+not used.

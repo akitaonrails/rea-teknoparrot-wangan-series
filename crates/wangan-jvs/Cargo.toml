@@ -1,0 +1,10 @@
+[package]
+name = "wangan-jvs"
+description = "JVS I/O board for the Wangan Midnight arcade games: protocol, controls and the shared input block"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
