@@ -57,10 +57,20 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked --target x86_64-pc-windows-gnu -- -D warnings
       - name: SDL2 (pinned MinGW package)
         run: scripts/build-launcher.sh sdl2
+      # The Wine the Linux package ships (11.21): Ubuntu's Wine 9 does not
+      # follow directory junctions, which the Windows runtime folder uses.
+      # Ubuntu's wine packages above bring its system libraries.
+      - name: Wine 11.21 (pinned)
+        run: |
+          . sdk/packaging/pins.sh
+          PIN_FILE=packaging/components.pins
+          mkdir -p "$RUNNER_TEMP/wine"
+          tar -xJf "$(pin_fetch wine "$RUNNER_TEMP/dl")" -C "$RUNNER_TEMP/wine" --strip-components=1
+          echo "$RUNNER_TEMP/wine/bin" >> "$GITHUB_PATH"
       - name: Tests under Wine
         run: |
+          wine --version
           sdl="$PWD/dist/sdl2/$(sed -n 's/^dir=//p' packaging/sdl2.pin)"
-          export PATH="$PATH:/usr/lib/wine"
           export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-fuse-ld=lld -L $sdl/lib"
           export WINEPATH="Z:$(printf '%s' "$PWD/dist/sdl2" | tr / '\\')"
           sdk/scripts/wine-test --target x86_64-pc-windows-gnu --locked --workspace
