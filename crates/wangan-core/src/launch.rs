@@ -67,6 +67,35 @@ pub fn wal_config(render: Size, deadzone: f32) -> String {
     )
 }
 
+/// WanganArcadeLoader's `keyconfig.toml`: every key must be present (the
+/// loader stops without the file). The launcher's input block drives the
+/// cabinet; these bindings are the loader's own fallback (keyboard and an
+/// SDL game controller) when no block is given.
+pub const WAL_KEYCONFIG: &str = r#"# Written by the launcher before every start.
+TEST = ["F1"]
+SERVICE = ["F2"]
+CARD_INSERT = ["C", "SDL_BACK"]
+GEAR_NEXT = ["SDL_RSHOULDER"]
+GEAR_PREVIOUS = ["SDL_LSHOULDER"]
+GEAR_NEUTRAL = []
+GEAR_FIRST = []
+GEAR_SECOND = []
+GEAR_THIRD = []
+GEAR_FOURTH = []
+GEAR_FIFTH = []
+GEAR_SIXTH = []
+GEAR_UP = []
+GEAR_LEFT = []
+GEAR_DOWN = []
+GEAR_RIGHT = []
+PERSPECTIVE = ["V", "SDL_Y"]
+INTRUDE = ["I", "SDL_X"]
+GAS = ["UPARROW", "SDL_RTRIGGER_DOWN"]
+BRAKE = ["DOWNARROW", "SDL_LTRIGGER_DOWN"]
+WHEEL_LEFT = ["LEFTARROW", "SDL_LSTICK_LEFT"]
+WHEEL_RIGHT = ["RIGHTARROW", "SDL_LSTICK_RIGHT"]
+"#;
+
 fn gamescope_args(s: &Settings, game: Size) -> Vec<String> {
     let mut a = vec![
         "-w".into(),
@@ -167,7 +196,10 @@ pub fn plan(game: &Game, rt: &Path, prefix: &Path, s: &Settings) -> Option<Plan>
                 rt.join("libso").display()
             );
             Some(Plan {
-                files: vec![(rt.join("config.toml"), wal_config(render, s.deadzone))],
+                files: vec![
+                    (rt.join("config.toml"), wal_config(render, s.deadzone)),
+                    (rt.join("keyconfig.toml"), WAL_KEYCONFIG.to_string()),
+                ],
                 helpers: vec![],
                 game: Command {
                     program: rt.join("main").to_string_lossy().into_owned(),
@@ -263,6 +295,38 @@ mod tests {
         )
         .unwrap();
         assert!(p.files[0].1.contains("width = 3840\nheight = 2160"));
+        // the loader unwraps keyconfig.toml at start: it must always be written, every key present
+        let keys = &p.files[1].1;
+        assert!(p.files[1].0.ends_with("keyconfig.toml"));
+        for k in [
+            "TEST",
+            "SERVICE",
+            "CARD_INSERT",
+            "GEAR_NEXT",
+            "GEAR_PREVIOUS",
+            "GEAR_NEUTRAL",
+            "GEAR_FIRST",
+            "GEAR_SECOND",
+            "GEAR_THIRD",
+            "GEAR_FOURTH",
+            "GEAR_FIFTH",
+            "GEAR_SIXTH",
+            "GEAR_UP",
+            "GEAR_LEFT",
+            "GEAR_DOWN",
+            "GEAR_RIGHT",
+            "PERSPECTIVE",
+            "INTRUDE",
+            "GAS",
+            "BRAKE",
+            "WHEEL_LEFT",
+            "WHEEL_RIGHT",
+        ] {
+            assert!(
+                keys.lines().any(|l| l.starts_with(&format!("{k} = "))),
+                "{k}"
+            );
+        }
         assert_eq!(p.game.program, "/rt/mt3dxp/main");
         assert!(
             p.game

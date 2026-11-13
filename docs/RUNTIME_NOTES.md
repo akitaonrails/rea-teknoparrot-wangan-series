@@ -108,3 +108,22 @@ not used.
 | TeknoParrot core | not usable | `BudgieLoader.exe <game>` exits within seconds when started without TeknoParrotUI |
 
 Runtime rules learned: dgVoodoo leftovers (`D3D8/D3D9/DDraw/D3DImm.dll`), `bngrw.dll(.bak)` from the dump and `[SYSTEM]`/`data_jp_ori` are left out; OpenParrot's own `bngrw.dll` (OpenBanapass) is used; `data_jp/network/` is copied (OpenParrot's WMMT6 module writes certificates there).
+
+## Through the launcher (`wangan-launcher --play <game> --headless`, 2026-11-13)
+
+Isolated data folder, the launcher's own Wine prefix (created on first
+start with the two Media Foundation fixes), runtime built from the library
+by edition hash, input block driven by `examples/drive` (`--no-input`).
+
+| Game | Result |
+|---|---|
+| MT5DX+ | race played (104 km/h), steering input turned the car; clean exit |
+| MT5 | race played (Galant, 104 km/h) |
+| MT6R | race played (91 km/h) |
+| MT3 | boots to the attract loop (the stock loader ignores the input block; race verified earlier with keyboard input) |
+
+gamescope's FSR output fails in the **headless** backend
+(`SyncobjFdToHandle … failed to create fsr output`), so headless runs use
+`upscaler = linear`. FSR/NIS on a real screen: **not yet verified**.
+The first launcher build forgot WanganArcadeLoader's `keyconfig.toml`; the
+loader panics without it (now always written, with a test).
