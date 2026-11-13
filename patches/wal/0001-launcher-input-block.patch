@@ -1,0 +1,256 @@
+Read cabinet controls from a launcher input block (WANGAN_INPUT_BLOCK)
+
+Against vixen256/WanganArcadeLoader0.5 d3fc426. GPL-3.0, like WAL.
+When WANGAN_INPUT_BLOCK=<path> is set, jamma handle_events reads wheel,
+pedals, gear, view, intrude, test, service and card insert from the
+64-byte "WIO1" block instead of SDL/keyboard; unset, nothing changes.
+
+diff --git a/src/block.rs b/src/block.rs
+new file mode 100644
+index 0000000..60dbd39
+--- /dev/null
++++ b/src/block.rs
+@@ -0,0 +1,122 @@
++//! Cabinet controls from a launcher's 64-byte input block.
++//!
++//! When `WANGAN_INPUT_BLOCK=<path>` is set, the controls are read from that
++//! file on every poll instead of SDL/keyboard. The launcher is the only
++//! writer; we only read. Layout (little endian):
++//!
++//! ```text
++//! 0  magic  "WIO1"
++//! 4  u32    sequence
++//! 8  u8     special switches (bit 7 = Test)
++//! 9  [u8;4] player 1 switch bytes
++//! 13 [u8;4] player 2 switch bytes
++//! 17 [u16;4] coins
++//! 25 [u8;32] analog bytes, two per channel
++//! 57 u8     quit
++//! ```
++//!
++//! Player 1 byte 0: 0x40 service, 0x20 menu up, 0x10 menu down, 0x02 enter.
++//! Player 1 byte 1: 0x80/0x40/0x20/0x10 gear lever (H pattern), 0x02 view
++//! change, 0x01 intrude. Player 1 byte 2: 0x04 card insert.
++//! Analog: [0] wheel 0..255 (centre 127), [2] gas, [4] brake.
++
++use std::fs::File;
++use std::os::unix::fs::FileExt;
++
++const SIZE: usize = 64;
++const MAGIC: [u8; 4] = *b"WIO1";
++
++/// One frame of controls, already decoded.
++#[derive(Default, Clone, Copy)]
++pub struct Controls {
++	/// -1.0 full left .. 1.0 full right.
++	pub wheel: f32,
++	/// 0.0 .. 1.0.
++	pub gas: f32,
++	pub brake: f32,
++	/// 0 neutral, 1..6.
++	pub gear: u8,
++	pub view: bool,
++	pub intrude: bool,
++	pub card: bool,
++	pub test: bool,
++	pub service: bool,
++	pub menu_up: bool,
++	pub menu_down: bool,
++}
++
++/// The gear lever bits back to the gear number (inverse of the launcher's
++/// `gear_bits`). Anything that is not a full gate reads as neutral.
++fn gear(bits: u8) -> u8 {
++	match bits & 0xF0 {
++		0xA0 => 1,
++		0x60 => 2,
++		0x80 => 3,
++		0x40 => 4,
++		0x90 => 5,
++		0x50 => 6,
++		_ => 0,
++	}
++}
++
++fn wheel(byte: u8) -> f32 {
++	let v = byte as f32 - 127.0;
++	if v < 0.0 {
++		v / 127.0
++	} else {
++		v / 128.0
++	}
++}
++
++/// `None` until the launcher has written the block (no magic yet).
++pub fn decode(b: &[u8; SIZE]) -> Option<Controls> {
++	if b[0..4] != MAGIC {
++		return None;
++	}
++	let special = b[8];
++	let p1 = &b[9..13];
++	let analog = &b[25..57];
++	Some(Controls {
++		wheel: wheel(analog[0]),
++		gas: analog[2] as f32 / 255.0,
++		brake: analog[4] as f32 / 255.0,
++		gear: gear(p1[1]),
++		view: p1[1] & 0x02 != 0,
++		intrude: p1[1] & 0x01 != 0,
++		card: p1[2] & 0x04 != 0,
++		test: special & 0x80 != 0,
++		service: p1[0] & 0x40 != 0,
++		menu_up: p1[0] & 0x20 != 0,
++		menu_down: p1[0] & 0x10 != 0,
++	})
++}
++
++pub struct Block {
++	path: String,
++	file: Option<File>,
++}
++
++impl Block {
++	/// `Some` when `WANGAN_INPUT_BLOCK` is set.
++	pub fn from_env() -> Option<Self> {
++		let path = std::env::var("WANGAN_INPUT_BLOCK").ok()?;
++		if path.is_empty() {
++			return None;
++		}
++		Some(Self { path, file: None })
++	}
++
++	/// The current controls; all released while the block cannot be read.
++	pub fn read(&mut self) -> Controls {
++		if self.file.is_none() {
++			self.file = File::open(&self.path).ok();
++		}
++		let mut buf = [0u8; SIZE];
++		match &self.file {
++			Some(file) if file.read_exact_at(&mut buf, 0).is_ok() => {
++				decode(&buf).unwrap_or_default()
++			}
++			_ => Controls::default(),
++		}
++	}
++}
+diff --git a/src/jamma.rs b/src/jamma.rs
+index a42fccd..1b419f1 100644
+--- a/src/jamma.rs
++++ b/src/jamma.rs
+@@ -4,6 +4,9 @@ pub static mut SDL_STATE: Option<poll::PollState> = None;
+ 
+ static mut GEAR_INDEX: u8 = 0;
+ 
++static mut BLOCK: Option<block::Block> = None;
++static mut BLOCK_CARD_WAS_DOWN: bool = false;
++
+ const GEAR_LEFT: u32 = 1;
+ const GEAR_RIGHT: u32 = 2;
+ const GEAR_UP: u32 = 4;
+@@ -21,7 +24,71 @@ fn set_gear_bits(index: u8) -> u32 {
+ 	}
+ }
+ 
++unsafe fn insert_card() {
++	if let Ok(card) = std::fs::read("card.bin") {
++		let card_data = card::CARD_DATA.get_mut().unwrap();
++		card_data.clear();
++		card_data.extend(card);
++	} else {
++		println!("Cannot open card.bin");
++	}
++}
++
++/// Controls from the launcher's input block (`WANGAN_INPUT_BLOCK`), written
++/// to the same places the SDL/keyboard path below writes them.
++unsafe fn handle_block_inputs(data: *mut u32, block: &mut block::Block) {
++	let c = block.read();
++
++	if c.card && !BLOCK_CARD_WAS_DOWN {
++		insert_card();
++	}
++	BLOCK_CARD_WAS_DOWN = c.card;
++
++	data.byte_add(0x24).write(0);
++
++	let mut bits = set_gear_bits(c.gear);
++	if c.test {
++		bits |= 0x20000000;
++	}
++	if c.service {
++		bits |= 0x80000000;
++	}
++	if c.view {
++		bits |= 0x40;
++	}
++	if c.intrude {
++		bits |= 0x80;
++	}
++	if c.brake > 0.0 {
++		bits |= 0x20;
++	}
++	if c.gas > 0.0 {
++		bits |= 0x10;
++	}
++	// Test menu navigation, like the GEAR_UP/GEAR_DOWN keys.
++	if c.menu_up {
++		bits |= GEAR_UP;
++	}
++	if c.menu_down {
++		bits |= GEAR_DOWN;
++	}
++	data.byte_add(0x8).write(bits);
++
++	let n2jvio = hook::get_symbol("n2jvio") as *mut u16;
++	n2jvio
++		.byte_add(0x1A8)
++		.write((i16::MAX as f32 + c.wheel * i16::MAX as f32) as u16);
++	data.byte_add(0x20).write(c.wheel.to_bits());
++	n2jvio.byte_add(0x1AA).write((c.gas * i16::MAX as f32) as u16);
++	data.byte_add(0x30).write(c.gas.to_bits());
++	n2jvio.byte_add(0x1AC).write((c.brake * i16::MAX as f32) as u16);
++	data.byte_add(0x34).write(c.brake.to_bits());
++}
++
+ unsafe extern "C" fn handle_inputs(data: *mut u32) {
++	if let Some(block) = BLOCK.as_mut() {
++		return handle_block_inputs(data, block);
++	}
+ 	if adm::WINDOW_HANDLE.is_none() {
+ 		return;
+ 	};
+@@ -34,13 +101,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
+ 	sdl.update();
+ 
+ 	if sdl.is_tapped(&keyconfig.card_insert) {
+-		if let Ok(card) = std::fs::read("card.bin") {
+-			let card_data = card::CARD_DATA.get_mut().unwrap();
+-			card_data.clear();
+-			card_data.extend(card);
+-		} else {
+-			println!("Cannot open card.bin");
+-		}
++		insert_card();
+ 	}
+ 
+ 	data.byte_add(0x24).write(0);
+@@ -130,6 +191,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
+ }
+ 
+ pub unsafe fn init() {
++	BLOCK = block::Block::from_env();
+ 	hook::hook_symbol("_ZN10clSystemN212initSystemN2Ev", adachi as *const ());
+ 	hook::hook_symbol("_ZN18clInputDeviceJamma8checkUseEv", adachi as *const ());
+ 	hook::hook_symbol(
+diff --git a/src/lib.rs b/src/lib.rs
+index d715231..3135a3e 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -7,6 +7,7 @@ use std::str::FromStr;
+ 
+ pub mod adm;
+ pub mod al;
++pub mod block;
+ pub mod card;
+ pub mod hook;
+ pub mod jamma;
