@@ -1,0 +1,190 @@
+From fcaca4244aa0c52b3582243f39e1926c58361602 Mon Sep 17 00:00:00 2001
+From: REA <rea@localhost>
+Date: Fri, 13 Nov 2026 14:35:50 -0300
+Subject: [PATCH] Build with clang-cl: fix code MSVC accepts but clang rejects
+
+Build-only changes, no behaviour change:
+- injector::WriteMemoryRaw takes const void* (callers pass string literals);
+- Hooking.Patterns.h: constructor parameter no longer shadows the class
+  name used in the delegating constructor;
+- SFV.cpp: drop a stray backslash ("\\\N"), which is the C++23 named
+  escape \N{...} for clang;
+- Friction.cpp: compare HWND with != NULL instead of > NULL;
+- WMMT5DX/WMMT6/WMMT6R/WMMT6_LEG/FNFDrift: drop local static copies of
+  FileExists()/genericRetZero(), identical to the ones in Utils.cpp and
+  Global.cpp. Utils.h/Global.h already declare them extern; MSVC turns
+  the later 'static' into internal linkage (C4211), clang keeps external
+  linkage, so lld-link saw duplicate symbols.
+---
+ OpenParrot/src/Functions/Games/ES3X/WMMT5DX.cpp   |  8 --------
+ OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp     |  8 --------
+ OpenParrot/src/Functions/Games/ES3X/WMMT6R.cpp    |  8 --------
+ OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp |  8 --------
+ OpenParrot/src/Functions/Games/Other/FNFDrift.cpp |  5 -----
+ OpenParrot/src/Functions/Games/Other/Friction.cpp |  2 +-
+ OpenParrot/src/Functions/Games/TypeX4/SFV.cpp     |  2 +-
+ OpenParrot/src/Utility/Hooking.Patterns.h         | 10 +++++-----
+ deps/inc/injector/injector.hpp                    |  2 +-
+ 9 files changed, 8 insertions(+), 45 deletions(-)
+
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT5DX.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT5DX.cpp
+index 0ba2703..c3c630c 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT5DX.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT5DX.cpp
+@@ -526,14 +526,6 @@ static int LoadGameData()
+ 	return 1;
+ }
+ 
+-static BOOL FileExists(char *szPath)
+-{
+-	DWORD dwAttrib = GetFileAttributesA(szPath);
+-
+-	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+-		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+-}
+-
+ static void LoadWmmt5CarData()
+ {
+ 	if (!loadOk)
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
+index 9b21b49..dd172b1 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6.cpp
+@@ -100,14 +100,6 @@ static unsigned int WINAPI Hook_bind(SOCKET s, const sockaddr* addr, int namelen
+ 	}
+ }
+ 
+-static BOOL FileExists(char* szPath)
+-{
+-	DWORD dwAttrib = GetFileAttributesA(szPath);
+-
+-	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+-		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+-}
+-
+ static int ReturnTrue()
+ {
+ 	return 1;
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6R.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6R.cpp
+index 1c41987..544d2db 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6R.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6R.cpp
+@@ -378,14 +378,6 @@ static int LoadGameData()
+ 	return 1;
+ }
+ 
+-static BOOL FileExists(char* szPath)
+-{
+-	DWORD dwAttrib = GetFileAttributesA(szPath);
+-
+-	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+-		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+-}
+-
+ static void LoadWmmt5CarData()
+ {
+ 	if (!loadOk)
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+index 21929d2..1db3231 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+@@ -435,14 +435,6 @@ static int LoadGameData()
+ 	return 1;
+ }
+ 
+-static BOOL FileExists(char* szPath)
+-{
+-	DWORD dwAttrib = GetFileAttributesA(szPath);
+-
+-	return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+-		!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+-}
+-
+ static DWORD WINAPI SpamCarTuneNeons(LPVOID)
+ {
+ 	while (true)
+diff --git a/OpenParrot/src/Functions/Games/Other/FNFDrift.cpp b/OpenParrot/src/Functions/Games/Other/FNFDrift.cpp
+index a935a7f..154b9cb 100644
+--- a/OpenParrot/src/Functions/Games/Other/FNFDrift.cpp
++++ b/OpenParrot/src/Functions/Games/Other/FNFDrift.cpp
+@@ -240,11 +240,6 @@ DWORD WINAPI SetWindowPosRT(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int c
+ 	return 1;
+ }
+ 
+-static DWORD genericRetZero()
+-{
+-	return 0;
+-}
+-
+ static InitFunction FNFDriftFunc([]()
+ 	{
+ 		GetDesktopResolution(horizontal, vertical);
+diff --git a/OpenParrot/src/Functions/Games/Other/Friction.cpp b/OpenParrot/src/Functions/Games/Other/Friction.cpp
+index 5c6cf8c..94e6185 100644
+--- a/OpenParrot/src/Functions/Games/Other/Friction.cpp
++++ b/OpenParrot/src/Functions/Games/Other/Friction.cpp
+@@ -240,7 +240,7 @@ static void Inputs(Helpers* helpers)
+ 
+ 	if (OriWndProc == NULL) // Hide Cursor
+ 	{
+-		if (D3D9hWnd > NULL)
++		if (D3D9hWnd != NULL)
+ 			OriWndProc = (WNDPROC)::SetWindowLongPtr((HWND)D3D9hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
+ 	}
+ 
+diff --git a/OpenParrot/src/Functions/Games/TypeX4/SFV.cpp b/OpenParrot/src/Functions/Games/TypeX4/SFV.cpp
+index 250696c..eed7e0a 100644
+--- a/OpenParrot/src/Functions/Games/TypeX4/SFV.cpp
++++ b/OpenParrot/src/Functions/Games/TypeX4/SFV.cpp
+@@ -1960,7 +1960,7 @@ static InitFunction SFVFunc([]()
+ 		MH_CreateHookApi(L"UIO_AMIC.dll", "UIO_AMIC_WdtGetDIP", UIO_AMIC_WdtGetDIP, (void**)&g_origUIO_AMIC_WdtGetDIP);
+ 		MH_EnableHook(MH_ALL_HOOKS);
+ 
+-		DWORD_PTR nesysbase = (DWORD_PTR)LoadLibraryA("..\\..\\Plugins\\NESYSUtil\\\NESiCAUtilLib.dll");
++		DWORD_PTR nesysbase = (DWORD_PTR)LoadLibraryA("..\\..\\Plugins\\NESYSUtil\\NESiCAUtilLib.dll");
+ 		MH_Initialize();
+ 		//	MH_CreateHookApi(L"NESiCAUtilLib.dll", "NESiCAUtilLibIsOnlineMode", NESiCAUtilLibIsOnlineMode, (void**)&g_origNESiCAUtilLibIsOnlineMode);
+ 		//	MH_CreateHookApi(L"NESiCAUtilLib.dll", "NESiCAUtilLibGetStatus", NESiCAUtilLibGetStatus, (void**)&g_origNESiCAUtilLibGetStatus);
+diff --git a/OpenParrot/src/Utility/Hooking.Patterns.h b/OpenParrot/src/Utility/Hooking.Patterns.h
+index afc8bf8..4f8e351 100644
+--- a/OpenParrot/src/Utility/Hooking.Patterns.h
++++ b/OpenParrot/src/Utility/Hooking.Patterns.h
+@@ -86,17 +86,17 @@ namespace hook
+ 
+ 	public:
+ 		template<size_t Len>
+-		pattern(const char(&pattern)[Len])
++		pattern(const char(&pattern_string)[Len])
+ 			: pattern(GetModuleHandle(NULL))
+ 		{
+-			Initialize(pattern, Len);
++			Initialize(pattern_string, Len);
+ 		}
+ 
+-		pattern(const std::string &pattern)
++		pattern(const std::string &pattern_string)
+ 			: pattern(GetModuleHandle(NULL))
+ 		{
+-			auto len = pattern.length();
+-			Initialize(pattern.c_str(), len);
++			auto len = pattern_string.length();
++			Initialize(pattern_string.c_str(), len);
+ 		}
+ 
+ 		inline pattern& count(uint32_t expected) &
+diff --git a/deps/inc/injector/injector.hpp b/deps/inc/injector/injector.hpp
+index 85eb5cc..261894c 100644
+--- a/deps/inc/injector/injector.hpp
++++ b/deps/inc/injector/injector.hpp
+@@ -318,7 +318,7 @@ struct scoped_unprotect
+  *      Writes into memory @addr the content of @value with a sizeof @size
+  *      Does memory unprotection if @vp is true
+  */
+-inline void WriteMemoryRaw(memory_pointer_tr addr, void* value, size_t size, bool vp)
++inline void WriteMemoryRaw(memory_pointer_tr addr, const void* value, size_t size, bool vp)
+ {
+     scoped_unprotect xprotect(addr, vp? size : 0);
+     memcpy(addr.get(), value, size);
+-- 
+2.56.0
+

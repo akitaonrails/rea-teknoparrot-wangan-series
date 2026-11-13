@@ -128,3 +128,27 @@ gamescope's FSR output fails in the **headless** backend
 `upscaler = linear`. FSR/NIS on a real screen: **not yet verified**.
 The first launcher build forgot WanganArcadeLoader's `keyconfig.toml`; the
 loader panics without it (now always written, with a test).
+
+## OpenParrot built from source (`scripts/build-openparrot.sh`, clang-cl + xwin SDK)
+
+Reproducible builds (byte-identical twice). Patches: `patches/clang-cl/*`
+(build-only), `patches/openparrot/0001-wmmt6-legacy-save-closed-file.patch`
+(the `fwrite` on a closed `FILE*`).
+
+| Build | OpenParrot64.dll SHA-256 |
+|---|---|
+| upstream fc8ba63 + fix | `1812cbbb92abef6acf5c97e6604ad158da11aecce80426e20a03236d3db16949` |
+| valkyrieasyraf fork a89d064 | `9a922262a5a40b6c0c1c98b4714f33cc4e01102b2473abc1e5d1f2c56283537b` |
+
+- MT5DX+ with the self-built upstream DLL: race played (regression OK).
+- **MT6**: still crashes right after "Not Use Card", with the patched and
+  the prebuilt DLL alike: access violation in Wine's ntdll relative-path
+  code with a garbage current-directory pointer, the main thread on an
+  unusual stack — memory corruption before any save (no `openprogress.sav`
+  written, so the `fwrite` fix is real but not this crash). Suspect: the
+  legacy module's load hooks (`imageBase+0x6C8818`, `+0x647FB0`); not proven.
+- **MT6RR** with the fork DLL (`[Resolution] RES=1360x768`, AMAuthd first):
+  boots (Rev 3.05.03, I/O OK), steering check stays "checking…", then
+  *E0551*. The fork hooks COM3 for the steering board; nothing answers it.
+  Like MT6's *E2212 STR PCB Link error*, this needs a steering-board
+  emulator whose protocol we have not found documented.

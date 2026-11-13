@@ -65,8 +65,10 @@ pub struct Game {
     pub support: Support,
 }
 
-const ES3B_BLOCKED_BUILD: &str =
-    "Needs the OpenParrot build with this launcher's fix; not shipped yet.";
+const MT6_BLOCKED: &str =
+    "Crashes under Wine right after the card prompt (memory corruption before the first save); being investigated.";
+const MT6RR_BLOCKED: &str =
+    "Stops at the steering-board check (E0551); the launcher can't answer that board yet.";
 
 pub const GAMES: &[Game] = &[
     Game {
@@ -181,7 +183,7 @@ pub const GAMES: &[Game] = &[
             label: "1.03.04 (Export)",
         }],
         cabinet: Cabinet::Wmmt5,
-        support: Support::Blocked(ES3B_BLOCKED_BUILD),
+        support: Support::Blocked(MT6_BLOCKED),
     },
     Game {
         id: GameId::Mt6r,
@@ -213,7 +215,7 @@ pub const GAMES: &[Game] = &[
             label: "3.05.03 (Japan)",
         }],
         cabinet: Cabinet::Wmmt6RR,
-        support: Support::Blocked(ES3B_BLOCKED_BUILD),
+        support: Support::Blocked(MT6RR_BLOCKED),
     },
 ];
 

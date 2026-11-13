@@ -1,0 +1,60 @@
+From 19c5e03c1d26e98714d16ebf2c652571ebe887ab Mon Sep 17 00:00:00 2001
+From: REA <rea@localhost>
+Date: Fri, 13 Nov 2026 14:33:11 -0300
+Subject: [PATCH] WMMT6 legacy: write car save to the open file, skip saves
+ when fopen fails
+
+SaveGameData() closes openprogress.sav and then passes that closed FILE*
+to fwrite() for the car file: the car data never reaches the .car file,
+and writing through a closed stream is undefined behaviour (with the
+static CRT it can fault or corrupt the heap). Write to carSave instead,
+and do not call fwrite()/fclose() on a NULL FILE* when any of the three
+saves fails to open.
+---
+ .../src/Functions/Games/ES3X/WMMT6_LEG.cpp    | 21 +++++++++++++------
+ 1 file changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+index 3b3c7ad..21929d2 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/WMMT6_LEG.cpp
+@@ -307,8 +307,11 @@ static int SaveGameData()
+ 	value = *(uintptr_t*)(value + 0x178);
+ 	memcpy(saveData, (void*)value, 0x340);
+ 	FILE* file = fopen("openprogress.sav", "wb");
+-	fwrite(saveData, 1, 0x2000, file);
+-	fclose(file);
++	if (file)
++	{
++		fwrite(saveData, 1, 0x2000, file);
++		fclose(file);
++	}
+ 
+ 	// Car Profile saving
+ 	memset(carData, 0, 0xFF);
+@@ -324,12 +327,18 @@ static int SaveGameData()
+ 		sprintf(carFileName, ".\\OpenParrot_Cars\\%08X.car", *(DWORD*)(*(uintptr_t*)(*(uintptr_t*)(imageBase + SaveLocation) + 0x2D8) + 0x34));
+ 	}
+ 	FILE* carSave = fopen(carFileName, "wb");
+-	fwrite(carData, 1, 0xE0, file);
+-	fclose(carSave);
++	if (carSave)
++	{
++		fwrite(carData, 1, 0xE0, carSave);
++		fclose(carSave);
++	}
+ 
+ 	FILE* fmileage = fopen("mileage.sav", "wb");
+-	fwrite(&mileageValue, 1, 0x4, fmileage);
+-	fclose(fmileage);
++	if (fmileage)
++	{
++		fwrite(&mileageValue, 1, 0x4, fmileage);
++		fclose(fmileage);
++	}
+ 
+ 	saveOk = false;
+ 	return 1;
+-- 
+2.56.0
+

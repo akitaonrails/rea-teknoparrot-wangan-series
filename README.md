@@ -19,8 +19,8 @@ games folder: each game runs from a private folder that links to your dump.
 | Maximum Tune 5 (5.00, Japan) | Namco ES3B | Wine + DXVK + OpenParrot + this launcher's I/O board | plays |
 | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays |
 | Maximum Tune 6R (Japan) | Namco ES3B | same | plays |
-| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with an OpenParrot fix | being finished |
-| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | same, with OpenParrot's 6RR module | being finished |
+| Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same | blocked: crashes after the card prompt under Wine |
+| Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | same, with OpenParrot_WMMT's 6RR module | blocked: steering-board check (E0551) |
 | Maximum Tune (3.07 Rev B) | Sega Chihiro | needs four Chihiro media-board files you supply | waiting for files |
 | Wangan Midnight R | Namco System 246 | needs a System 246 BIOS you supply | waiting for files |
 
