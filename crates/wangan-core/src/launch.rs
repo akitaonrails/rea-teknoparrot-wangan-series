@@ -61,7 +61,7 @@ fn teknoparrot_ini(id: GameId) -> Option<&'static str> {
 pub fn wal_config(render: Size, deadzone: f32) -> String {
     format!(
         "# Written by the launcher before every start.\n\
-         fullscreen = false\ninput_emu = true\ncard_emu = true\nblock_sudo = true\n\
+         fullscreen = false\ninput_emu = true\ncard_emu = true\nblock_sudo = true\nignore_custom_ioctls = true\n\
          dongle = \"285013501138\"\ndeadzone = {deadzone:.2}\nwidth = {}\nheight = {}\n",
         render.w, render.h
     )
@@ -295,6 +295,10 @@ mod tests {
         )
         .unwrap();
         assert!(p.files[0].1.contains("width = 3840\nheight = 2160"));
+        // the loader parses the whole file or nothing: every field it requires must be there
+        for k in ["fullscreen", "input_emu", "card_emu", "block_sudo", "ignore_custom_ioctls", "dongle", "deadzone"] {
+            assert!(p.files[0].1.lines().any(|l| l.starts_with(&format!("{k} = "))), "{k}");
+        }
         // the loader unwraps keyconfig.toml at start: it must always be written, every key present
         let keys = &p.files[1].1;
         assert!(p.files[1].0.ends_with("keyconfig.toml"));
