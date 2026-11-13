@@ -26,10 +26,10 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 |---|---|---|---|---|
 | Maximum Tune 3 (Export) | Namco N2 | natively, with WanganArcadeLoader (patched) | plays | no (Linux game) |
 | Maximum Tune 3DX+ (Export) | Namco N2 | same | plays, up to 4K | no (Linux game) |
-| Maximum Tune 5 (5.00, Japan) | Namco ES3B | OpenParrot + this launcher's I/O board | plays | played under Wine |
+| Maximum Tune 5 (5.00, Japan) | Namco ES3B | OpenParrot + this launcher's I/O board | plays | not yet run |
 | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | played under Wine |
 | Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
-| Maximum Tune 6R (Japan) | Namco ES3B | same | plays | played under Wine |
+| Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
 | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
 | Maximum Tune (3.07 Rev B) | Sega Chihiro | needs four Chihiro media-board files you supply | waiting for files | waiting for files |
 | Wangan Midnight R | Namco System 246 | needs a System 246 BIOS you supply | waiting for files | waiting for files |
