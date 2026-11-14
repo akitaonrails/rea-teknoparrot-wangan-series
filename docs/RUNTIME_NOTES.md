@@ -33,8 +33,11 @@ Runtime layout that worked (the dump is never written):
 | Check (2026-11-13) | MT3 (Export) | MT3DX+ (EXP) |
 |---|---|---|
 | Boots, GPU | yes, `libGLX_nvidia` mapped in `main` | yes, same |
-| Resolution `width/height` 3840×2160 | not run | full 16:9 frame at 3840×2160, sharp UI |
+| Resolution `width/height` 3840×2160 | yes (2026-11-14, through the launcher): `render destination width = 3840` in the game log, attract-mode 3D car with one-pixel edges in a 1:1 crop (`.work/out/mt3-4k-b/`) | full 16:9 frame at 3840×2160, sharp UI |
 | 1280×720 | yes | yes |
+
+Since 2026-11-14 an N2 game whose render size is unset draws at the output
+size (4K by default), not 1280×720.
 | Boot link screen skipped with View Change | yes | yes |
 | Card creation (gas = Yes), brand/car/colour/transmission, name entry (wheel left/right + gas) | yes (Skyline GT-R) | yes (GT-R R35) |
 | Story mode → level select → intro → **race on the Daikoku line** | yes | yes |

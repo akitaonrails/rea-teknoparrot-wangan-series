@@ -24,7 +24,7 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 
 | Game | Board | How it runs | Linux | Windows |
 |---|---|---|---|---|
-| Maximum Tune 3 (Export) | Namco N2 | natively, with WanganArcadeLoader (patched) | plays | no (Linux game) |
+| Maximum Tune 3 (Export) | Namco N2 | natively, with WanganArcadeLoader (patched) | plays, up to 4K | no (Linux game) |
 | Maximum Tune 3DX+ (Export) | Namco N2 | same | plays, up to 4K | no (Linux game) |
 | Maximum Tune 5 (5.00, Japan) | Namco ES3B | OpenParrot + this launcher's I/O board | plays | not yet run |
 | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | played under Wine |
@@ -94,7 +94,8 @@ these games up for this project (see [docs/RESEARCH.md](docs/RESEARCH.md)).
 
 - **One hub for the whole series**, with an original illustration per game,
   driven by pad, keyboard or mouse.
-- **4K on MT3/3DX+**, drawn natively at up to 3840×2160 (above).
+- **4K on MT3/3DX+**, drawn natively at up to 3840×2160 (above); by default
+  they draw at your output size.
 - **One input path for every game.** Pads and wheels are read with SDL:
   analog steering and pedals, a stick dead zone, sequential shifting on
   shoulder buttons or wheel paddles, wheels recognised from the SDK's

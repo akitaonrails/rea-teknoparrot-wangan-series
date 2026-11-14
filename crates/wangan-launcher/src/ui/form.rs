@@ -76,7 +76,7 @@ pub const OUTPUTS: [Size; 3] = [
     Size::new(3840, 2160),
 ];
 
-/// Render sizes for N2 games (`None` = the game's default, 1280×720).
+/// Render sizes for N2 games (`None` = the output size).
 pub const RENDERS: [Option<Size>; 5] = [
     None,
     Some(Size::new(1280, 720)),
@@ -84,9 +84,6 @@ pub const RENDERS: [Option<Size>; 5] = [
     Some(Size::new(2560, 1440)),
     Some(Size::new(3840, 2160)),
 ];
-
-/// What an N2 game draws at when the render size is left at default.
-pub const N2_DEFAULT: Size = Size::new(1280, 720);
 
 const RENDER_FIXED: &str = "This game draws at its own size; the upscaler sizes it to your screen.";
 const SHARPNESS_OFF: &str = "Only FSR 1 and NVIDIA Image Scaling use sharpness.";
@@ -197,7 +194,7 @@ impl Form {
             Row::Sharpness => s.sharpness.to_string(),
             Row::Fullscreen => if s.fullscreen { "On" } else { "Off" }.to_string(),
             Row::Render => match (self.route, s.render) {
-                (Route::NativeN2, None) => format!("Game default, {}", size_name(N2_DEFAULT)),
+                (Route::NativeN2, None) => format!("Same as output, {}", size_name(s.output)),
                 (Route::NativeN2, Some(z)) => size_name(z),
                 _ => size_name(ES3B_SIZE),
             },
@@ -335,7 +332,7 @@ mod tests {
     #[test]
     fn render_size_is_only_for_n2_games() {
         let mut f = n2();
-        assert_eq!(f.value(Row::Render), "Game default, 1280 × 720 (720p)");
+        assert_eq!(f.value(Row::Render), "Same as output, 3840 × 2160 (4K)");
         f.adjust(Row::Render, 1, false);
         f.adjust(Row::Render, 1, false);
         assert_eq!(f.settings.render, Some(Size::new(1920, 1080)));

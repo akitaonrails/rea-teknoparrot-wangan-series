@@ -292,7 +292,9 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
             })
         }
         Route::NativeN2 => {
-            let render = s.render.unwrap_or(Size::new(1280, 720));
+            // unset: draw at the output size (WanganArcadeLoader renders
+            // MT3/3DX+ natively at any size, 4K seen in both games)
+            let render = s.render.unwrap_or(s.output);
             let ld = format!(
                 "{}:{}:{}",
                 rt.join("glfix").display(),
@@ -395,6 +397,18 @@ mod tests {
         assert_eq!(p.helpers.len(), 2);
         assert!(p.helpers[1].args[2].ends_with(r"AMCUS\AMAuthd.exe"));
         assert!(p.files[0].1.contains("Banapass Connection=0"));
+    }
+
+    #[test]
+    fn n2_render_size_left_unset_follows_the_output() {
+        let s = Settings {
+            render: None,
+            output: Size::new(2560, 1440),
+            ..Settings::default()
+        };
+        let p = plan(game(GameId::Mt3), Path::new("/rt/mt3"), Path::new("/pfx"), &s).unwrap();
+        assert!(p.files[0].1.contains("width = 2560\nheight = 1440"));
+        assert_eq!(p.game_size, Size::new(2560, 1440));
     }
 
     #[test]
