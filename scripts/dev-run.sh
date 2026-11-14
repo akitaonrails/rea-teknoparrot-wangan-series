@@ -23,4 +23,5 @@ if command -v gamescope >/dev/null 2>&1 && command -v wine >/dev/null 2>&1; then
 fi
 box=${WANGAN_BOX:-gaming}
 cd /
-exec distrobox enter "$box" -- env WANGAN_DATA="$WANGAN_DATA" WANGAN_COMPONENTS="$WANGAN_COMPONENTS" "$exe" "$@"
+# no tty: the launcher needs none, and a box whose /dev/pts broke still runs it
+exec distrobox enter --no-tty "$box" -- env WANGAN_DATA="$WANGAN_DATA" WANGAN_COMPONENTS="$WANGAN_COMPONENTS" "$exe" "$@"
