@@ -31,8 +31,8 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 | Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
 | Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
 | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
-| Maximum Tune (3.07 Rev B) | Sega Chihiro | needs four Chihiro media-board files you supply | waiting for files | waiting for files |
-| Wangan Midnight R | Namco System 246 | needs a System 246 BIOS you supply | waiting for files | waiting for files |
+| Maximum Tune (3.07 Rev B) | Sega Chihiro | Cxbx-Reloaded; needs the four Chihiro media-board files you add | not yet run | not yet run |
+| Wangan Midnight R | Namco System 246 | pcsx2x6; needs the System 246 BIOS you add | not yet run | not yet run |
 
 "Plays" means a race was driven in the real game through the launcher,
 with its own input path; each run is recorded in
@@ -103,6 +103,12 @@ these games up for this project (see [docs/RESEARCH.md](docs/RESEARCH.md)).
   readings so you can check your setup before playing.
 - **Screen options** through gamescope on Linux: output size and FSR 1 or
   NVIDIA Image Scaling (see "Not verified yet").
+- **Board files, checked.** Wangan Midnight R and Maximum Tune need firmware
+  from the original boards that isn't part of the game dumps. Choose
+  **Add files** on their tile (or run `wangan-launcher --add-files <folder>`)
+  and point it at a folder or zip: the launcher keeps only files whose size
+  and SHA-1 match MAME's records, under any name, and copies them to its own
+  folder. It never downloads them.
 - **Every window option has a command-line flag**, for scripts and front
   ends like ES-DE.
 

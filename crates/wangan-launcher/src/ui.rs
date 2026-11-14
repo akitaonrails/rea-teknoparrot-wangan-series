@@ -17,6 +17,7 @@ use eframe::egui::{
 };
 use rea_launcher::wheel::{Action, Control, Kind};
 use wangan_core::catalog::{GAMES, Game};
+use wangan_core::firmware::{self, FileState};
 use wangan_core::input::{Button, default_pad_map};
 use wangan_core::library::{self, Entry, Found, HashCache};
 
@@ -102,6 +103,10 @@ struct App {
     folder_error: Option<String>,
     /// The View button (Y on a pad) last frame, for "Y Settings".
     last_view: bool,
+    /// Per game: its board files are added (or it needs none).
+    files_ok: Vec<bool>,
+    /// The last board-file search: what it said, and whether it completed the set.
+    files_note: Option<(String, bool)>,
 }
 
 impl App {
@@ -130,8 +135,11 @@ impl App {
             folder: String::new(),
             folder_error: None,
             last_view: false,
+            files_ok: vec![true; GAMES.len()],
+            files_note: None,
             paths,
         };
+        app.check_files();
         app.start_scan();
         app
     }
@@ -199,14 +207,100 @@ impl App {
     }
 
     fn state(&self, i: usize) -> TileState {
-        TileState::of(&GAMES[i], self.entries.is_some(), self.entry(i).is_some())
+        TileState::of(
+            &GAMES[i],
+            self.entries.is_some(),
+            self.entry(i).is_some(),
+            self.files_ok[i],
+        )
     }
 
     fn world(&self) -> World {
+        let state = self.state(self.model.selected);
         World {
-            playable: self.state(self.model.selected) == TileState::Ready,
+            playable: state == TileState::Ready,
             has_library: self.library.is_some(),
+            needs_files: matches!(state, TileState::NeedsFiles(_)),
         }
+    }
+
+    /// Which games have their board files (a few small files each: hashed
+    /// at start and after each search, never per frame).
+    fn check_files(&mut self) {
+        for (i, g) in GAMES.iter().enumerate() {
+            self.files_ok[i] = g
+                .firmware
+                .is_none_or(|set| set.complete(&set.dir(&self.paths.data)));
+        }
+    }
+
+    fn import_files(&mut self) {
+        let Some(set) = GAMES[self.model.selected].firmware else {
+            return;
+        };
+        let typed = self.folder.trim();
+        if typed.is_empty() {
+            self.folder_error = Some("Type the folder's path first.".into());
+            return;
+        }
+        let src = expand_home(typed);
+        if !src.exists() {
+            self.folder_error = Some(format!(
+                "{} isn't a folder or file this computer can open. Check the path and try again.",
+                src.display()
+            ));
+            return;
+        }
+        self.folder_error = None;
+        let dest = set.dir(&self.paths.data);
+        let note = match firmware::import(set, &src, &dest) {
+            Ok(r) => {
+                log::line(
+                    &self.paths,
+                    &format!(
+                        "board files ({}) from {}: added {:?}, missing {:?}, {} looked at",
+                        set.id,
+                        src.display(),
+                        r.added,
+                        r.missing,
+                        r.looked_at
+                    ),
+                );
+                if r.missing.is_empty() {
+                    (format!("All {} files are in.", set.files.len()), true)
+                } else if r.added.is_empty() {
+                    (
+                        format!(
+                            "None of the missing files were found in {} (looked at {} file{} of the right size). Choose the folder or zip that has them.",
+                            src.display(),
+                            r.looked_at,
+                            if r.looked_at == 1 { "" } else { "s" }
+                        ),
+                        false,
+                    )
+                } else {
+                    (
+                        format!(
+                            "Added {}. Still missing: {}.",
+                            r.added.join(", "),
+                            r.missing.join(", ")
+                        ),
+                        false,
+                    )
+                }
+            }
+            Err(e) => (
+                format!(
+                    "Couldn't finish the search: {e}. Check that {} can be written.",
+                    dest.display()
+                ),
+                false,
+            ),
+        };
+        self.files_note = Some(note);
+        self.check_files();
+        let w = self.world();
+        self.model.settle(w);
     }
 
     fn ensure_form(&mut self) {
@@ -235,7 +329,7 @@ impl App {
         if y && !self.snap.writing {
             out.push(Input::Settings);
         }
-        let typing = self.model.page == Page::FirstRun && self.model.focus == Focus::Field;
+        let typing = self.model.page.has_field() && self.model.focus == Focus::Field;
         ctx.input(|i| {
             let keys: &[(egui::Key, Input)] = if typing {
                 &[
@@ -299,6 +393,17 @@ impl App {
             Effect::Rescan => self.start_scan(),
             Effect::SubmitFolder => self.submit_folder(),
             Effect::OpenedSettings => self.ensure_form(),
+            Effect::OpenedAddFiles => {
+                let downloads = expand_home("~/Downloads");
+                self.folder = if downloads.is_dir() {
+                    "~/Downloads".into()
+                } else {
+                    String::new()
+                };
+                self.folder_error = None;
+                self.files_note = None;
+            }
+            Effect::ImportFiles => self.import_files(),
             Effect::OpenedFolder => {
                 self.folder = self
                     .library
@@ -336,13 +441,7 @@ impl App {
 
     fn submit_folder(&mut self) {
         let typed = self.folder.trim();
-        let dir = match typed.strip_prefix("~/") {
-            Some(rest) => std::env::var_os("HOME")
-                .map(PathBuf::from)
-                .unwrap_or_default()
-                .join(rest),
-            None => PathBuf::from(typed),
-        };
+        let dir = expand_home(typed);
         if typed.is_empty() {
             self.folder_error = Some("Type the folder's path first.".into());
             return;
@@ -461,6 +560,29 @@ impl App {
 
 /// An error message as a sentence: capital first letter, no final stop
 /// (the caller adds one).
+/// A typed path, with a leading `~/` for the home folder.
+fn expand_home(typed: &str) -> PathBuf {
+    let home = || {
+        std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .map(PathBuf::from)
+            .unwrap_or_default()
+    };
+    match typed.strip_prefix("~/").or(typed.strip_prefix("~\\")) {
+        Some(rest) => home().join(rest),
+        None if typed == "~" => home(),
+        None => PathBuf::from(typed),
+    }
+}
+
+fn human_size(bytes: u64) -> String {
+    match bytes {
+        b if b >= 1 << 20 => format!("{} MB", b >> 20),
+        b if b >= 1 << 10 => format!("{} KB", b >> 10),
+        b => format!("{b} bytes"),
+    }
+}
+
 fn sentence(e: &str) -> String {
     let e = e.trim().trim_end_matches('.');
     let mut c = e.chars();
@@ -531,7 +653,7 @@ impl eframe::App for App {
         }
 
         // typed text first, so Enter in the same frame submits all of it
-        if self.model.page == Page::FirstRun
+        if self.model.page.has_field()
             && self.model.focus == Focus::Field
             && self.message.is_none()
             && self.running.is_none()
@@ -560,8 +682,9 @@ impl eframe::App for App {
             Page::Settings => self.draw_settings(ui, &p, r, &mut clicks),
             Page::Controls => self.draw_controls(&p, r),
             Page::FirstRun => self.draw_first_run(ui, &p, r, &mut clicks),
+            Page::AddFiles => self.draw_add_files(ui, &p, r, &mut clicks),
         }
-        if self.model.page != Page::FirstRun {
+        if !self.model.page.has_field() {
             self.draw_top_bar(ui, &p, r, &mut clicks);
         } else {
             draw_brand_bar(&p, r);
@@ -1120,12 +1243,14 @@ impl App {
         let (fill, color) = match state {
             TileState::Ready => (Some(SIGN), INK),
             TileState::Blocked(_) => (Some(SIGNAL), INK),
+            TileState::NeedsFiles(_) => (Some(SODIUM), BASE),
             TileState::NotInLibrary => (None, INK),
             TileState::Looking => (None, MUTED),
         };
         chip(p, pos2(x, chip_y), state.chip(), fill, color);
         let reason = match state {
             TileState::Blocked(why) => why.to_string(),
+            TileState::NeedsFiles(set) => format!("Also needs the {}.", set.title),
             TileState::NotInLibrary => {
                 "Put its folder in your games folder, then choose Rescan in Settings.".into()
             }
@@ -1159,13 +1284,14 @@ impl App {
         let by = r.top() + 446.0;
         let play_r = Rect::from_min_size(pos2(x, by), vec2(170.0, 50.0));
         let set_r = Rect::from_min_size(pos2(play_r.right() + 16.0, by), vec2(170.0, 50.0));
-        let playable = state == TileState::Ready;
+        let needs_files = matches!(state, TileState::NeedsFiles(_));
+        let playable = state == TileState::Ready || needs_files;
         if button(
             ui,
             p,
             play_r,
             "play",
-            "Play",
+            if needs_files { "Add files" } else { "Play" },
             ButtonStyle::Primary,
             playable,
             self.model.focus == Focus::Play,
@@ -1252,6 +1378,11 @@ impl App {
                 p.rect_filled(br, CornerRadius::same(3), alpha(BASE, 235));
                 if matches!(st, TileState::Blocked(_)) {
                     padlock(p, pos2(br.left() + 10.0, br.center().y - 1.0), 8.0, INK);
+                } else if matches!(st, TileState::NeedsFiles(_)) {
+                    let c = pos2(br.left() + 10.0, br.center().y);
+                    let s = Stroke::new(2.0, SODIUM);
+                    p.line_segment([c - vec2(4.5, 0.0), c + vec2(4.5, 0.0)], s);
+                    p.line_segment([c - vec2(0.0, 4.5), c + vec2(0.0, 4.5)], s);
                 } else {
                     p.circle_stroke(
                         pos2(br.left() + 10.0, br.center().y),
@@ -1783,67 +1914,15 @@ impl App {
         )
         .bottom()
             + 24.0;
-        let field = Rect::from_min_size(pos2(x, y), vec2(w, 48.0));
-        let focused = self.model.focus == Focus::Field;
-        p.rect_filled(field, CornerRadius::same(6), PANEL);
-        let resp = ui
-            .interact(field, Id::unique("folder-field"), Sense::click())
-            .on_hover_cursor(CursorIcon::Text);
-        if resp.clicked() {
-            clicks.push(Click::Focus(Focus::Field, None));
-        }
-        // the text, its end kept in view, and a caret
-        let font = theme::body(size::LABEL);
-        let inner = field.shrink2(vec2(16.0, 0.0));
-        if self.folder.is_empty() {
-            text(
-                p,
-                inner.left_center(),
-                Align2::LEFT_CENTER,
-                "/path/to/your/games",
-                font.clone(),
-                MUTED,
-            );
-        }
-        let g = p.layout_no_wrap(self.folder.clone(), font, INK);
-        let tw = g.size().x;
-        let tx = inner.left() - (tw - inner.width() + 6.0).max(0.0);
-        p.with_clip_rect(inner)
-            .galley(pos2(tx, inner.center().y - g.size().y / 2.0), g, INK);
-        let blink = ui.input(|i| i.time).fract() < 0.6;
-        if focused && blink {
-            let cx = (tx + tw + 2.0).min(inner.right());
-            p.line_segment(
-                [
-                    pos2(cx, inner.center().y - 11.0),
-                    pos2(cx, inner.center().y + 11.0),
-                ],
-                Stroke::new(2.0, SODIUM),
-            );
-        }
-        p.rect_stroke(
-            field,
-            CornerRadius::same(6),
-            Stroke::new(2.0, if focused { INK } else { LINE }),
-            StrokeKind::Inside,
-        );
-        if focused {
-            focus_ring(p, field, 6);
-        }
-        y = field.bottom() + 12.0;
-        let hint_text = "For example /mnt/games/TeknoParrot. Press Enter to use it.";
-        text(
+        y = self.folder_field(
+            ui,
             p,
             pos2(x, y),
-            Align2::LEFT_TOP,
-            hint_text,
-            theme::body(size::BODY),
-            MUTED,
+            w,
+            "/path/to/your/games",
+            "For example /mnt/games/TeknoParrot. Press Enter to use it.",
+            clicks,
         );
-        y += 30.0;
-        if let Some(e) = &self.folder_error {
-            y = wrapped(p, pos2(x, y), e, theme::body(size::BODY), ERROR, w).bottom() + 10.0;
-        }
         y += 12.0;
         let br = Rect::from_min_size(pos2(x, y), vec2(220.0, 50.0));
         if button(
@@ -1879,10 +1958,204 @@ impl App {
         }
     }
 
+    /// The one-line path field with its hint and error; returns the y below.
+    #[allow(clippy::too_many_arguments)]
+    fn folder_field(
+        &self,
+        ui: &mut egui::Ui,
+        p: &egui::Painter,
+        at: Pos2,
+        w: f32,
+        placeholder: &str,
+        hint_text: &str,
+        clicks: &mut Vec<Click>,
+    ) -> f32 {
+        let (x, mut y) = (at.x, at.y);
+        let field = Rect::from_min_size(pos2(x, y), vec2(w, 48.0));
+        let focused = self.model.focus == Focus::Field;
+        p.rect_filled(field, CornerRadius::same(6), PANEL);
+        let resp = ui
+            .interact(field, Id::unique("folder-field"), Sense::click())
+            .on_hover_cursor(CursorIcon::Text);
+        if resp.clicked() {
+            clicks.push(Click::Focus(Focus::Field, None));
+        }
+        // the text, its end kept in view, and a caret
+        let font = theme::body(size::LABEL);
+        let inner = field.shrink2(vec2(16.0, 0.0));
+        if self.folder.is_empty() {
+            text(
+                p,
+                inner.left_center(),
+                Align2::LEFT_CENTER,
+                placeholder,
+                font.clone(),
+                MUTED,
+            );
+        }
+        let g = p.layout_no_wrap(self.folder.clone(), font, INK);
+        let tw = g.size().x;
+        let tx = inner.left() - (tw - inner.width() + 6.0).max(0.0);
+        p.with_clip_rect(inner)
+            .galley(pos2(tx, inner.center().y - g.size().y / 2.0), g, INK);
+        let blink = ui.input(|i| i.time).fract() < 0.6;
+        if focused && blink {
+            let cx = (tx + tw + 2.0).min(inner.right());
+            p.line_segment(
+                [
+                    pos2(cx, inner.center().y - 11.0),
+                    pos2(cx, inner.center().y + 11.0),
+                ],
+                Stroke::new(2.0, SODIUM),
+            );
+        }
+        p.rect_stroke(
+            field,
+            CornerRadius::same(6),
+            Stroke::new(2.0, if focused { INK } else { LINE }),
+            StrokeKind::Inside,
+        );
+        if focused {
+            focus_ring(p, field, 6);
+        }
+        y = field.bottom() + 12.0;
+        text(
+            p,
+            pos2(x, y),
+            Align2::LEFT_TOP,
+            hint_text,
+            theme::body(size::BODY),
+            MUTED,
+        );
+        y += 30.0;
+        if let Some(e) = &self.folder_error {
+            y = wrapped(p, pos2(x, y), e, theme::body(size::BODY), ERROR, w).bottom() + 10.0;
+        }
+        y
+    }
+
+    fn draw_add_files(
+        &mut self,
+        ui: &mut egui::Ui,
+        p: &egui::Painter,
+        r: Rect,
+        clicks: &mut Vec<Click>,
+    ) {
+        let g = &GAMES[self.model.selected];
+        let Some(set) = g.firmware else { return };
+        let w = 760.0_f32.min(r.width() - 2.0 * MARGIN);
+        let x = r.left() + MARGIN + 40.0;
+        let mut y = r.top() + 120.0;
+        text(
+            p,
+            pos2(x, y),
+            Align2::LEFT_TOP,
+            &format!("Add the {}", set.title),
+            theme::display(44.0),
+            INK,
+        );
+        y += 60.0;
+        y = wrapped(
+            p,
+            pos2(x, y),
+            &format!(
+                "{} needs these files from the original board. Type the folder or zip \
+                 where you keep them: the launcher looks inside (zips and subfolders too), \
+                 keeps only exact matches whatever their names, and copies them to its own folder.",
+                g.title
+            ),
+            theme::body(size::LABEL),
+            INK,
+            w,
+        )
+        .bottom()
+            + 18.0;
+
+        // the checklist: each file, its size, and whether it's in
+        let states = set.check(&set.dir(&self.paths.data));
+        for (f, st) in &states {
+            let (mark, color) = match st {
+                FileState::Present => ("In", SIGN),
+                FileState::Missing => ("Missing", MUTED),
+                FileState::Wrong => ("Wrong file", ERROR),
+            };
+            let cr = chip(p, pos2(x, y), mark, Some(color), INK);
+            text(
+                p,
+                pos2(x + 120.0_f32.max(cr.width() + 12.0), cr.center().y),
+                Align2::LEFT_CENTER,
+                &format!("{}  ·  {}", f.name, human_size(f.size)),
+                theme::body(size::BODY),
+                INK,
+            );
+            y += 36.0;
+        }
+        y += 14.0;
+
+        y = self.folder_field(
+            ui,
+            p,
+            pos2(x, y),
+            w,
+            "/path/to/your/files",
+            "A folder, a zip, or ~/Downloads. Press Enter to look.",
+            clicks,
+        );
+        if let Some((note, done)) = &self.files_note {
+            y = wrapped(
+                p,
+                pos2(x, y),
+                note,
+                theme::semibold(size::BODY),
+                if *done { INK } else { ERROR },
+                w,
+            )
+            .bottom()
+                + 10.0;
+        }
+        y += 12.0;
+        let br = Rect::from_min_size(pos2(x, y), vec2(240.0, 50.0));
+        if button(
+            ui,
+            p,
+            br,
+            "look-for-files",
+            "Look for the files",
+            ButtonStyle::Primary,
+            true,
+            self.model.focus == Focus::UseFolder,
+        )
+        .clicked()
+        {
+            clicks.push(Click::Focus(Focus::UseFolder, Some(Input::Press)));
+        }
+        let cr = Rect::from_min_size(pos2(br.right() + 16.0, y), vec2(150.0, 50.0));
+        if button(
+            ui,
+            p,
+            cr,
+            "files-back",
+            "Back",
+            ButtonStyle::Outline,
+            true,
+            false,
+        )
+        .clicked()
+        {
+            clicks.push(Click::Focus(Focus::UseFolder, Some(Input::Back)));
+        }
+    }
+
     fn draw_footer(&self, p: &egui::Painter, r: Rect) {
         let cy = r.bottom() - 30.0;
         let x = r.left() + MARGIN;
         let hints: &[(&str, &str)] = match self.model.page {
+            Page::Hub if self.world().needs_files => &[
+                ("A", "Add files"),
+                ("Y", "Settings"),
+                ("B", "Back"),
+                ("Start / Esc", "Quit"),
+            ],
             Page::Hub => &[
                 ("A", "Play"),
                 ("Y", "Settings"),
@@ -1900,6 +2173,7 @@ impl App {
                 &[("Enter", "Use this folder"), ("Esc", "Cancel")]
             }
             Page::FirstRun => &[("Enter", "Use this folder"), ("Esc", "Quit")],
+            Page::AddFiles => &[("Enter", "Look for the files"), ("Esc", "Back")],
         };
         let mut hx = x;
         for (k, w) in hints {

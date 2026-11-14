@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use wangan_core::catalog::{self, Platform, Support};
+use wangan_core::firmware::{self, FileState};
 use wangan_core::library::{self, Found, HashCache};
 use wangan_core::settings::Settings;
 
@@ -23,6 +24,8 @@ wangan-launcher — Wangan Midnight arcade series
   wangan-launcher                      open the launcher window
   wangan-launcher --library <folder>   remember where your games are
   wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
   wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
   wangan-launcher --game <game> <options>   save options for a game without starting it
   Options (saved in that game's settings, same as the window):
@@ -40,6 +43,7 @@ wangan-launcher — Wangan Midnight arcade series
 struct Args {
     library: Option<PathBuf>,
     list: bool,
+    add_files: Option<PathBuf>,
     play: Option<String>,
     headless: bool,
     no_input: bool,
@@ -61,6 +65,7 @@ fn parse_args(
     let mut a = Args {
         library: None,
         list: false,
+        add_files: None,
         play: None,
         headless: false,
         no_input: false,
@@ -72,6 +77,9 @@ fn parse_args(
             "--help" | "-h" => return Ok(None),
             "--library" => a.library = Some(it.next().ok_or("--library needs a folder")?.into()),
             "--list" => a.list = true,
+            "--add-files" => {
+                a.add_files = Some(it.next().ok_or("--add-files needs a folder or zip")?.into())
+            }
             "--play" => a.play = Some(it.next().ok_or("--play needs a game")?),
             "--headless" if platform == Platform::Windows => {
                 return Err(format!("--headless: {}", ui::form::NO_GAMESCOPE));
@@ -133,6 +141,9 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     }
+    if let Some(src) = &args.add_files {
+        return add_files_cli(&paths, src);
+    }
     let library = paths::read_library(&paths.config());
     if args.list {
         let Some(root) = library else {
@@ -143,7 +154,20 @@ fn main() -> ExitCode {
         for e in &found {
             match &e.found {
                 Found::Known { game, edition } => {
+                    let missing: Vec<&str> = game
+                        .firmware
+                        .map(|set| {
+                            set.check(&set.dir(&paths.data))
+                                .into_iter()
+                                .filter(|(_, st)| *st != FileState::Present)
+                                .map(|(f, _)| f.name)
+                                .collect()
+                        })
+                        .unwrap_or_default();
                     let state = match game.support_here() {
+                        _ if !missing.is_empty() => {
+                            format!("needs board files (--add-files): {}", missing.join(", "))
+                        }
                         Support::Ready => "ready".to_string(),
                         Support::Blocked(why) => format!("not yet: {why}"),
                     };
@@ -189,6 +213,41 @@ fn main() -> ExitCode {
             eprintln!("{e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// Look in `src` for every board-file set and report each one.
+fn add_files_cli(paths: &Paths, src: &std::path::Path) -> ExitCode {
+    if !src.exists() {
+        eprintln!("{} is not a folder or file", src.display());
+        return ExitCode::from(2);
+    }
+    let mut ok = true;
+    for set in [&firmware::SYS246, &firmware::CHIHIRO] {
+        match firmware::import(set, src, &set.dir(&paths.data)) {
+            Ok(r) => {
+                println!("{} ({} looked at)", set.title, r.looked_at);
+                for f in set.files {
+                    let mark = if r.added.contains(&f.name) {
+                        "added"
+                    } else if r.missing.contains(&f.name) {
+                        "missing"
+                    } else {
+                        "already in"
+                    };
+                    println!("  {mark:<10} {}", f.name);
+                }
+            }
+            Err(e) => {
+                eprintln!("{}: {e}", set.title);
+                ok = false;
+            }
+        }
+    }
+    if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     }
 }
 

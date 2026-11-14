@@ -4,6 +4,7 @@
 //! listed here are launched; anything else is reported with its digest so
 //! the player can file it (STANDARDS: "Exact binary identity").
 
+use crate::firmware::{CHIHIRO, FirmwareSet, SYS246};
 use wangan_jvs::controls::Cabinet;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -59,6 +60,10 @@ impl Platform {
     };
 }
 
+/// A game whose board files are in, but whose emulator the launcher
+/// doesn't start yet.
+pub const EMULATOR_PENDING: &str = "Your board files are in. Starting this game from the launcher hasn't been tested yet, so Play stays off for now.";
+
 /// Why the N2 games are not offered on Windows.
 pub const N2_LINUX_ONLY: &str = "Maximum Tune 3 and 3DX+ are Linux programs (Namco N2 board); they run only in the Linux build of the launcher.";
 
@@ -83,6 +88,8 @@ pub struct Game {
     pub main_file: &'static str,
     pub editions: &'static [Edition],
     pub cabinet: Cabinet,
+    /// Board firmware the player must add (not part of the game dump).
+    pub firmware: Option<&'static FirmwareSet>,
     pub support: Support,
 }
 
@@ -116,7 +123,8 @@ pub const GAMES: &[Game] = &[
             label: "WMR1 Ver. A",
         }],
         cabinet: Cabinet::Wmmt5,
-        support: Support::Blocked("Needs a Namco System 246 BIOS, which is not in your library."),
+        firmware: Some(&SYS246),
+        support: Support::Blocked(EMULATOR_PENDING),
     },
     Game {
         id: GameId::Mt1,
@@ -132,9 +140,8 @@ pub const GAMES: &[Game] = &[
             label: "3.07 Rev B (Export)",
         }],
         cabinet: Cabinet::Wmmt5,
-        support: Support::Blocked(
-            "Needs the four Chihiro media-board files (ic10_g24lc64.bin, pc20_g24lc64.bin, ic11_24lc024.bin, fpr21042_m29w160et.bin), which are not in your library.",
-        ),
+        firmware: Some(&CHIHIRO),
+        support: Support::Blocked(EMULATOR_PENDING),
     },
     Game {
         id: GameId::Mt3,
@@ -150,6 +157,7 @@ pub const GAMES: &[Game] = &[
             label: "Export",
         }],
         cabinet: Cabinet::Wmmt5,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -166,6 +174,7 @@ pub const GAMES: &[Game] = &[
             label: "Export",
         }],
         cabinet: Cabinet::Wmmt5,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -182,6 +191,7 @@ pub const GAMES: &[Game] = &[
             label: "5.00 (Japan)",
         }],
         cabinet: Cabinet::Wmmt5,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -198,6 +208,7 @@ pub const GAMES: &[Game] = &[
             label: "Export",
         }],
         cabinet: Cabinet::Wmmt5,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -214,6 +225,7 @@ pub const GAMES: &[Game] = &[
             label: "1.03.04 (Export)",
         }],
         cabinet: Cabinet::Wmmt5,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -230,6 +242,7 @@ pub const GAMES: &[Game] = &[
             label: "Japan",
         }],
         cabinet: Cabinet::Wmmt6RR,
+        firmware: None,
         support: Support::Ready,
     },
     Game {
@@ -246,6 +259,7 @@ pub const GAMES: &[Game] = &[
             label: "3.05.03 (Japan)",
         }],
         cabinet: Cabinet::Wmmt6RR,
+        firmware: None,
         support: Support::Ready,
     },
 ];

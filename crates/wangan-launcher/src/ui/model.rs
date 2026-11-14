@@ -4,6 +4,7 @@
 //! [`Effect`]s it returns.
 
 use wangan_core::catalog::{Game, Support};
+use wangan_core::firmware::FirmwareSet;
 
 use super::form::Row;
 
@@ -51,6 +52,15 @@ pub enum Page {
     Hub,
     Controls,
     Settings,
+    /// Look for a game's board files in a folder the player types.
+    AddFiles,
+}
+
+impl Page {
+    /// Pages built around a typed path (no top bar; keys type into it).
+    pub fn has_field(self) -> bool {
+        matches!(self, Page::FirstRun | Page::AddFiles)
+    }
 }
 
 /// The top bar's sections.
@@ -82,7 +92,7 @@ impl Tab {
             Page::Hub => Some(Tab::Games),
             Page::Controls => Some(Tab::Controls),
             Page::Settings => Some(Tab::Settings),
-            Page::FirstRun => None,
+            Page::FirstRun | Page::AddFiles => None,
         }
     }
     fn index(self) -> usize {
@@ -133,6 +143,10 @@ pub enum Effect {
     OpenedSettings,
     /// The folder page was opened from settings.
     OpenedFolder,
+    /// The add-files page was opened for the selected game.
+    OpenedAddFiles,
+    /// Look for the selected game's board files in the typed folder.
+    ImportFiles,
 }
 
 /// What the model needs to know about the world to move the focus.
@@ -142,6 +156,9 @@ pub struct World {
     pub playable: bool,
     /// A library folder is set (the folder page can be left).
     pub has_library: bool,
+    /// The selected game waits for board files (the hub's first button
+    /// adds them).
+    pub needs_files: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -176,16 +193,17 @@ impl Model {
             Page::Hub => Focus::Tile,
             Page::Controls => Focus::Tab(Tab::Controls),
             Page::Settings => Focus::Item(0),
-            Page::FirstRun => Focus::Field,
+            Page::FirstRun | Page::AddFiles => Focus::Field,
         };
         match page {
             Page::Settings => Effect::OpenedSettings,
+            Page::AddFiles => Effect::OpenedAddFiles,
             _ => Effect::None,
         }
     }
 
     fn hub_button(w: World) -> Focus {
-        if w.playable {
+        if w.playable || w.needs_files {
             Focus::Play
         } else {
             Focus::GameSettings
@@ -209,7 +227,12 @@ impl Model {
                 Input::Settings if self.page == Page::Hub => return self.open(Page::Settings),
                 Input::Start | Input::Escape if self.page == Page::Hub => return Effect::Quit,
                 Input::Start | Input::Escape | Input::Back if self.page != Page::Hub => {
-                    return self.open(Page::Hub);
+                    let from = self.page;
+                    let e = self.open(Page::Hub);
+                    if from == Page::AddFiles {
+                        self.focus = Focus::Play;
+                    }
+                    return e;
                 }
                 _ => {}
             }
@@ -222,6 +245,7 @@ impl Model {
             Page::Settings => self.on_settings(input),
             Page::Controls => Effect::None,
             Page::FirstRun => self.on_first_run(input, w),
+            Page::AddFiles => self.on_add_files(input),
         }
     }
 
@@ -259,12 +283,17 @@ impl Model {
             (Focus::Tile, Input::Right) => self.select(self.selected + 1),
             (Focus::Tile, Input::Up) => self.focus = Self::hub_button(w),
             (Focus::Tile, Input::Press) if w.playable => return Effect::Play,
+            (Focus::Tile | Focus::Play, Input::Press) if w.needs_files => {
+                return self.open(Page::AddFiles);
+            }
             (Focus::Tile, Input::Press) => self.focus = Focus::GameSettings,
             (Focus::Play | Focus::GameSettings, Input::Down) => self.focus = Focus::Tile,
             (Focus::Play | Focus::GameSettings, Input::Up) => self.focus = Focus::Tab(Tab::Games),
             (Focus::Play | Focus::GameSettings, Input::Back) => self.focus = Focus::Tile,
             (Focus::Play, Input::Right) => self.focus = Focus::GameSettings,
-            (Focus::GameSettings, Input::Left) if w.playable => self.focus = Focus::Play,
+            (Focus::GameSettings, Input::Left) if w.playable || w.needs_files => {
+                self.focus = Focus::Play
+            }
             (Focus::Play, Input::Press) if w.playable => return Effect::Play,
             (Focus::GameSettings, Input::Press) => return self.open(Page::Settings),
             _ => {}
@@ -276,7 +305,7 @@ impl Model {
     /// After the selection or the library changed: keep focus off a Play
     /// that can't be pressed.
     pub fn settle(&mut self, w: World) {
-        if self.focus == Focus::Play && !w.playable {
+        if self.focus == Focus::Play && !w.playable && !w.needs_files {
             self.focus = Focus::GameSettings;
         }
     }
@@ -302,6 +331,21 @@ impl Model {
             _ => {}
         }
         Effect::None
+    }
+
+    fn on_add_files(&mut self, input: Input) -> Effect {
+        match (self.focus, input) {
+            (Focus::Field | Focus::UseFolder, Input::Press) => Effect::ImportFiles,
+            (Focus::Field, Input::Down | Input::Right) => {
+                self.focus = Focus::UseFolder;
+                Effect::None
+            }
+            (Focus::UseFolder, Input::Up | Input::Left) => {
+                self.focus = Focus::Field;
+                Effect::None
+            }
+            _ => Effect::None,
+        }
     }
 
     fn on_first_run(&mut self, input: Input, w: World) -> Effect {
@@ -333,11 +377,21 @@ pub enum TileState {
     Looking,
     Ready,
     NotInLibrary,
+    /// The game is there but its board files aren't added yet.
+    NeedsFiles(&'static FirmwareSet),
     Blocked(&'static str),
 }
 
 impl TileState {
-    pub fn of(game: &Game, scanned: bool, in_library: bool) -> Self {
+    /// `files_ok`: the game's board files (if it needs any) are added.
+    pub fn of(game: &Game, scanned: bool, in_library: bool, files_ok: bool) -> Self {
+        if let Some(set) = game.firmware.filter(|_| !files_ok) {
+            return match (scanned, in_library) {
+                (false, _) => TileState::Looking,
+                (true, false) => TileState::NotInLibrary,
+                (true, true) => TileState::NeedsFiles(set),
+            };
+        }
         match (game.support_here(), scanned, in_library) {
             (Support::Blocked(why), _, _) => TileState::Blocked(why),
             (_, false, _) => TileState::Looking,
@@ -351,6 +405,7 @@ impl TileState {
             TileState::Looking => "Looking for your games…",
             TileState::Ready => "Ready",
             TileState::NotInLibrary => "Not in your library",
+            TileState::NeedsFiles(_) => "Needs board files",
             TileState::Blocked(_) => "Not supported yet",
         }
     }
@@ -359,6 +414,7 @@ impl TileState {
     pub fn badge(self) -> Option<&'static str> {
         match self {
             TileState::NotInLibrary => Some("Not found"),
+            TileState::NeedsFiles(_) => Some("Add files"),
             TileState::Blocked(_) => Some("Locked"),
             _ => None,
         }
@@ -373,10 +429,17 @@ mod tests {
     const READY: World = World {
         playable: true,
         has_library: true,
+        needs_files: false,
     };
     const NOT_READY: World = World {
         playable: false,
         has_library: true,
+        needs_files: false,
+    };
+    const NEEDS_FILES: World = World {
+        playable: false,
+        has_library: true,
+        needs_files: true,
     };
 
     #[test]
@@ -505,6 +568,7 @@ mod tests {
         let none = World {
             playable: false,
             has_library: false,
+            needs_files: false,
         };
         let mut m = Model::new(GAMES.len(), false);
         assert_eq!((m.page, m.focus), (Page::FirstRun, Focus::Field));
@@ -521,29 +585,59 @@ mod tests {
     #[test]
     fn tile_state_from_catalog_and_library() {
         let mt5 = catalog::by_slug("mt5").unwrap();
-        let blocked = catalog::by_slug("wangan-r").unwrap();
-        assert_eq!(TileState::of(mt5, false, false), TileState::Looking);
-        assert_eq!(TileState::of(mt5, true, true), TileState::Ready);
-        assert_eq!(TileState::of(mt5, true, false), TileState::NotInLibrary);
+        let wr = catalog::by_slug("wangan-r").unwrap();
+        assert_eq!(TileState::of(mt5, false, false, true), TileState::Looking);
+        assert_eq!(TileState::of(mt5, true, true, true), TileState::Ready);
+        assert_eq!(TileState::of(mt5, true, false, true), TileState::NotInLibrary);
         // the N2 games are Linux programs: locked, with the reason, on Windows
         let mt3 = catalog::by_slug("mt3").unwrap();
         assert_eq!(
-            TileState::of(mt3, true, true),
+            TileState::of(mt3, true, true, true),
             if cfg!(windows) {
                 TileState::Blocked(catalog::N2_LINUX_ONLY)
             } else {
                 TileState::Ready
             }
         );
-        assert!(matches!(
-            TileState::of(blocked, true, true),
-            TileState::Blocked(_)
-        ));
-        assert!(matches!(
-            TileState::of(blocked, false, false),
-            TileState::Blocked(_)
-        ));
+        // board files first, then the emulator's own state
+        assert_eq!(
+            TileState::of(wr, true, true, false),
+            TileState::NeedsFiles(&wangan_core::firmware::SYS246)
+        );
+        assert_eq!(TileState::of(wr, true, false, false), TileState::NotInLibrary);
+        assert_eq!(
+            TileState::of(wr, true, true, true),
+            TileState::Blocked(catalog::EMULATOR_PENDING)
+        );
+        assert_eq!(
+            TileState::NeedsFiles(&wangan_core::firmware::CHIHIRO).badge(),
+            Some("Add files")
+        );
         assert_eq!(TileState::NotInLibrary.badge(), Some("Not found"));
         assert_eq!(TileState::Ready.badge(), None);
     }
+
+    #[test]
+    fn a_game_waiting_for_files_offers_add_files_and_comes_back_to_it() {
+        let mut m = Model::new(GAMES.len(), true);
+        assert_eq!(m.input(Input::Up, NEEDS_FILES), Effect::None);
+        assert_eq!(m.focus, Focus::Play, "the first button is Add files");
+        assert_eq!(m.input(Input::Press, NEEDS_FILES), Effect::OpenedAddFiles);
+        assert_eq!((m.page, m.focus), (Page::AddFiles, Focus::Field));
+        assert_eq!(m.input(Input::Press, NEEDS_FILES), Effect::ImportFiles);
+        m.input(Input::Down, NEEDS_FILES);
+        assert_eq!(m.focus, Focus::UseFolder);
+        assert_eq!(m.input(Input::Press, NEEDS_FILES), Effect::ImportFiles);
+        m.input(Input::Escape, NEEDS_FILES);
+        assert_eq!((m.page, m.focus), (Page::Hub, Focus::Play));
+        // straight from the tile too
+        m.focus = Focus::Tile;
+        assert_eq!(m.input(Input::Press, NEEDS_FILES), Effect::OpenedAddFiles);
+        // a game that can't start and needs nothing: Play is skipped
+        m.open(Page::Hub);
+        m.focus = Focus::Play;
+        m.settle(NOT_READY);
+        assert_eq!(m.focus, Focus::GameSettings);
+    }
+
 }

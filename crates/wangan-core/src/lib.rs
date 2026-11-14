@@ -3,6 +3,7 @@
 //! the runtime folder rules, settings, and the launch plan.
 
 pub mod catalog;
+pub mod firmware;
 pub mod input;
 pub mod launch;
 pub mod library;
