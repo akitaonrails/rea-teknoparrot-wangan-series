@@ -588,7 +588,10 @@ mod tests {
         let wr = catalog::by_slug("wangan-r").unwrap();
         assert_eq!(TileState::of(mt5, false, false, true), TileState::Looking);
         assert_eq!(TileState::of(mt5, true, true, true), TileState::Ready);
-        assert_eq!(TileState::of(mt5, true, false, true), TileState::NotInLibrary);
+        assert_eq!(
+            TileState::of(mt5, true, false, true),
+            TileState::NotInLibrary
+        );
         // the N2 games are Linux programs: locked, with the reason, on Windows
         let mt3 = catalog::by_slug("mt3").unwrap();
         assert_eq!(
@@ -604,9 +607,21 @@ mod tests {
             TileState::of(wr, true, true, false),
             TileState::NeedsFiles(&wangan_core::firmware::SYS246)
         );
-        assert_eq!(TileState::of(wr, true, false, false), TileState::NotInLibrary);
+        assert_eq!(
+            TileState::of(wr, true, false, false),
+            TileState::NotInLibrary
+        );
         assert_eq!(
             TileState::of(wr, true, true, true),
+            if cfg!(windows) {
+                TileState::Blocked(catalog::SYS246_LINUX_ONLY)
+            } else {
+                TileState::Ready
+            }
+        );
+        let mt1 = catalog::by_slug("mt1").unwrap();
+        assert_eq!(
+            TileState::of(mt1, true, true, true),
             TileState::Blocked(catalog::EMULATOR_PENDING)
         );
         assert_eq!(
@@ -639,5 +654,4 @@ mod tests {
         m.settle(NOT_READY);
         assert_eq!(m.focus, Focus::GameSettings);
     }
-
 }

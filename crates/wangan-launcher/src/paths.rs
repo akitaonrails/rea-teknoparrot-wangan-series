@@ -5,7 +5,7 @@
 //!   `launcher.cfg`, `settings/`, `runtimes/` (one per game, saves
 //!   included), `prefix/` (Wine, Linux only), `launcher.log`;
 //! - components (`$WANGAN_COMPONENTS`, else `components/` beside the
-//!   program): `openparrot/`, `openparrot-6rr/`, `dxvk/`, `io/`, `wal/`,
+//!   program): `openparrot/`, `openparrot-6rr/`, `dxvk/`, `io/`, `wal/`, `pcsx2x6/`,
 //!   `art/`, `fonts/`, and on Linux the bundled `wine/`;
 //! - Wine (Linux): `$WANGAN_WINE` (a Wine folder with `bin/wine`), else the
 //!   package's `components/wine/`, else `wine` from PATH.
@@ -74,6 +74,7 @@ impl Paths {
             dxvk: self.components.join("dxvk"),
             io_board: self.components.join("io"),
             wal: self.components.join("wal"),
+            pcsx2x6: self.components.join("pcsx2x6"),
         }
     }
 }

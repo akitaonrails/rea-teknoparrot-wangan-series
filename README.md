@@ -32,7 +32,7 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 | Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
 | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
 | Maximum Tune (3.07 Rev B) | Sega Chihiro | Cxbx-Reloaded; needs the four Chihiro media-board files you add | not yet run | not yet run |
-| Wangan Midnight R | Namco System 246 | pcsx2x6; needs the System 246 BIOS you add | not yet run | not yet run |
+| Wangan Midnight R | Namco System 246 | pcsx2x6 (bundled); needs the System 246 BIOS you add | plays, up to 4K | not yet run |
 
 "Plays" means a race was driven in the real game through the launcher,
 with its own input path; each run is recorded in
@@ -95,7 +95,8 @@ these games up for this project (see [docs/RESEARCH.md](docs/RESEARCH.md)).
 - **One hub for the whole series**, with an original illustration per game,
   driven by pad, keyboard or mouse.
 - **4K on MT3/3DX+**, drawn natively at up to 3840×2160 (above); by default
-  they draw at your output size.
+  they draw at your output size. Wangan Midnight R is upscaled inside
+  pcsx2x6 to fit the window (6× at 2160p).
 - **One input path for every game.** Pads and wheels are read with SDL:
   analog steering and pedals, a stick dead zone, sequential shifting on
   shoulder buttons or wheel paddles, wheels recognised from the SDK's
@@ -123,7 +124,8 @@ these games up for this project (see [docs/RESEARCH.md](docs/RESEARCH.md)).
    **32-bit OpenGL** for MT3/3DX+ (Arch: `lib32-nvidia-utils` or
    `lib32-mesa`; Debian/Ubuntu: `libgl1:i386`), and GStreamer's libav
    plugin for the intro movies (Arch: `gst-libav`; Debian/Ubuntu:
-   `gstreamer1.0-libav`). Wine, DXVK, the loaders and SDL2 are bundled.
+   `gstreamer1.0-libav`). Wine, DXVK, the loaders, pcsx2x6 and SDL2 are
+   bundled.
 3. Run `./wangan-launcher` and choose the folder that holds your game
    folders. The first start of an MT5/MT6 game creates the Wine prefix and
    takes a minute.
@@ -161,6 +163,11 @@ wangan-launcher --game mt3dxp --render 3840x2160 --output 3840x2160
 | Back | Insert card |
 | Start | Insert coin (6RR plays on credits) |
 | A | Test menu enter |
+
+Wangan Midnight R runs in pcsx2x6, which reads the pad itself: left stick,
+RT/LT, RB/LB and Y as above, Back inserts a coin, Start is Start, Escape
+quits. Keyboard: arrows to drive, 5 coin, 1 Start, E/Q shift, V view. The
+Controls page's dead zone and wheel table don't apply to it yet.
 
 ## Where things are
 
@@ -201,6 +208,7 @@ Releases are built by GitHub Actions from pinned sources; see
 
 GPL-3.0-or-later. Built on OpenParrot (teknogods), OpenParrot_WMMT
 (valkyrieasyraf), OpenBanapass (ProjectAsakura), WanganArcadeLoader
-(vixen256), DXVK and the TeknoParrotUI source; the full list is in
+(vixen256), pcsx2x6 and Proverb (PS2Homebrew-arcade), DXVK and the
+TeknoParrotUI source; the full list is in
 [THIRD_PARTY.md](THIRD_PARTY.md). Thanks to the Wangan Midnight emulation
 community.

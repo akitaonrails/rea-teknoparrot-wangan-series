@@ -71,6 +71,17 @@ pub fn block_path(rt: &Path) -> PathBuf {
     rt.join("input.block")
 }
 
+/// Wangan R's `.acgame` file in its runtime.
+pub fn sys246_acgame(rt: &Path) -> PathBuf {
+    rt.join("game")
+        .join(format!("{}.acgame", crate::sys246::GAME_ID))
+}
+
+/// pcsx2x6's settings file in a Wangan R runtime.
+pub fn sys246_ini(rt: &Path) -> PathBuf {
+    crate::sys246::data_dir(rt).join("inis").join("PCSX2.ini")
+}
+
 /// `Z:\…` path as Wine sees a Unix path.
 pub fn wine_path(p: &Path) -> String {
     format!("Z:{}", p.to_string_lossy().replace('/', "\\"))
@@ -326,7 +337,44 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                 game_size: render,
             })
         }
-        Route::Chihiro | Route::System246 => None,
+        Route::System246 => {
+            // pcsx2x6 fills the window; it draws at the upscale the window
+            // height asks for
+            let window = s.render.unwrap_or(s.output);
+            let data = rt.join("config");
+            Some(Plan {
+                files: vec![
+                    (sys246_acgame(rt), crate::sys246::acgame()),
+                    (
+                        sys246_ini(rt),
+                        crate::sys246::pcsx2_ini(crate::sys246::upscale_for(window.h), false),
+                    ),
+                ],
+                helpers: vec![],
+                game: Command {
+                    program: rt.join("pcsx2x6/AppRun").to_string_lossy().into_owned(),
+                    args: vec![
+                        "-nogui".into(),
+                        "-batch".into(),
+                        "-fullscreen".into(),
+                        sys246_acgame(rt).to_string_lossy().into_owned(),
+                    ],
+                    env: vec![
+                        (
+                            "XDG_CONFIG_HOME".into(),
+                            data.to_string_lossy().into_owned(),
+                        ),
+                        // into gamescope's X server, never the desktop's Wayland
+                        ("QT_QPA_PLATFORM".into(), "xcb".into()),
+                    ],
+                    cwd: rt.to_path_buf(),
+                },
+                gamescope: gamescope_args(s, window),
+                wine_prefix: None,
+                game_size: window,
+            })
+        }
+        Route::Chihiro => None,
     }
 }
 
@@ -335,6 +383,41 @@ mod tests {
     use super::*;
     use crate::catalog::game;
     use crate::settings::Upscaler;
+
+    #[test]
+    fn wangan_r_runs_pcsx2x6_on_its_acgame_upscaled_for_the_window() {
+        let s = Settings {
+            output: Size::new(3840, 2160),
+            ..Settings::default()
+        };
+        let rt = Path::new("/rt/wangan-r");
+        let p = plan(game(GameId::WanganR), rt, Path::new("/pfx"), &s).unwrap();
+        assert_eq!(p.game.program, "/rt/wangan-r/pcsx2x6/AppRun");
+        assert_eq!(
+            p.game.args.last().unwrap(),
+            "/rt/wangan-r/game/NM00005.acgame"
+        );
+        assert!(
+            p.game
+                .env
+                .contains(&("XDG_CONFIG_HOME".into(), "/rt/wangan-r/config".into()))
+        );
+        assert_eq!(p.game_size, Size::new(3840, 2160));
+        assert_eq!(p.files[0], (sys246_acgame(rt), crate::sys246::acgame()));
+        assert_eq!(p.files[1].0, sys246_ini(rt));
+        assert!(p.files[1].1.contains("upscale_multiplier = 6\n"));
+        assert!(p.wine_prefix.is_none() && p.helpers.is_empty());
+        assert!(
+            plan_on(
+                game(GameId::WanganR),
+                rt,
+                Path::new("/pfx"),
+                &s,
+                &Host::Windows
+            )
+            .is_none()
+        );
+    }
 
     #[test]
     fn es3b_plan_runs_board_then_loader_with_dxvk() {
@@ -406,7 +489,13 @@ mod tests {
             output: Size::new(2560, 1440),
             ..Settings::default()
         };
-        let p = plan(game(GameId::Mt3), Path::new("/rt/mt3"), Path::new("/pfx"), &s).unwrap();
+        let p = plan(
+            game(GameId::Mt3),
+            Path::new("/rt/mt3"),
+            Path::new("/pfx"),
+            &s,
+        )
+        .unwrap();
         assert!(p.files[0].1.contains("width = 2560\nheight = 1440"));
         assert_eq!(p.game_size, Size::new(2560, 1440));
     }
@@ -559,7 +648,7 @@ mod tests {
     }
 
     #[test]
-    fn windows_has_no_n2_plan() {
+    fn windows_has_no_n2_or_wangan_r_plan() {
         for id in [GameId::Mt3, GameId::Mt3dxp, GameId::WanganR] {
             assert!(
                 plan_on(
@@ -588,7 +677,7 @@ mod tests {
     fn blocked_routes_have_no_plan() {
         assert!(
             plan(
-                game(GameId::WanganR),
+                game(GameId::Mt1),
                 Path::new("/r"),
                 Path::new("/p"),
                 &Settings::default()

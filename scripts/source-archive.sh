@@ -5,8 +5,8 @@
 #
 # Holds this repository at HEAD (git archive), the pinned upstream trees
 # with our patches applied (scripts/fetch-sources.sh: OpenParrot,
-# OpenParrot_WMMT, WanganArcadeLoader), and the FFmpeg source tarball the
-# Linux package's FFmpeg libraries are built from. Wine's source is
+# OpenParrot_WMMT, WanganArcadeLoader, pcsx2x6), and the FFmpeg source
+# tarball the Linux package's FFmpeg libraries are built from. Wine's source is
 # referenced in licenses/wine/SOURCE.txt (unmodified WineHQ release).
 set -eu
 
@@ -18,6 +18,7 @@ rm -rf "$w"; mkdir -p "$w/$name" "$root/dist/pkg"
 
 git -C "$root" archive --format=tar --prefix=launcher/ HEAD | tar -x -C "$w/$name"
 "$root/scripts/fetch-sources.sh" "$w/$name/upstream"
+"$root/scripts/fetch-sources.sh" "$w/$name/upstream" pcsx2x6
 for d in "$w/$name"/upstream/*; do rm -rf "$d/.git"; done
 
 . "$root/sdk/packaging/pins.sh"
@@ -36,6 +37,8 @@ upstream/openparrot-wmmt/  valkyrieasyraf/OpenParrot_WMMT $(sed -n 's/^OPENPARRO
                            + launcher/patches/openparrot-wmmt/*.patch (applied)
 upstream/wal/              vixen256/WanganArcadeLoader0.5 $(sed -n 's/^WAL_COMMIT=//p' "$root/packaging/sources.sh")
                            + launcher/patches/wal/*.patch (applied)
+upstream/pcsx2x6/          PS2Homebrew-arcade/pcsx2x6 $(sed -n 's/^PCSX2X6_COMMIT=//p' "$root/packaging/sources.sh")
+                           (tag v0.2.22; the package ships its release AppImage unchanged)
 upstream/ffmpeg/           FFmpeg 4.4.5 source as released (configure line:
                            launcher/scripts/build-ffmpeg.sh)
 

@@ -1,8 +1,11 @@
 #!/bin/sh
 # Fetch the pinned upstream sources (packaging/sources.sh) and apply our
-# patches, into <out>/{openparrot,openparrot-wmmt,wal}.
+# patches, into <out>/{openparrot,openparrot-wmmt,wal,pcsx2x6}.
 #
-#   scripts/fetch-sources.sh <out> [openparrot|openparrot-wmmt|wal ...]
+#   scripts/fetch-sources.sh <out> [openparrot|openparrot-wmmt|wal|pcsx2x6 ...]
+#
+# Without names: the three trees the release builds (pcsx2x6 is shipped as
+# released upstream; scripts/source-archive.sh asks for its tree).
 #
 # Each tree is checked out at its pinned commit (git checks the SHA-1) and
 # gets patches/<name>/*.patch in name order. The build-only clang-cl
@@ -24,6 +27,7 @@ for name in "$@"; do
 	openparrot) repo=$OPENPARROT_REPO commit=$OPENPARROT_COMMIT ;;
 	openparrot-wmmt) repo=$OPENPARROT_WMMT_REPO commit=$OPENPARROT_WMMT_COMMIT ;;
 	wal) repo=$WAL_REPO commit=$WAL_COMMIT ;;
+	pcsx2x6) repo=$PCSX2X6_REPO commit=$PCSX2X6_COMMIT ;;
 	*) die "unknown source $name" ;;
 	esac
 	d=$out/$name

@@ -117,7 +117,9 @@ impl FirmwareSet {
     }
 
     pub fn complete(&self, dir: &Path) -> bool {
-        self.check(dir).iter().all(|(_, s)| *s == FileState::Present)
+        self.check(dir)
+            .iter()
+            .all(|(_, s)| *s == FileState::Present)
     }
 
     fn wanted(&self, size: u64) -> bool {

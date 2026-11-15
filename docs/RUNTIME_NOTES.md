@@ -198,3 +198,27 @@ for its `winedmo`). Played headless and silent:
 | Windows launcher (local build) under Wine | MT5DX+ | race (103 km/h); board quit after the game |
 
 Not run: 6RR from the packages; the Windows build on a real Windows PC.
+
+## Namco System 246: pcsx2x6 v0.2.22 (Wangan Midnight R, 2026-11-15)
+
+pcsx2x6 `pcsx2x6-v0.2.22-linux-appimage-x64-Qt.AppImage` (sha256
+a28e9354…255d), extracted, run natively in gamescope; Proverb `boot.elf`
+from the `nightly` `proverb.zip` (sha256 ca1a6eae…7ed2). The owner's dump:
+`wanganmr.zip` (MAME dongle files, SHA-1 matching MAME) and
+`wanganmr/wmr1-a.chd`. BIOS: the owner's `r27v1602f.7d`, SHA-1 matching
+MAME, added with `--add-files`.
+
+| Check | Result |
+|---|---|
+| MAME 2 MiB BIOS named in `[Filenames] BIOS` | boots: `BIOS Found: COH-H System 246 Rack C 20021119-163841` |
+| Dongle: `wmr1vera.ic002` pages interleaved with `_spr` spare bytes as `memcards/NM00005.ps2` (8,650,752 bytes) | `McdSlot 0 [File]: NM00005.ps2 [8 MB, Formatted]`; the game accepts it |
+| CHD linked as `NM00005/NM00005.chd` | opened; attract mode, intro movies |
+| Coin (`[JVS] Coin1`), Start, gas to decide | CREDIT(S) 2/1, car select (Skyline GT-R), shift select, name entry |
+| **Race** | driven on the Shuto against a rival: gas held, 66–81 km/h, gear 2, steering; result screen (YOU LOSE) |
+| `upscale_multiplier = 6` at 3840×2160 | 4K frame, geometry sharp in a 1:1 crop; the game is 4:3, pillarboxed |
+| Escape (`[Hotkeys] ShutdownVM`) | game ends, launcher session ends with status 0, no pcsx2x6 left |
+| Audio | not checked. With no sound server pcsx2x6 shows an error box over the game, so headless runs write `[SPU2/Output] Backend = Null` |
+| Pad (SDL bindings in `[JVS]`) | **not yet tested** (keyboard bindings were used) |
+
+Probe runs `.work/out/wmr-1…4`; through the launcher
+(`--play wangan-r --headless --no-input`, silent) `.work/out/wmr-l1/`.

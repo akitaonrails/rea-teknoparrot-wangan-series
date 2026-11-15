@@ -23,3 +23,13 @@ wine https://github.com/Kron4ek/Wine-Builds/releases/download/11.21/wine-11.21-a
 # against the FFmpeg 4 libraries (libavformat.so.58), which current
 # distributions no longer have; scripts/build-ffmpeg.sh builds them.
 ffmpeg https://ffmpeg.org/releases/ffmpeg-4.4.5.tar.xz f9514e0d3515aee5a271283df71636e1d1ff7274b15853bcd84e144be416ab07 mirror
+
+# pcsx2x6 v0.2.22 (GPL-3.0), PS2Homebrew-arcade's PCSX2 fork for the Namco
+# System 246 (Wangan Midnight R; Linux package only). The AppImage is
+# extracted into components/pcsx2x6/app.
+pcsx2x6 https://github.com/PS2Homebrew-arcade/pcsx2x6/releases/download/v0.2.22/pcsx2x6-v0.2.22-linux-appimage-x64-Qt.AppImage a28e9354046804e9f3d658b63856f7b2d3d53aefd9f141f053ac9926c08c255d mirror
+
+# Proverb (AFL-3.0), pcsx2x6's homebrew boot loader: only bin/NM00005/boot.elf
+# is taken (components/pcsx2x6/NM00005/boot.elf). The nightly asset may be
+# rebuilt in place, so the mirror copy is the fallback.
+proverb https://github.com/PS2Homebrew-arcade/proverb/releases/download/nightly/proverb.zip ca1a6eaae507a09c0d8737a05ecfd9365f2622059d870f9e663dd8a8f44a7ed2 https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases/download/thirdparty/proverb.zip mirror

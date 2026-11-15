@@ -17,8 +17,8 @@
 #            dist/windows/SDL2-LICENSE.txt [WINDOWS_DIR]
 #
 # Layout: the launcher beside components/ (crates/wangan-launcher/src/paths.rs):
-# openparrot/, openparrot-6rr/, io/, art/, fonts/, and on Linux dxvk/, wal/
-# and wine/ (portable Wine with the FFmpeg libraries in wine/lib/ffmpeg).
+# openparrot/, openparrot-6rr/, io/, art/, fonts/, and on Linux dxvk/, wal/,
+# pcsx2x6/ and wine/ (portable Wine with the FFmpeg libraries in wine/lib/ffmpeg).
 # No game file is ever packaged.
 set -eu
 
@@ -95,6 +95,15 @@ if [ "$os" = linux ]; then
 	cp "$lin/libwal_3dxp.so" "$c/wal/"
 	cp "$t/wal/libopenal.so" "$t/wal/gamecontrollerdb.txt" "$c/wal/"
 	cp -r "$t/wal/tmp" "$c/wal/tmp"
+
+	# pcsx2x6 (Wangan R): the AppImage extracted (no FUSE needed), Proverb's boot.elf for NM00005
+	mkdir -p "$c/pcsx2x6/NM00005" "$t/pcsx2x6"
+	cp "$(fetch pcsx2x6)" "$t/pcsx2x6/pcsx2x6.AppImage"
+	chmod +x "$t/pcsx2x6/pcsx2x6.AppImage"
+	(cd "$t/pcsx2x6" && ./pcsx2x6.AppImage --appimage-extract >/dev/null)
+	[ -e "$t/pcsx2x6/squashfs-root/AppRun" ] || die "the pcsx2x6 AppImage has no AppRun"
+	mv "$t/pcsx2x6/squashfs-root" "$c/pcsx2x6/app"
+	unzip -q -o -j "$(fetch proverb)" bin/NM00005/boot.elf -d "$c/pcsx2x6/NM00005"
 
 	# Wine (as sdk/packaging/appimage-wine.sh trims it) + FFmpeg 4 for its movie demuxer
 	mkdir -p "$c/wine"

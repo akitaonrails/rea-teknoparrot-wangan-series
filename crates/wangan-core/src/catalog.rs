@@ -64,6 +64,10 @@ impl Platform {
 /// doesn't start yet.
 pub const EMULATOR_PENDING: &str = "Your board files are in. Starting this game from the launcher hasn't been tested yet, so Play stays off for now.";
 
+/// Why Wangan R is not offered on Windows yet.
+pub const SYS246_LINUX_ONLY: &str =
+    "Wangan Midnight R has only been set up and played in the Linux build of the launcher so far.";
+
 /// Why the N2 games are not offered on Windows.
 pub const N2_LINUX_ONLY: &str = "Maximum Tune 3 and 3DX+ are Linux programs (Namco N2 board); they run only in the Linux build of the launcher.";
 
@@ -98,6 +102,9 @@ impl Game {
     pub fn support_on(&self, platform: Platform) -> Support {
         match (self.support, self.route, platform) {
             (Support::Ready, Route::NativeN2, Platform::Windows) => Support::Blocked(N2_LINUX_ONLY),
+            (Support::Ready, Route::System246, Platform::Windows) => {
+                Support::Blocked(SYS246_LINUX_ONLY)
+            }
             (s, _, _) => s,
         }
     }
@@ -124,7 +131,7 @@ pub const GAMES: &[Game] = &[
         }],
         cabinet: Cabinet::Wmmt5,
         firmware: Some(&SYS246),
-        support: Support::Blocked(EMULATOR_PENDING),
+        support: Support::Ready,
     },
     Game {
         id: GameId::Mt1,
@@ -368,7 +375,9 @@ mod tests {
             .collect();
         assert_eq!(
             ready,
-            ["mt3", "mt3dxp", "mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
+            [
+                "wangan-r", "mt3", "mt3dxp", "mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"
+            ]
         );
     }
 }

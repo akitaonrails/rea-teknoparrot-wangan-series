@@ -83,6 +83,9 @@ pub struct Components {
     pub io_board: PathBuf,
     /// libwal_3dxp.so, libopenal.so, gamecontrollerdb.txt, tmp/
     pub wal: PathBuf,
+    /// `app/` (the extracted pcsx2x6 AppImage, `app/AppRun`) and
+    /// `NM00005/boot.elf` (Proverb).
+    pub pcsx2x6: PathBuf,
 }
 
 /// Names never brought into an ES3B runtime: leftovers in the owner's dumps
@@ -146,8 +149,41 @@ pub fn plan_on(
         }
         Route::NativeN2 if platform == Platform::Windows => vec![],
         Route::NativeN2 => plan_n2(src, items, rt, c),
-        Route::Chihiro | Route::System246 => vec![],
+        Route::System246 if platform == Platform::Windows => vec![],
+        Route::System246 => plan_sys246(src, rt, c),
+        Route::Chihiro => vec![],
     }
+}
+
+/// Wangan R: the emulator linked in, the game folder pcsx2x6 expects
+/// (`game/NM00005/`: the dump's CHD under the id's name, Proverb's
+/// `boot.elf`), and its data folder (`config/PCSX2x6/`, the
+/// `XDG_CONFIG_HOME` it runs with). The BIOS and the dongle card are put in
+/// by the session (they come from the board files and the dump's zip).
+fn plan_sys246(src: &Path, rt: &Path, c: &Components) -> Vec<Op> {
+    use crate::sys246::GAME_ID;
+    let game = rt.join("game").join(GAME_ID);
+    let data = crate::sys246::data_dir(rt);
+    vec![
+        Op::Dir(rt.to_path_buf()),
+        Op::Link {
+            target: c.pcsx2x6.join("app"),
+            at: rt.join("pcsx2x6"),
+        },
+        Op::Dir(game.clone()),
+        Op::Link {
+            target: src.join(crate::sys246::CHD),
+            at: game.join(format!("{GAME_ID}.chd")),
+        },
+        Op::Refresh {
+            from: c.pcsx2x6.join(GAME_ID).join("boot.elf"),
+            to: game.join("boot.elf"),
+            exec: false,
+        },
+        Op::Dir(data.join("bios")),
+        Op::Dir(data.join("memcards")),
+        Op::Dir(data.join("inis")),
+    ]
 }
 
 fn plan_es3b(
@@ -532,7 +568,45 @@ mod tests {
             dxvk: base.join("dxvk"),
             io_board: base.join("io"),
             wal: base.join("wal"),
+            pcsx2x6: base.join("pcsx2x6"),
         }
+    }
+
+    #[test]
+    fn wangan_r_gets_the_emulator_the_chd_and_proverb_under_the_game_id() {
+        let (src, rt) = (Path::new("/lib/wmr"), Path::new("/rt"));
+        let ops = plan(
+            game(GameId::WanganR),
+            src,
+            &[],
+            &[],
+            rt,
+            &comps(Path::new("/c")),
+        );
+        assert!(ops.contains(&Op::Link {
+            target: "/c/pcsx2x6/app".into(),
+            at: "/rt/pcsx2x6".into(),
+        }));
+        assert!(ops.contains(&Op::Link {
+            target: "/lib/wmr/wanganmr/wmr1-a.chd".into(),
+            at: "/rt/game/NM00005/NM00005.chd".into(),
+        }));
+        assert!(ops.contains(&Op::Refresh {
+            from: "/c/pcsx2x6/NM00005/boot.elf".into(),
+            to: "/rt/game/NM00005/boot.elf".into(),
+            exec: false,
+        }));
+        assert!(ops.contains(&Op::Dir("/rt/config/PCSX2x6/memcards".into())));
+        let none = plan_on(
+            game(GameId::WanganR),
+            src,
+            &[],
+            &[],
+            rt,
+            &comps(Path::new("/c")),
+            Platform::Windows,
+        );
+        assert!(none.is_empty());
     }
 
     fn item(name: &str, dir: bool, size: u64) -> Item {
@@ -658,6 +732,7 @@ mod tests {
             dxvk: c.join("dxvk"),
             io_board: c.join("io"),
             wal: c.join("wal"),
+            pcsx2x6: c.join("pcsx2x6"),
         };
         let ops = plan(game(GameId::Mt5), &src, &items, &[], &rt, &comps);
         apply(&ops).unwrap();

@@ -66,6 +66,9 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
         )?)?;
         link_nvidia_glx32(&rt.join("glfix"))?;
     }
+    if game.route == Route::System246 {
+        prepare_sys246(paths, game, entry, &rt)?;
+    }
     let plan = launch::plan_on(game, &rt, &paths.prefix(), settings, &host)
         .context("this game has no launch route yet")?;
     for (path, text) in &plan.files {
@@ -83,6 +86,40 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
         runtime: rt,
         block,
     })
+}
+
+/// Wangan R: the BIOS from the board files, and a fresh dongle card from
+/// the dump's zip at every start (the game writes to the card while it
+/// runs; the dump's copy is never touched).
+fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry, rt: &Path) -> Result<()> {
+    use wangan_core::sys246;
+    let set = game
+        .firmware
+        .context("no board files are known for this game")?;
+    let fw = set.dir(&paths.data);
+    if !set.complete(&fw) {
+        bail!(
+            "the {} isn't added yet (Add files on the game's tile)",
+            set.title
+        );
+    }
+    let data = sys246::data_dir(rt);
+    for f in set.files {
+        // the emulator writes .nvm/.mec beside the BIOS: a copy in the runtime
+        let to = data.join("bios").join(f.name);
+        if fs::read(&to).map(|b| !f.matches(&b)).unwrap_or(true) {
+            write_atomic(&to, &fs::read(fw.join(f.name))?)?;
+        }
+    }
+    let zip = entry.dir.join(game.main_file);
+    let card = sys246::dongle_from_zip(&zip)
+        .with_context(|| format!("making the dongle card from {}", zip.display()))?;
+    write_atomic(
+        &data
+            .join("memcards")
+            .join(format!("{}.ps2", sys246::GAME_ID)),
+        &card,
+    )
 }
 
 fn op_dir<'a>(game: &Game, c: &'a runtime::Components) -> &'a Path {
@@ -150,7 +187,13 @@ fn check_components(game: &Game, c: &runtime::Components, host: &Host) -> Result
             v
         }
         Route::NativeN2 => vec![c.wal.join("libwal_3dxp.so"), c.wal.join("libopenal.so")],
-        _ => vec![],
+        Route::System246 => vec![
+            c.pcsx2x6.join("app").join("AppRun"),
+            c.pcsx2x6
+                .join(wangan_core::sys246::GAME_ID)
+                .join("boot.elf"),
+        ],
+        Route::Chihiro => vec![],
     };
     let missing: Vec<String> = need
         .iter()
@@ -423,6 +466,17 @@ pub fn run(
             Host::Windows => vec![],
         };
         prepare_prefix(paths, &env)?;
+    }
+    if display == Display::Headless && game.route == Route::System246 {
+        // test runs reach no sound server: pcsx2x6 would stop on an error box
+        write_atomic(
+            &launch::sys246_ini(&p.runtime),
+            wangan_core::sys246::pcsx2_ini(
+                wangan_core::sys246::upscale_for(p.plan.game_size.h),
+                true,
+            )
+            .as_bytes(),
+        )?;
     }
     let mut cmd = gamescope_command(&p.plan, display, &p.runtime)?;
     let log_file = fs::OpenOptions::new()
