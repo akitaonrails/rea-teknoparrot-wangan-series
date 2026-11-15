@@ -222,3 +222,24 @@ MAME, added with `--add-files`.
 
 Probe runs `.work/out/wmr-1…4`; through the launcher
 (`--play wangan-r --headless --no-input`, silent) `.work/out/wmr-l1/`.
+
+## Sega Chihiro: Cxbx-Reloaded CI-585c49a under Wine 11.21 (Maximum Tune 1, 2026-11-15)
+
+Not playable yet. Probe only (`.work/c1/`, nothing wired into the
+launcher). `CxbxReloaded-Release.zip` sha256 010d1e85…3bf43, portable
+`settings.ini` beside the exe, the owner's four media-board files (MAME
+SHA-1s) in `EmuMediaBoard/`, a probe prefix.
+
+| Step | Result |
+|---|---|
+| vcrun2019 (MSVCP140 14.29) | crash `0xC0000005` inside `MSVCP140.dll` at start; this build needs the 2022 runtime |
+| vcrun2022 + d3dcompiler_47 | starts; Chihiro detected from `boot.id` |
+| Boot path | `cxbxr-ldr` writes `Partition2/3.bin` from `fpr21042`, then starts a **second** loader process on SEGABOOT and exits: the session must wait for the Wine server, not the first process |
+| No sound device (silent test) | fatal "select a valid audio adapter"; an ALSA `null` PCM as Wine's audio device works and stays silent |
+| SEGABOOT | draws ("Initializing media board"); once ended at *Error 22: communication error between main board and media board*, later runs passed it (timing) |
+| Game `A\V307.xbe` | started by SEGABOOT, writes `backup_ram.bin` and `ic11`, but the screen stays black for 5 minutes |
+| Without `boot.id` | not possible: Cxbx-R's media board aborts "Could not open Chihiro boot.id" |
+
+Next to look at: what V307 waits for at the black screen (the dump
+ships YACardEmu, a card-reader emulator on a named pipe; Cxbx-R's
+media-board stub answers only some commands).
