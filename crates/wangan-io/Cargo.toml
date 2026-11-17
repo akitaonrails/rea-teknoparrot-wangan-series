@@ -11,10 +11,9 @@ repository.workspace = true
 name = "wangan-io"
 path = "src/main.rs"
 
-[dependencies]
-wangan-jvs = { path = "../wangan-jvs" }
-
+# Only the Windows program has a board to run; elsewhere it explains itself
 [target.'cfg(windows)'.dependencies]
+wangan-jvs = { path = "../wangan-jvs" }
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",
