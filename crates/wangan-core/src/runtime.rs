@@ -14,7 +14,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::catalog::{Game, Platform, Route};
+use crate::catalog::{Game, Host, Route};
 
 /// Files below this size in an ES3B folder's top level are copied: the
 /// game rewrites its backup files (`F*/G*/BK_*`) there.
@@ -119,7 +119,7 @@ pub fn plan(
     rt: &Path,
     c: &Components,
 ) -> Vec<Op> {
-    plan_on(game, src, items, network_items, rt, c, Platform::HOST)
+    plan_on(game, src, items, network_items, rt, c, Host::current())
 }
 
 /// The runtime for `game` on `platform`. Windows runs the games on its own
@@ -132,7 +132,7 @@ pub fn plan_on(
     network_items: &[Item],
     rt: &Path,
     c: &Components,
-    platform: Platform,
+    platform: Host,
 ) -> Vec<Op> {
     match game.route {
         Route::Es3b => {
@@ -142,14 +142,14 @@ pub fn plan_on(
                 &c.openparrot
             };
             let mut ops = plan_es3b(src, items, network_items, rt, c, op);
-            if platform == Platform::Windows {
+            if platform == Host::Windows {
                 ops.retain(|o| !matches!(o, Op::Refresh { from, .. } if from.starts_with(&c.dxvk)));
             }
             ops
         }
-        Route::NativeN2 if platform == Platform::Windows => vec![],
+        Route::NativeN2 if platform == Host::Windows => vec![],
         Route::NativeN2 => plan_n2(src, items, rt, c),
-        Route::System246 if platform == Platform::Windows => vec![],
+        Route::System246 if platform == Host::Windows => vec![],
         Route::System246 => plan_sys246(src, rt, c),
         Route::Chihiro => vec![],
     }
@@ -583,7 +583,7 @@ mod tests {
             &[],
             rt,
             &comps(c),
-            Platform::Linux,
+            Host::Linux,
         );
         let game_dir = rt.join("game").join("NM00005");
         assert!(ops.contains(&Op::Link {
@@ -607,7 +607,7 @@ mod tests {
             &[],
             rt,
             &comps(Path::new("/c")),
-            Platform::Windows,
+            Host::Windows,
         );
         assert!(none.is_empty());
     }
@@ -761,16 +761,8 @@ mod tests {
                 .filter(|o| matches!(o, Op::Refresh { from, .. } if from.starts_with("/c/dxvk")))
                 .count()
         };
-        let linux = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Platform::Linux);
-        let windows = plan_on(
-            game(GameId::Mt5),
-            src,
-            &items,
-            &[],
-            rt,
-            &c,
-            Platform::Windows,
-        );
+        let linux = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Host::Linux);
+        let windows = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Host::Windows);
         assert_eq!(dxvk(&linux), 2);
         assert_eq!(dxvk(&windows), 0);
         // everything else is the same runtime
@@ -781,8 +773,8 @@ mod tests {
             exec: false
         }));
         let n2 = vec![item("main", false, 9_000_000)];
-        assert!(plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Platform::Windows).is_empty());
-        assert!(!plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Platform::Linux).is_empty());
+        assert!(plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Host::Windows).is_empty());
+        assert!(!plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Host::Linux).is_empty());
     }
 
     #[test]

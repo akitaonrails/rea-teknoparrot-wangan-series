@@ -7,7 +7,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::catalog::{Game, GameId, Platform, Route};
+use crate::catalog::{Game, GameId, Route};
 use crate::settings::{Settings, Size};
 
 /// A process to start.
@@ -55,13 +55,6 @@ impl Host {
         Host::Linux {
             wine: "wine".into(),
             wine_env: vec![],
-        }
-    }
-
-    pub fn platform(&self) -> Platform {
-        match self {
-            Host::Linux { .. } => Platform::Linux,
-            Host::Windows => Platform::Windows,
         }
     }
 }

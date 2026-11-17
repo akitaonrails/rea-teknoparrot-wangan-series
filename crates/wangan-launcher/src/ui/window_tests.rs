@@ -40,10 +40,13 @@ fn index(slug: &str) -> usize {
 
 /// A library entry for `slug` (its first edition), in a folder named
 /// after the game.
-fn entry(slug: &str) -> Entry {
+fn entry(slug: &str) -> Entry<Game> {
     let game = &GAMES[index(slug)];
     Entry {
         dir: Path::new(LIBRARY).join(format!("{} [TP]", game.title)),
+        file: Path::new(LIBRARY)
+            .join(format!("{} [TP]", game.title))
+            .join(game.main_file),
         found: Found::Known {
             game,
             edition: &game.editions[0],
@@ -51,12 +54,13 @@ fn entry(slug: &str) -> Entry {
     }
 }
 
-fn unknown_entry() -> Entry {
+fn unknown_entry() -> Entry<Game> {
     Entry {
         dir: Path::new(LIBRARY).join("Something else"),
+        file: Path::new(LIBRARY).join("Something else/wmn6r.exe"),
         found: Found::Unknown {
             file: "wmn6r.exe".into(),
-            sha256: "00".repeat(32),
+            digest: "00".repeat(32),
         },
     }
 }

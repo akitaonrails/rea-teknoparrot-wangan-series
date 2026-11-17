@@ -10,9 +10,9 @@ mod winproc;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use wangan_core::catalog::{self, Platform, Support};
+use rea_launcher::library::{Found, HashCache};
+use wangan_core::catalog::{self, Host, Support};
 use wangan_core::firmware::{self, FileState};
-use wangan_core::library::{self, Found, HashCache};
 use wangan_core::settings::Settings;
 
 use crate::paths::Paths;
@@ -53,14 +53,14 @@ struct Args {
 }
 
 fn parse() -> Result<Option<Args>, String> {
-    parse_args(std::env::args().skip(1), Platform::HOST)
+    parse_args(std::env::args().skip(1), Host::current())
 }
 
 /// The command line; options the window shows as off on this platform are
 /// refused here with the same reason (window and CLI in parity).
 fn parse_args(
     mut it: impl Iterator<Item = String>,
-    platform: Platform,
+    platform: Host,
 ) -> Result<Option<Args>, String> {
     let mut a = Args {
         library: None,
@@ -81,7 +81,7 @@ fn parse_args(
                 a.add_files = Some(it.next().ok_or("--add-files needs a folder or zip")?.into())
             }
             "--play" => a.play = Some(it.next().ok_or("--play needs a game")?),
-            "--headless" if platform == Platform::Windows => {
+            "--headless" if platform == Host::Windows => {
                 return Err(format!("--headless: {}", ui::form::NO_GAMESCOPE));
             }
             "--headless" => a.headless = true,
@@ -150,8 +150,11 @@ fn main() -> ExitCode {
             eprintln!("no library yet: run with --library <folder>");
             return ExitCode::FAILURE;
         };
-        let found = library::scan(&root, &mut HashCache::default());
-        for e in &found {
+        let scan = catalog::library(HashCache::default()).scan(&[root]);
+        for problem in &scan.problems {
+            eprintln!("warning: couldn't read {problem}");
+        }
+        for e in &scan.entries {
             match &e.found {
                 Found::Known { game, edition } => {
                     let missing: Vec<&str> = game
@@ -164,11 +167,12 @@ fn main() -> ExitCode {
                                 .collect()
                         })
                         .unwrap_or_default();
-                    let state = match game.support_here() {
+                    let state = match game.support_on(Host::current()) {
                         _ if !missing.is_empty() => {
                             format!("needs board files (--add-files): {}", missing.join(", "))
                         }
                         Support::Ready => "ready".to_string(),
+                        Support::Unverified(note) => format!("starts; {note}"),
                         Support::Blocked(why) => format!("not yet: {why}"),
                     };
                     println!(
@@ -179,8 +183,8 @@ fn main() -> ExitCode {
                         e.dir.display()
                     );
                 }
-                Found::Unknown { file, sha256 } => println!(
-                    "unknown  {file} sha256 {sha256}\n         {}",
+                Found::Unknown { file, digest } => println!(
+                    "unknown  {file} sha256 {digest}\n         {}",
                     e.dir.display()
                 ),
             }
@@ -269,7 +273,7 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
         eprintln!("unknown game {slug}");
         return ExitCode::from(2);
     };
-    if let Support::Blocked(why) = game.support_here() {
+    if let Support::Blocked(why) = game.support_on(Host::current()) {
         eprintln!("{} can't start: {why}", game.title);
         return ExitCode::FAILURE;
     }
@@ -277,8 +281,8 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
         eprintln!("no library yet: run with --library <folder>");
         return ExitCode::FAILURE;
     };
-    let found = library::scan(&root, &mut HashCache::default());
-    let Some(entry) = library::by_game(&found).get(&game.id).map(|e| (*e).clone()) else {
+    let found = catalog::library(HashCache::default()).scan(&[root.clone()]);
+    let Some(entry) = found.by_game().get(&game.id).map(|e| (*e).clone()) else {
         eprintln!("{} is not in {}", game.title, root.display());
         return ExitCode::FAILURE;
     };
@@ -339,11 +343,11 @@ mod tests {
             "--headless",
         ] {
             let line = format!("--play mt5 {opt}");
-            let e = parse_args(args(&line), Platform::Windows).err().expect(opt);
+            let e = parse_args(args(&line), Host::Windows).err().expect(opt);
             assert!(e.ends_with(ui::form::NO_GAMESCOPE), "{e}");
-            assert!(parse_args(args(&line), Platform::Linux).is_ok(), "{opt}");
+            assert!(parse_args(args(&line), Host::Linux).is_ok(), "{opt}");
         }
-        let a = parse_args(args("--game mt5 --deadzone 0.1"), Platform::Windows)
+        let a = parse_args(args("--game mt5 --deadzone 0.1"), Host::Windows)
             .unwrap()
             .unwrap();
         assert_eq!(a.options, ["deadzone = 0.1"]);

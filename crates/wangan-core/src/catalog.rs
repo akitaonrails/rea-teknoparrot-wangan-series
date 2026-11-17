@@ -4,8 +4,13 @@
 //! listed here are launched; anything else is reported with its digest so
 //! the player can file it (STANDARDS: "Exact binary identity").
 
-use crate::firmware::{CHIHIRO, FirmwareSet, SYS246};
+use rea_launcher::catalog::{self, Edition, Title};
+pub use rea_launcher::catalog::{Host, Support};
+use rea_launcher::gamescope::Size;
+use rea_launcher::library::{HashCache, Library};
 use wangan_jvs::controls::Cabinet;
+
+use crate::firmware::{CHIHIRO, FirmwareSet, SYS246};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum GameId {
@@ -33,33 +38,6 @@ pub enum Route {
     System246,
 }
 
-/// Whether the launcher can start a game today, and why not.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Support {
-    /// Verified in the real game (a race played), see docs/RUNTIME_NOTES.md.
-    Ready,
-    /// Known not to work yet; the text says why, for the player.
-    Blocked(&'static str),
-}
-
-/// The system the launcher runs on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Platform {
-    /// Wine and gamescope for the Windows games, the N2 games natively.
-    Linux,
-    /// The Windows games directly; no N2 games.
-    Windows,
-}
-
-impl Platform {
-    /// The platform this build of the launcher is for.
-    pub const HOST: Platform = if cfg!(windows) {
-        Platform::Windows
-    } else {
-        Platform::Linux
-    };
-}
-
 /// A game whose board files are in, but whose emulator the launcher
 /// doesn't start yet.
 pub const EMULATOR_PENDING: &str = "Your board files are in. Under Wine the Chihiro emulator freezes in most runs of this game, so Play stays off for now.";
@@ -70,12 +48,6 @@ pub const SYS246_LINUX_ONLY: &str =
 
 /// Why the N2 games are not offered on Windows.
 pub const N2_LINUX_ONLY: &str = "Maximum Tune 3 and 3DX+ are Linux programs (Namco N2 board); they run only in the Linux build of the launcher.";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Edition {
-    pub sha256: &'static str,
-    pub label: &'static str,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Game {
@@ -91,6 +63,9 @@ pub struct Game {
     /// The file that identifies the edition, relative to the game folder.
     pub main_file: &'static str,
     pub editions: &'static [Edition],
+    /// The size the game draws at when nothing changes it (the N2 games:
+    /// WanganArcadeLoader's own; the others always draw at it).
+    pub native: Size,
     pub cabinet: Cabinet,
     /// Board firmware the player must add (not part of the game dump).
     pub firmware: Option<&'static FirmwareSet>,
@@ -98,20 +73,37 @@ pub struct Game {
 }
 
 impl Game {
-    /// Whether the game can start on `platform`, and why not.
-    pub fn support_on(&self, platform: Platform) -> Support {
-        match (self.support, self.route, platform) {
-            (Support::Ready, Route::NativeN2, Platform::Windows) => Support::Blocked(N2_LINUX_ONLY),
-            (Support::Ready, Route::System246, Platform::Windows) => {
+    /// Whether the game can start on `host`, and why not.
+    pub fn support_on(&self, host: Host) -> Support {
+        match (self.support, self.route, host) {
+            (Support::Ready, Route::NativeN2, Host::Windows) => Support::Blocked(N2_LINUX_ONLY),
+            (Support::Ready, Route::System246, Host::Windows) => {
                 Support::Blocked(SYS246_LINUX_ONLY)
             }
             (s, _, _) => s,
         }
     }
 
-    /// [`Game::support_on`] for the platform this launcher was built for.
-    pub fn support_here(&self) -> Support {
-        self.support_on(Platform::HOST)
+    /// Whether the game draws at its own size whatever the settings say
+    /// (only WanganArcadeLoader takes a render size).
+    pub fn render_fixed(&self) -> bool {
+        self.route != Route::NativeN2
+    }
+}
+
+impl Title for Game {
+    type Id = GameId;
+
+    fn id(&self) -> GameId {
+        self.id
+    }
+
+    fn main_file(&self) -> &'static str {
+        self.main_file
+    }
+
+    fn editions(&self) -> &'static [Edition] {
+        self.editions
     }
 }
 
@@ -125,10 +117,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco System 246",
         route: Route::System246,
         main_file: "wanganmr.zip",
-        editions: &[Edition {
-            sha256: "4d78fe15299df5a10f63e697bbe1a620abe7080e69f8972e7315f1e3bff13ca8",
-            label: "WMR1 Ver. A",
-        }],
+        editions: &[Edition::sha256(
+            "4d78fe15299df5a10f63e697bbe1a620abe7080e69f8972e7315f1e3bff13ca8",
+            "WMR1 Ver. A",
+        )],
+        native: Size::new(640, 480),
         cabinet: Cabinet::Wmmt5,
         firmware: Some(&SYS246),
         support: Support::Ready,
@@ -142,10 +135,11 @@ pub const GAMES: &[Game] = &[
         board: "Sega Chihiro",
         route: Route::Chihiro,
         main_file: "V307.xbe",
-        editions: &[Edition {
-            sha256: "2d74371e5a0bb83a6b5185350792f7e3a4242076b62306fab103936ddd2dd760",
-            label: "3.07 Rev B (Export)",
-        }],
+        editions: &[Edition::sha256(
+            "2d74371e5a0bb83a6b5185350792f7e3a4242076b62306fab103936ddd2dd760",
+            "3.07 Rev B (Export)",
+        )],
+        native: Size::new(640, 480),
         cabinet: Cabinet::Wmmt5,
         firmware: Some(&CHIHIRO),
         support: Support::Blocked(EMULATOR_PENDING),
@@ -159,10 +153,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco N2",
         route: Route::NativeN2,
         main_file: "main",
-        editions: &[Edition {
-            sha256: "0574cf963d8dd94788f247e65cc4da7e47f4b366588d1309fe869f4264a26475",
-            label: "Export",
-        }],
+        editions: &[Edition::sha256(
+            "0574cf963d8dd94788f247e65cc4da7e47f4b366588d1309fe869f4264a26475",
+            "Export",
+        )],
+        native: Size::new(1280, 720),
         cabinet: Cabinet::Wmmt5,
         firmware: None,
         support: Support::Ready,
@@ -176,10 +171,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco N2",
         route: Route::NativeN2,
         main_file: "main",
-        editions: &[Edition {
-            sha256: "3dc7cc6174806fe4ea6687625c233ed5468e0225e3bcce15e225b25b2934be5b",
-            label: "Export",
-        }],
+        editions: &[Edition::sha256(
+            "3dc7cc6174806fe4ea6687625c233ed5468e0225e3bcce15e225b25b2934be5b",
+            "Export",
+        )],
+        native: Size::new(1280, 720),
         cabinet: Cabinet::Wmmt5,
         firmware: None,
         support: Support::Ready,
@@ -193,10 +189,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco ES3B",
         route: Route::Es3b,
         main_file: "wmn5r.exe",
-        editions: &[Edition {
-            sha256: "4701c88d3598d56c31055fdaba98ec1c17e3455e96ad701abebc65eba6105c3e",
-            label: "5.00 (Japan)",
-        }],
+        editions: &[Edition::sha256(
+            "4701c88d3598d56c31055fdaba98ec1c17e3455e96ad701abebc65eba6105c3e",
+            "5.00 (Japan)",
+        )],
+        native: Size::new(1360, 768),
         cabinet: Cabinet::Wmmt5,
         firmware: None,
         support: Support::Ready,
@@ -210,10 +207,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco ES3B",
         route: Route::Es3b,
         main_file: "wmn5r.exe",
-        editions: &[Edition {
-            sha256: "738e88b4d03ef6ab84208464d470e69557a8591cf5a293570badb1dfdcbc3b2a",
-            label: "Export",
-        }],
+        editions: &[Edition::sha256(
+            "738e88b4d03ef6ab84208464d470e69557a8591cf5a293570badb1dfdcbc3b2a",
+            "Export",
+        )],
+        native: Size::new(1360, 768),
         cabinet: Cabinet::Wmmt5,
         firmware: None,
         support: Support::Ready,
@@ -227,10 +225,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco ES3B",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
-        editions: &[Edition {
-            sha256: "92f02199a44fa65a35af3ed162b5ce5477cfc8b2e3a13ccc95936356680f1479",
-            label: "1.03.04 (Export)",
-        }],
+        editions: &[Edition::sha256(
+            "92f02199a44fa65a35af3ed162b5ce5477cfc8b2e3a13ccc95936356680f1479",
+            "1.03.04 (Export)",
+        )],
+        native: Size::new(1360, 768),
         cabinet: Cabinet::Wmmt5,
         firmware: None,
         support: Support::Ready,
@@ -244,10 +243,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco ES3B",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
-        editions: &[Edition {
-            sha256: "bf9fded65f5d029deaed5c3b5d06e8035dae70eee2e03c51e3adc2b1444ae2be",
-            label: "Japan",
-        }],
+        editions: &[Edition::sha256(
+            "bf9fded65f5d029deaed5c3b5d06e8035dae70eee2e03c51e3adc2b1444ae2be",
+            "Japan",
+        )],
+        native: Size::new(1360, 768),
         cabinet: Cabinet::Wmmt6RR,
         firmware: None,
         support: Support::Ready,
@@ -261,10 +261,11 @@ pub const GAMES: &[Game] = &[
         board: "Namco ES3B",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
-        editions: &[Edition {
-            sha256: "9203e373b73a522c3ca213df9add0e3d4cce3f81aaba8c48ce5e46c132932d4b",
-            label: "3.05.03 (Japan)",
-        }],
+        editions: &[Edition::sha256(
+            "9203e373b73a522c3ca213df9add0e3d4cce3f81aaba8c48ce5e46c132932d4b",
+            "3.05.03 (Japan)",
+        )],
+        native: Size::new(1360, 768),
         cabinet: Cabinet::Wmmt6RR,
         firmware: None,
         support: Support::Ready,
@@ -272,29 +273,16 @@ pub const GAMES: &[Game] = &[
 ];
 
 pub fn game(id: GameId) -> &'static Game {
-    GAMES
-        .iter()
-        .find(|g| g.id == id)
-        .expect("every id is in GAMES")
+    catalog::by_id(GAMES, id).expect("every id is in GAMES")
 }
 
 pub fn by_slug(slug: &str) -> Option<&'static Game> {
     GAMES.iter().find(|g| g.slug == slug)
 }
 
-/// Every game whose main file has this name (several share `main` or `wmn6r.exe`).
-pub fn by_main_file(name: &str) -> impl Iterator<Item = &'static Game> + '_ {
-    GAMES.iter().filter(move |g| g.main_file == name)
-}
-
-/// The game and edition a main file's digest belongs to.
-pub fn identify(sha256: &str) -> Option<(&'static Game, &'static Edition)> {
-    GAMES.iter().find_map(|g| {
-        g.editions
-            .iter()
-            .find(|e| e.sha256.eq_ignore_ascii_case(sha256))
-            .map(|e| (g, e))
-    })
+/// The library scan over these games, sharing `cache` with every other scan.
+pub fn library(cache: HashCache) -> Library<Game> {
+    Library::new(GAMES).with_cache(cache)
 }
 
 #[cfg(test)]
@@ -304,31 +292,21 @@ mod tests {
 
     #[test]
     fn ids_slugs_and_digests_are_unique() {
-        let ids: HashSet<_> = GAMES.iter().map(|g| g.id).collect();
+        assert_eq!(catalog::check_table(GAMES), Ok(()));
         let slugs: HashSet<_> = GAMES.iter().map(|g| g.slug).collect();
-        let shas: HashSet<_> = GAMES
-            .iter()
-            .flat_map(|g| g.editions.iter().map(|e| e.sha256))
-            .collect();
-        assert_eq!(ids.len(), GAMES.len());
         assert_eq!(slugs.len(), GAMES.len());
-        assert_eq!(
-            shas.len(),
-            GAMES.iter().map(|g| g.editions.len()).sum::<usize>()
-        );
-        for s in &shas {
-            assert_eq!(s.len(), 64);
-            assert!(s.chars().all(|c| c.is_ascii_hexdigit()));
-        }
     }
 
     #[test]
     fn identify_finds_the_right_game() {
-        let (g, e) =
-            identify("3DC7CC6174806FE4EA6687625C233ED5468E0225E3BCCE15E225B25B2934BE5B").unwrap();
+        let (g, e) = catalog::identify(
+            GAMES,
+            "3DC7CC6174806FE4EA6687625C233ED5468E0225E3BCCE15E225B25B2934BE5B",
+        )
+        .unwrap();
         assert_eq!(g.id, GameId::Mt3dxp);
         assert_eq!(e.label, "Export");
-        assert!(identify("00").is_none());
+        assert!(catalog::identify(GAMES, "00").is_none());
     }
 
     #[test]
@@ -340,28 +318,25 @@ mod tests {
 
     #[test]
     fn n2_games_are_linux_only() {
-        let ready_on = |p: Platform| -> Vec<&str> {
+        let ready_on = |h: Host| -> Vec<&str> {
             GAMES
                 .iter()
-                .filter(|g| g.support_on(p) == Support::Ready)
+                .filter(|g| g.support_on(h) == Support::Ready)
                 .map(|g| g.slug)
                 .collect()
         };
         assert_eq!(
-            ready_on(Platform::Windows),
+            ready_on(Host::Windows),
             ["mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
         );
         assert_eq!(
-            game(GameId::Mt3).support_on(Platform::Windows),
+            game(GameId::Mt3).support_on(Host::Windows),
             Support::Blocked(N2_LINUX_ONLY)
         );
-        assert_eq!(
-            game(GameId::Mt3dxp).support_on(Platform::Linux),
-            Support::Ready
-        );
+        assert_eq!(game(GameId::Mt3dxp).support_on(Host::Linux), Support::Ready);
         // a game blocked everywhere keeps its own reason
         assert_eq!(
-            game(GameId::Mt1).support_on(Platform::Windows),
+            game(GameId::Mt1).support_on(Host::Windows),
             game(GameId::Mt1).support
         );
     }
@@ -379,5 +354,44 @@ mod tests {
                 "wangan-r", "mt3", "mt3dxp", "mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"
             ]
         );
+    }
+
+    #[test]
+    fn only_the_n2_games_take_a_render_size() {
+        let takes: Vec<_> = GAMES
+            .iter()
+            .filter(|g| !g.render_fixed())
+            .map(|g| g.slug)
+            .collect();
+        assert_eq!(takes, ["mt3", "mt3dxp"]);
+    }
+
+    #[test]
+    fn a_stray_main_file_never_hides_the_game_beside_it() {
+        let t = tempfile::tempdir().unwrap();
+        let g = t.path().join("MT6 [TP]");
+        std::fs::create_dir(&g).unwrap();
+        // an N2 main file left over in an ES3B folder, and the ES3B program
+        std::fs::write(g.join("main"), b"not the game").unwrap();
+        std::fs::write(g.join("wmn6r.exe"), b"not the game either").unwrap();
+        let scan = library(HashCache::default()).scan(&[t.path().to_path_buf()]);
+        let files: Vec<_> = scan
+            .entries
+            .iter()
+            .map(|e| e.file.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(files, ["main", "wmn6r.exe"], "both are reported");
+        assert!(scan.problems.is_empty(), "{:?}", scan.problems);
+    }
+
+    /// The owner's real library, when present (`WANGAN_GAMES_DIR=… cargo test -- --ignored`).
+    #[test]
+    #[ignore]
+    fn real_library_finds_all_nine() {
+        let Ok(root) = std::env::var("WANGAN_GAMES_DIR") else {
+            return;
+        };
+        let scan = library(HashCache::default()).scan(&[root.into()]);
+        assert_eq!(scan.by_game().len(), 9, "{:#?}", scan.entries);
     }
 }

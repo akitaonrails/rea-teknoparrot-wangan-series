@@ -15,11 +15,11 @@ use eframe::egui::{
     self, Align2, Color32, CornerRadius, CursorIcon, FontId, Id, Mesh, Pos2, Rect, Sense, Shape,
     Stroke, StrokeKind, TextureHandle, Vec2, pos2, vec2,
 };
+use rea_launcher::library::{Entry, Found, HashCache, Scan};
 use rea_launcher::wheel::{Action, Control, Kind};
-use wangan_core::catalog::{GAMES, Game};
+use wangan_core::catalog::{self, GAMES, Game};
 use wangan_core::firmware::{self, FileState};
 use wangan_core::input::{Button, default_pad_map};
-use wangan_core::library::{self, Entry, Found, HashCache};
 
 use crate::input::{Command, InputService, Snapshot};
 use crate::log;
@@ -86,9 +86,10 @@ struct App {
     snap: Snapshot,
     model: Model,
     /// The last scan; `None` while looking.
-    entries: Option<Vec<Entry>>,
-    scan: Option<Receiver<(Vec<Entry>, HashCache)>>,
-    cache: Option<HashCache>,
+    entries: Option<Vec<Entry<Game>>>,
+    scan: Option<Receiver<Scan<Game>>>,
+    /// Shared by every scan: a rescan during a scan reuses its digests.
+    cache: HashCache,
     form: Option<(usize, Form)>,
     /// The last save: text, and whether it worked.
     note: Option<(String, bool)>,
@@ -127,7 +128,7 @@ impl App {
             snap: Snapshot::default(),
             entries: None,
             scan: None,
-            cache: Some(HashCache::default()),
+            cache: HashCache::default(),
             form: None,
             note: None,
             heroes: vec![None; GAMES.len()],
@@ -152,13 +153,12 @@ impl App {
         let Some(root) = self.library.clone() else {
             return;
         };
-        let mut cache = self.cache.take().unwrap_or_default();
+        let library = catalog::library(self.cache.clone());
         let (tx, rx) = mpsc::channel();
         std::thread::Builder::new()
             .name("scan".into())
             .spawn(move || {
-                let found = library::scan(&root, &mut cache);
-                let _ = tx.send((found, cache));
+                let _ = tx.send(library.scan(&[root]));
             })
             .expect("spawn scan thread");
         self.entries = None;
@@ -168,20 +168,22 @@ impl App {
     fn poll_scan(&mut self) {
         let Some(rx) = &self.scan else { return };
         match rx.try_recv() {
-            Ok((found, cache)) => {
-                for e in &found {
-                    if let Found::Unknown { file, sha256 } = &e.found {
+            Ok(found) => {
+                for problem in &found.problems {
+                    log::line(&self.paths, &format!("couldn't read {problem}"));
+                }
+                for e in &found.entries {
+                    if let Found::Unknown { file, digest } = &e.found {
                         log::line(
                             &self.paths,
                             &format!(
-                                "unknown build {file} sha256 {sha256} in {}",
+                                "unknown build {file} sha256 {digest} in {}",
                                 e.dir.display()
                             ),
                         );
                     }
                 }
-                self.entries = Some(found);
-                self.cache = Some(cache);
+                self.entries = Some(found.entries);
                 self.scan = None;
             }
             Err(TryRecvError::Empty) => {}
@@ -203,7 +205,7 @@ impl App {
         }
     }
 
-    fn entry(&self, i: usize) -> Option<&Entry> {
+    fn entry(&self, i: usize) -> Option<&Entry<Game>> {
         self.entries
             .as_ref()?
             .iter()

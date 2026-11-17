@@ -1992,7 +1992,7 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 name = "rea-launcher"
 version = "0.9.0"
 dependencies = [
- "sha2 0.11.1",
+ "sha2",
 ]
 
 [[package]]
@@ -2219,17 +2219,6 @@ name = "sha1"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.2.17",
- "digest 0.10.7",
-]
-
-[[package]]
-name = "sha2"
-version = "0.10.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
@@ -2621,7 +2610,6 @@ dependencies = [
  "junction",
  "rea-launcher",
  "sha1",
- "sha2 0.10.9",
  "tempfile",
  "wangan-jvs",
  "zip",

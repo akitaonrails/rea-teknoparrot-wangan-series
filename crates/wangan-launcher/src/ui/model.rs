@@ -3,7 +3,7 @@
 //! the first-run folder field. The window draws this and acts on the
 //! [`Effect`]s it returns.
 
-use wangan_core::catalog::{Game, Support};
+use wangan_core::catalog::{Game, Host, Support};
 use wangan_core::firmware::FirmwareSet;
 
 use super::form::Row;
@@ -392,11 +392,11 @@ impl TileState {
                 (true, true) => TileState::NeedsFiles(set),
             };
         }
-        match (game.support_here(), scanned, in_library) {
+        match (game.support_on(Host::current()), scanned, in_library) {
             (Support::Blocked(why), _, _) => TileState::Blocked(why),
             (_, false, _) => TileState::Looking,
             (_, true, false) => TileState::NotInLibrary,
-            (Support::Ready, true, true) => TileState::Ready,
+            (Support::Ready | Support::Unverified(_), true, true) => TileState::Ready,
         }
     }
 

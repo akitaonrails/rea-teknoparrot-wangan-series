@@ -6,7 +6,6 @@ pub mod catalog;
 pub mod firmware;
 pub mod input;
 pub mod launch;
-pub mod library;
 pub mod runtime;
 pub mod settings;
 pub mod sys246;

@@ -3,7 +3,7 @@
 
 use std::path::Path;
 
-use wangan_core::catalog::{Platform, Route};
+use wangan_core::catalog::{Host, Route};
 use wangan_core::launch::ES3B_SIZE;
 use wangan_core::settings::{Settings, Size, Upscaler};
 
@@ -91,9 +91,9 @@ const SHARPNESS_OFF: &str = "Only FSR 1 and NVIDIA Image Scaling use sharpness."
 pub const NO_GAMESCOPE: &str = "On Windows the game sets its own screen mode (full screen, 1360 × 768); this option is for gamescope on Linux.";
 
 /// Why a row can't be used on `platform` at all, whatever the game.
-pub fn platform_off(row: Row, platform: Platform) -> Option<&'static str> {
+pub fn platform_off(row: Row, platform: Host) -> Option<&'static str> {
     match (row, platform) {
-        (Row::Output | Row::Upscaler | Row::Sharpness | Row::Fullscreen, Platform::Windows) => {
+        (Row::Output | Row::Upscaler | Row::Sharpness | Row::Fullscreen, Host::Windows) => {
             Some(NO_GAMESCOPE)
         }
         _ => None,
@@ -104,7 +104,7 @@ pub fn platform_off(row: Row, platform: Platform) -> Option<&'static str> {
 pub struct Form {
     pub settings: Settings,
     pub route: Route,
-    pub platform: Platform,
+    pub platform: Host,
 }
 
 fn size_name(s: Size) -> String {
@@ -160,10 +160,10 @@ fn pick<T: Copy + PartialEq>(all: &[T], cur: T, d: i32, wrap: bool) -> T {
 
 impl Form {
     pub fn new(settings: Settings, route: Route) -> Self {
-        Self::on(settings, route, Platform::HOST)
+        Self::on(settings, route, Host::current())
     }
 
-    pub fn on(settings: Settings, route: Route, platform: Platform) -> Self {
+    pub fn on(settings: Settings, route: Route, platform: Host) -> Self {
         Self {
             settings,
             route,
@@ -242,12 +242,12 @@ mod tests {
     use super::*;
 
     fn n2() -> Form {
-        Form::on(Settings::default(), Route::NativeN2, Platform::Linux)
+        Form::on(Settings::default(), Route::NativeN2, Host::Linux)
     }
 
     #[test]
     fn windows_turns_the_gamescope_rows_off_with_a_reason() {
-        let mut f = Form::on(Settings::default(), Route::Es3b, Platform::Windows);
+        let mut f = Form::on(Settings::default(), Route::Es3b, Host::Windows);
         for row in [Row::Output, Row::Upscaler, Row::Sharpness, Row::Fullscreen] {
             assert_eq!(f.disabled(row), Some(NO_GAMESCOPE), "{row:?}");
             assert!(!f.adjust(row, 1, true), "{row:?} must not change");
@@ -256,7 +256,7 @@ mod tests {
         assert!(f.disabled(Row::Deadzone).is_none());
         assert!(f.adjust(Row::Deadzone, 1, false));
         // the same rows are on for Linux
-        let l = Form::on(Settings::default(), Route::Es3b, Platform::Linux);
+        let l = Form::on(Settings::default(), Route::Es3b, Host::Linux);
         assert!(l.disabled(Row::Output).is_none() && l.disabled(Row::Fullscreen).is_none());
     }
 
@@ -337,7 +337,7 @@ mod tests {
         f.adjust(Row::Render, 1, false);
         assert_eq!(f.settings.render, Some(Size::new(1920, 1080)));
 
-        let mut es3b = Form::on(Settings::default(), Route::Es3b, Platform::Linux);
+        let mut es3b = Form::on(Settings::default(), Route::Es3b, Host::Linux);
         assert_eq!(es3b.disabled(Row::Render), Some(RENDER_FIXED));
         assert_eq!(es3b.value(Row::Render), "1360 × 768");
         assert!(!es3b.adjust(Row::Render, 1, false));
@@ -349,9 +349,9 @@ mod tests {
     #[test]
     fn every_row_has_words_and_disabled_rows_say_why() {
         for (route, platform) in [
-            (Route::NativeN2, Platform::Linux),
-            (Route::Es3b, Platform::Linux),
-            (Route::Es3b, Platform::Windows),
+            (Route::NativeN2, Host::Linux),
+            (Route::Es3b, Host::Linux),
+            (Route::Es3b, Host::Windows),
         ] {
             let f = Form::on(Settings::default(), route, platform);
             for row in Row::ALL {

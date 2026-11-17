@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rea_launcher::wheel::Control as _;
-use wangan_core::catalog::{GAMES, Platform};
+use wangan_core::catalog::{self, GAMES};
 use wangan_core::input::{Button, default_pad_map};
 use wangan_core::launch::{self, Host};
 use wangan_core::runtime::{self, Components, Item, Op};
@@ -481,7 +481,7 @@ fn write_op(out: &mut String, op: &Op) {
 #[test]
 fn every_runtime_plan() {
     let mut out = String::new();
-    for platform in [Platform::Linux, Platform::Windows] {
+    for platform in [catalog::Host::Linux, catalog::Host::Windows] {
         for g in GAMES {
             let _ = writeln!(out, "== {} on {platform:?}", g.slug);
             let (items, jp) = listing(g.slug);

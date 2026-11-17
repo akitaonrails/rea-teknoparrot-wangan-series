@@ -12,9 +12,9 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
+use rea_launcher::library::Entry;
 use wangan_core::catalog::{Game, Route};
 use wangan_core::launch::{self, Host, Plan};
-use wangan_core::library::Entry;
 use wangan_core::runtime;
 use wangan_core::settings::Settings;
 use wangan_jvs::shared::{QUIT, Snapshot};
@@ -40,7 +40,12 @@ pub struct Prepared {
 }
 
 /// Build the runtime folder and write the game's config files.
-pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -> Result<Prepared> {
+pub fn prepare(
+    paths: &Paths,
+    game: &Game,
+    entry: &Entry<Game>,
+    settings: &Settings,
+) -> Result<Prepared> {
     let rt = paths.runtime(game.slug);
     let items =
         runtime::list(&entry.dir).with_context(|| format!("reading {}", entry.dir.display()))?;
@@ -50,7 +55,9 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
     } else {
         vec![]
     };
-    if let wangan_core::catalog::Support::Blocked(why) = game.support_here() {
+    if let wangan_core::catalog::Support::Blocked(why) =
+        game.support_on(wangan_core::catalog::Host::current())
+    {
         bail!("{} can't start here: {why}", game.title);
     }
     let comps = paths.runtime_components();
@@ -91,7 +98,7 @@ pub fn prepare(paths: &Paths, game: &Game, entry: &Entry, settings: &Settings) -
 /// Wangan R: the BIOS from the board files, and a fresh dongle card from
 /// the dump's zip at every start (the game writes to the card while it
 /// runs; the dump's copy is never touched).
-fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry, rt: &Path) -> Result<()> {
+fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry<Game>, rt: &Path) -> Result<()> {
     use wangan_core::sys246;
     let set = game
         .firmware
