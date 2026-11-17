@@ -104,6 +104,8 @@ if [ "$os" = linux ]; then
 	[ -e "$t/pcsx2x6/squashfs-root/AppRun" ] || die "the pcsx2x6 AppImage has no AppRun"
 	mv "$t/pcsx2x6/squashfs-root" "$c/pcsx2x6/app"
 	unzip -q -o -j "$(fetch proverb)" bin/NM00005/boot.elf -d "$c/pcsx2x6/NM00005"
+	mkdir -p "$out/licenses/proverb"
+	unzip -q -o -j "$(fetch proverb)" LICENSE -d "$out/licenses/proverb"
 
 	# Wine (as sdk/packaging/appimage-wine.sh trims it) + FFmpeg 4 for its movie demuxer
 	mkdir -p "$c/wine"

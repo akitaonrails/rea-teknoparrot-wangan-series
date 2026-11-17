@@ -220,8 +220,11 @@ fn walk(
                 continue;
             }
             report.looked_at += 1;
-            let mut bytes = Vec::with_capacity(entry.size() as usize);
-            if entry.read_to_end(&mut bytes).is_ok() {
+            // read no more than the size the entry declares: a hostile
+            // header cannot make this hold more than one wanted file
+            let size = entry.size();
+            let mut bytes = Vec::with_capacity(size as usize);
+            if (&mut entry).take(size).read_to_end(&mut bytes).is_ok() {
                 found(&bytes, report)?;
             }
         }
