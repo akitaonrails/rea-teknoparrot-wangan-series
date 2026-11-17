@@ -575,7 +575,16 @@ mod tests {
     #[test]
     fn wangan_r_gets_the_emulator_the_chd_and_proverb_under_the_game_id() {
         let (src, rt, c) = (Path::new("/lib/wmr"), Path::new("/rt"), Path::new("/c"));
-        let ops = plan(game(GameId::WanganR), src, &[], &[], rt, &comps(c));
+        // the Linux plan (Wangan R has none on Windows yet; checked below)
+        let ops = plan_on(
+            game(GameId::WanganR),
+            src,
+            &[],
+            &[],
+            rt,
+            &comps(c),
+            Platform::Linux,
+        );
         let game_dir = rt.join("game").join("NM00005");
         assert!(ops.contains(&Op::Link {
             target: c.join("pcsx2x6").join("app"),
