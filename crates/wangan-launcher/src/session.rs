@@ -674,7 +674,7 @@ mod tests {
             },
             gamescope: vec![],
             wine_prefix: None,
-            game_size: wangan_core::settings::Size::new(1360, 768),
+            game_size: rea_launcher::gamescope::Size::new(1360, 768),
         };
         let s = script(&plan);
         assert!(

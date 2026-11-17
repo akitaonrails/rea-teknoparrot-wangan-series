@@ -1,5 +1,6 @@
 == parsed
 Settings {
+    look: None,
     render: None,
     output: Size {
         w: 2560,
@@ -8,22 +9,22 @@ Settings {
     upscaler: Nis,
     sharpness: 5,
     fullscreen: true,
-    deadzone: 0.15,
+    deadzone: 0.2,
 }
 == problems
-line 7: bad value for sharpness: 50
-line 10: no '='
+settings line 5: unknown setting "fsr_sharpness" (ignored, kept in the file)
+settings line 7: sharpness needs 0 to 20, not "50"
+settings line 12: unknown setting "future_key" (ignored, kept in the file)
 == saved
 # my Wangan notes
-output = 2560x1440
+output=2560X1440
 
-upscaler = nis
+  upscaler =  nis
 fsr_sharpness = 3
 # output = 1920x1080
-sharpness = 5
+sharpness = 50
 render = native
-deadzone = 0.15
+deadzone = 0.20
 no equals sign here
-deadzone = 0.15
+deadzone = 0.20
 future_key = keep me
-fullscreen = true

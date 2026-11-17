@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use rea_launcher::library::{Found, HashCache};
-use wangan_core::catalog::{self, Host, Support};
+use wangan_core::catalog::{self, Game, Host, Support};
 use wangan_core::firmware::{self, FileState};
 use wangan_core::settings::Settings;
 
@@ -48,8 +48,8 @@ struct Args {
     headless: bool,
     no_input: bool,
     game: Option<String>,
-    /// `key = value` lines for the game's settings file.
-    options: Vec<String>,
+    /// `(key, value)` for the game's settings file.
+    options: Vec<(String, String)>,
 }
 
 fn parse() -> Result<Option<Args>, String> {
@@ -96,12 +96,10 @@ fn parse_args(
                     return Err(format!("{x}: {why}"));
                 }
                 let value = it.next().ok_or(format!("{x} needs a value"))?;
-                let line = format!("{key} = {value}");
-                let (_, problems) = Settings::parse(&line);
-                if !problems.is_empty() {
+                if Settings::default().set(key, &value).is_err() {
                     return Err(format!("bad value for {x}: {value}"));
                 }
-                a.options.push(line);
+                a.options.push((key.to_string(), value));
             }
             other => return Err(format!("unknown option {other}")),
         }
@@ -109,13 +107,16 @@ fn parse_args(
     Ok(Some(a))
 }
 
-pub fn load_settings(paths: &Paths, slug: &str) -> Settings {
-    let text = std::fs::read_to_string(paths.settings(slug)).unwrap_or_default();
-    let (s, problems) = Settings::parse(&text);
+/// A game's settings; the lines its file couldn't read go to `launcher.log`.
+pub fn load_settings(paths: &Paths, game: &Game) -> Result<Settings, String> {
+    let file = paths.settings(game.slug);
+    let text = rea_launcher::cfg::read_file(&file)
+        .map_err(|e| format!("couldn't read {}: {e}", file.display()))?;
+    let (s, problems) = Settings::parse(&text.unwrap_or_default());
     for p in problems {
-        log::line(paths, &format!("settings/{slug}.cfg: {p}"));
+        log::line(paths, &format!("settings/{}.cfg: {p}", game.slug));
     }
-    s
+    Ok(s)
 }
 
 fn main() -> ExitCode {
@@ -196,11 +197,11 @@ fn main() -> ExitCode {
             eprintln!("options need --play <game> or --game <game>\n\n{USAGE}");
             return ExitCode::from(2);
         };
-        if catalog::by_slug(slug).is_none() {
+        let Some(game) = catalog::by_slug(slug) else {
             eprintln!("unknown game {slug}");
             return ExitCode::from(2);
-        }
-        if let Err(e) = save_options(&paths, slug, &args.options) {
+        };
+        if let Err(e) = save_options(&paths, game, &args.options) {
             eprintln!("could not save the options: {e}");
             return ExitCode::FAILURE;
         }
@@ -255,17 +256,20 @@ fn add_files_cli(paths: &Paths, src: &std::path::Path) -> ExitCode {
     }
 }
 
-/// Apply `key = value` options to a game's settings file, keeping the rest.
-pub fn save_options(paths: &Paths, slug: &str, options: &[String]) -> std::io::Result<()> {
-    let file = paths.settings(slug);
-    let old = std::fs::read_to_string(&file).unwrap_or_default();
-    let (settings, _) = Settings::parse(&format!("{old}\n{}", options.join("\n")));
-    if let Some(p) = file.parent() {
-        std::fs::create_dir_all(p)?;
+/// Apply `(key, value)` options to a game's settings file, keeping the rest.
+pub fn save_options(
+    paths: &Paths,
+    game: &Game,
+    options: &[(String, String)],
+) -> Result<(), String> {
+    let mut s = load_settings(paths, game)?;
+    for (k, v) in options {
+        s.set(k, v)
+            .map_err(|_| format!("bad value for --{k}: {v}"))?;
     }
-    let tmp = file.with_extension("tmp");
-    std::fs::write(&tmp, settings.save(&old))?;
-    std::fs::rename(tmp, file)
+    let keys: Vec<&str> = options.iter().map(|(k, _)| k.as_str()).collect();
+    s.write(&paths.settings(game.slug), &keys)
+        .map_err(|e| e.to_string())
 }
 
 fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) -> ExitCode {
@@ -286,7 +290,13 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
         eprintln!("{} is not in {}", game.title, root.display());
         return ExitCode::FAILURE;
     };
-    let settings = load_settings(paths, slug);
+    let settings = match load_settings(paths, game) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
     let prepared = match session::prepare(paths, game, &entry, &settings) {
         Ok(p) => p,
         Err(e) => {
@@ -350,6 +360,6 @@ mod tests {
         let a = parse_args(args("--game mt5 --deadzone 0.1"), Host::Windows)
             .unwrap()
             .unwrap();
-        assert_eq!(a.options, ["deadzone = 0.1"]);
+        assert_eq!(a.options, [("deadzone".to_string(), "0.1".to_string())]);
     }
 }

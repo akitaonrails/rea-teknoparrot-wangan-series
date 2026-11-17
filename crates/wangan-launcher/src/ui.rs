@@ -309,14 +309,20 @@ impl App {
         self.model.settle(w);
     }
 
+    /// A game's settings; one the launcher can't read is logged, and its
+    /// defaults shown (a save then refuses to write over the file).
+    fn settings(&self, game: &Game) -> wangan_core::settings::Settings {
+        crate::load_settings(&self.paths, game).unwrap_or_else(|e| {
+            log::line(&self.paths, &e);
+            Default::default()
+        })
+    }
+
     fn ensure_form(&mut self) {
         let i = self.model.selected;
         if self.form.as_ref().map(|(at, _)| *at) != Some(i) {
             let g = &GAMES[i];
-            self.form = Some((
-                i,
-                Form::new(crate::load_settings(&self.paths, g.slug), g.route),
-            ));
+            self.form = Some((i, Form::new(self.settings(g), g.route)));
             self.note = None;
         }
     }
@@ -430,7 +436,7 @@ impl App {
             return;
         }
         let path = self.paths.settings(GAMES[*i].slug);
-        self.note = Some(match form::save(&path, &f.settings) {
+        self.note = Some(match f.settings.write(&path, &[row.key()]) {
             Ok(()) => (
                 "Saved. The game uses it the next time you press Play.".to_string(),
                 true,
@@ -484,7 +490,7 @@ impl App {
             return;
         };
         let game = &GAMES[i];
-        let settings = crate::load_settings(&self.paths, game.slug);
+        let settings = self.settings(game);
         let paths = self.paths.clone();
         let (tx, rx) = mpsc::channel();
         std::thread::Builder::new()
@@ -513,7 +519,9 @@ impl App {
                     self.input.send(Command::Attach {
                         block: prepared.block.clone(),
                         cabinet: game.cabinet,
-                        deadzone: crate::load_settings(&self.paths, game.slug).deadzone,
+                        deadzone: crate::load_settings(&self.paths, game)
+                            .map(|s| s.deadzone)
+                            .unwrap_or_default(),
                     });
                     let paths = self.paths.clone();
                     let (tx, rx) = mpsc::channel();

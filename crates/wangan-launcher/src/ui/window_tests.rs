@@ -711,15 +711,18 @@ fn every_option_is_saved_like_the_command_line_saves_it() {
         data: cli.path().to_path_buf(),
         ..w.paths.clone()
     };
-    let options = [
-        format!("output = {}", s.output),
-        format!("upscaler = {}", s.upscaler.key()),
-        format!("sharpness = {}", s.sharpness),
-        format!("fullscreen = {}", s.fullscreen),
-        format!("render = {render}"),
-        format!("deadzone = {}", s.deadzone),
-    ];
-    crate::save_options(&cli_paths, "mt3", &options).unwrap();
+    let options: Vec<(String, String)> = [
+        ("output", s.output.to_string()),
+        ("upscaler", s.upscaler.key().to_string()),
+        ("sharpness", s.sharpness.to_string()),
+        ("fullscreen", s.fullscreen.to_string()),
+        ("render", render),
+        ("deadzone", s.deadzone.to_string()),
+    ]
+    .map(|(k, v)| (k.to_string(), v))
+    .into();
+    let mt3 = wangan_core::catalog::by_slug("mt3").unwrap();
+    crate::save_options(&cli_paths, mt3, &options).unwrap();
     assert_eq!(
         w.settings_file("mt3").unwrap(),
         std::fs::read_to_string(cli_paths.settings("mt3")).unwrap()

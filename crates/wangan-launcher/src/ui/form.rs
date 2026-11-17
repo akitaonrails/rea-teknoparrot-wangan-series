@@ -1,11 +1,10 @@
 //! A game's settings page as data: its rows, what each shows, why one is
 //! off, and how ◀ ▶ change the [`Settings`] behind it.
 
-use std::path::Path;
-
+use rea_launcher::gamescope::{Size, Upscaler};
 use wangan_core::catalog::{Host, Route};
 use wangan_core::launch::ES3B_SIZE;
-use wangan_core::settings::{Settings, Size, Upscaler};
+use wangan_core::settings::Settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
@@ -225,18 +224,6 @@ impl Form {
     }
 }
 
-/// Write `settings` into the file at `path`, keeping the player's comments
-/// and unknown keys; atomically (temporary file, then rename).
-pub fn save(path: &Path, settings: &Settings) -> std::io::Result<()> {
-    let existing = std::fs::read_to_string(path).unwrap_or_default();
-    if let Some(p) = path.parent() {
-        std::fs::create_dir_all(p)?;
-    }
-    let tmp = path.with_extension("cfg.tmp");
-    std::fs::write(&tmp, settings.save(&existing))?;
-    std::fs::rename(tmp, path)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,11 +360,14 @@ mod tests {
         let mut f = n2();
         f.adjust(Row::Output, -2, false);
         f.adjust(Row::Fullscreen, 1, false);
-        save(&path, &f.settings).unwrap();
+        f.settings.write(&path, &["output", "fullscreen"]).unwrap();
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.starts_with("# my notes\nfuture = 1\n"), "{text}");
         let (back, problems) = Settings::parse(&text);
-        assert!(problems.is_empty());
+        assert!(
+            problems.iter().all(|p| p.contains("future")),
+            "{problems:?}"
+        );
         assert_eq!(back, f.settings);
         assert_eq!(back.output, Size::new(1920, 1080));
         assert!(!back.fullscreen);

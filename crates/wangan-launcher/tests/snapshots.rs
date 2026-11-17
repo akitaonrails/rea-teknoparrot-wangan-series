@@ -11,12 +11,13 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use rea_launcher::gamescope::{Size, Upscaler};
 use rea_launcher::wheel::Control as _;
 use wangan_core::catalog::{self, GAMES};
 use wangan_core::input::{Button, default_pad_map};
 use wangan_core::launch::{self, Host};
 use wangan_core::runtime::{self, Components, Item, Op};
-use wangan_core::settings::{Settings, Size, Upscaler};
+use wangan_core::settings::Settings;
 use wangan_jvs::board::{Board, NAMCO_WMMT};
 use wangan_jvs::controls::{Cabinet, Controls};
 use wangan_jvs::{chihiro, frame};
@@ -217,7 +218,7 @@ fn every_command_line_mode() {
 
 #[test]
 fn the_settings_file_written_from_defaults() {
-    rea_launcher::snapshot!("settings.cfg.txt", Settings::default().save(""));
+    rea_launcher::snapshot!("settings.cfg.txt", Settings::default().save("", &[]));
 }
 
 /// A player's file: comments, blank lines, unknown and old keys, a key
@@ -238,8 +239,10 @@ no equals sign here
 deadzone = 0.15
 future_key = keep me
 ";
-    let (settings, problems) = Settings::parse(text);
-    let saved = settings.save(text);
+    let (mut settings, problems) = Settings::parse(text);
+    // the window changes one row and saves it
+    settings.deadzone = 0.2;
+    let saved = settings.save(text, &["deadzone"]);
     let mut out = format!("== parsed\n{settings:#?}\n== problems\n");
     for problem in &problems {
         let _ = writeln!(out, "{problem}");
@@ -247,11 +250,12 @@ future_key = keep me
     let _ = write!(out, "== saved\n{saved}");
     let (again, problems) = Settings::parse(&saved);
     assert_eq!(again, settings);
-    assert!(
-        problems.iter().all(|p| p.contains("no '='")),
-        "{problems:?}"
+    assert_eq!(problems.len(), 3, "{problems:?}");
+    assert_eq!(
+        again.save(&saved, &["deadzone"]),
+        saved,
+        "a second save changes nothing"
     );
-    assert_eq!(again.save(&saved), saved, "a second save changes nothing");
     rea_launcher::snapshot!("settings-round-trip.txt", out);
 }
 
@@ -263,6 +267,7 @@ fn settings_cases() -> Vec<(&'static str, Settings)> {
         (
             "custom",
             Settings {
+                look: None,
                 render: Some(Size::new(1920, 1080)),
                 output: Size::new(2560, 1440),
                 upscaler: Upscaler::Nis,
@@ -274,6 +279,7 @@ fn settings_cases() -> Vec<(&'static str, Settings)> {
         (
             "smooth-720p",
             Settings {
+                look: None,
                 render: None,
                 output: Size::new(1280, 720),
                 upscaler: Upscaler::Linear,

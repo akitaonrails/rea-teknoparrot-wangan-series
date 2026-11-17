@@ -8,7 +8,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::catalog::{Game, GameId, Route};
-use crate::settings::{Settings, Size};
+use rea_launcher::gamescope::Size;
+
+use crate::settings::Settings;
 
 /// A process to start.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -130,34 +132,6 @@ BRAKE = ["DOWNARROW", "SDL_LTRIGGER_DOWN"]
 WHEEL_LEFT = ["LEFTARROW", "SDL_LSTICK_LEFT"]
 WHEEL_RIGHT = ["RIGHTARROW", "SDL_LSTICK_RIGHT"]
 "#;
-
-fn gamescope_args(s: &Settings, game: Size) -> Vec<String> {
-    let mut a = vec![
-        "-w".into(),
-        game.w.to_string(),
-        "-h".into(),
-        game.h.to_string(),
-        "-W".into(),
-        s.output.w.to_string(),
-        "-H".into(),
-        s.output.h.to_string(),
-        "-r".into(),
-        "60".into(),
-        "-F".into(),
-        s.upscaler.key().into(),
-    ];
-    if matches!(
-        s.upscaler,
-        crate::settings::Upscaler::Fsr | crate::settings::Upscaler::Nis
-    ) {
-        a.push("--sharpness".into());
-        a.push(s.sharpness.to_string());
-    }
-    if s.fullscreen {
-        a.push("-f".into());
-    }
-    a
-}
 
 fn es3b_exe(id: GameId) -> &'static str {
     match id {
@@ -290,7 +264,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     env: wine_env,
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: gamescope_args(s, ES3B_SIZE),
+                gamescope: s.picture(ES3B_SIZE).args(false),
                 wine_prefix: Some(prefix.to_path_buf()),
                 game_size: ES3B_SIZE,
             })
@@ -325,7 +299,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     ],
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: gamescope_args(s, render),
+                gamescope: s.picture(render).args(false),
                 wine_prefix: None,
                 game_size: render,
             })
@@ -362,7 +336,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     ],
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: gamescope_args(s, window),
+                gamescope: s.picture(window).args(false),
                 wine_prefix: None,
                 game_size: window,
             })
@@ -375,7 +349,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
 mod tests {
     use super::*;
     use crate::catalog::game;
-    use crate::settings::Upscaler;
+    use rea_launcher::gamescope::Upscaler;
 
     #[test]
     fn wangan_r_runs_pcsx2x6_on_its_acgame_upscaled_for_the_window() {

@@ -1,6 +1,32 @@
-render = native
+# Settings for one game of the Wangan Midnight launcher.
+# Every key is also a command-line option: render = 2560x1440 is --set
+# <game> --render 2560x1440 (or --play <game> --render 2560x1440).
+
+# Sets the picture at once: the game's own, sharper for your screen, or for
+# the Steam Deck. Options set after it win.
+# Values: original, recommended or steam_deck.
+#look =
+
+# The size of the picture on your screen. Pick your screen's size.
+# Values: WIDTHxHEIGHT.
 output = 3840x2160
+
+# How the game's picture is stretched to the output size.
+# Values: fsr, nis, linear or nearest.
 upscaler = fsr
+
+# How crisp the upscaler makes edges. 0 is the sharpest.
+# Values: 0 to 20.
 sharpness = 5
+
+# Fill the whole screen, or play in a window.
+# Values: on or off.
 fullscreen = true
+
+# The size the game draws at. Bigger is sharper and needs a stronger GPU.
+# Values: WIDTHxHEIGHT or native.
+render = native
+
+# How far a controller stick moves before the car starts to steer.
+# Values: 0.00 to 0.30.
 deadzone = 0.05
