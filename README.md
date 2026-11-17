@@ -31,7 +31,7 @@ A 1:1 crop of the 4K frame: [docs/images/mt3dxp-4k-detail.jpg](docs/images/mt3dx
 | Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
 | Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
 | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
-| Maximum Tune (3.07 Rev B) | Sega Chihiro | Cxbx-Reloaded; needs the four Chihiro media-board files you add | not yet run | not yet run |
+| Maximum Tune (3.07 Rev B) | Sega Chihiro | TeknoParrot's Cxbx-Reloaded under Wine; needs the four Chihiro media-board files you add | not supported yet: boots and races, but freezes in most runs | not yet run |
 | Wangan Midnight R | Namco System 246 | pcsx2x6 (bundled); needs the System 246 BIOS you add | plays, up to 4K | not yet run |
 
 "Plays" means a race was driven in the real game through the launcher,

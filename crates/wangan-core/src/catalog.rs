@@ -62,7 +62,7 @@ impl Platform {
 
 /// A game whose board files are in, but whose emulator the launcher
 /// doesn't start yet.
-pub const EMULATOR_PENDING: &str = "Your board files are in. Starting this game from the launcher hasn't been tested yet, so Play stays off for now.";
+pub const EMULATOR_PENDING: &str = "Your board files are in. Under Wine the Chihiro emulator freezes in most runs of this game, so Play stays off for now.";
 
 /// Why Wangan R is not offered on Windows yet.
 pub const SYS246_LINUX_ONLY: &str =
