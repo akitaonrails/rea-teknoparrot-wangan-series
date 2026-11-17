@@ -392,15 +392,16 @@ mod tests {
         };
         let rt = Path::new("/rt/wangan-r");
         let p = plan(game(GameId::WanganR), rt, Path::new("/pfx"), &s).unwrap();
-        assert_eq!(p.game.program, "/rt/wangan-r/pcsx2x6/AppRun");
+        let at = |f: &str| rt.join(f).to_string_lossy().into_owned();
+        assert_eq!(p.game.program, at("pcsx2x6/AppRun"));
         assert_eq!(
-            p.game.args.last().unwrap(),
-            "/rt/wangan-r/game/NM00005.acgame"
+            *p.game.args.last().unwrap(),
+            sys246_acgame(rt).to_string_lossy()
         );
         assert!(
             p.game
                 .env
-                .contains(&("XDG_CONFIG_HOME".into(), "/rt/wangan-r/config".into()))
+                .contains(&("XDG_CONFIG_HOME".into(), at("config")))
         );
         assert_eq!(p.game_size, Size::new(3840, 2160));
         assert_eq!(p.files[0], (sys246_acgame(rt), crate::sys246::acgame()));

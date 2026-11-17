@@ -574,29 +574,23 @@ mod tests {
 
     #[test]
     fn wangan_r_gets_the_emulator_the_chd_and_proverb_under_the_game_id() {
-        let (src, rt) = (Path::new("/lib/wmr"), Path::new("/rt"));
-        let ops = plan(
-            game(GameId::WanganR),
-            src,
-            &[],
-            &[],
-            rt,
-            &comps(Path::new("/c")),
-        );
+        let (src, rt, c) = (Path::new("/lib/wmr"), Path::new("/rt"), Path::new("/c"));
+        let ops = plan(game(GameId::WanganR), src, &[], &[], rt, &comps(c));
+        let game_dir = rt.join("game").join("NM00005");
         assert!(ops.contains(&Op::Link {
-            target: "/c/pcsx2x6/app".into(),
-            at: "/rt/pcsx2x6".into(),
+            target: c.join("pcsx2x6").join("app"),
+            at: rt.join("pcsx2x6"),
         }));
         assert!(ops.contains(&Op::Link {
-            target: "/lib/wmr/wanganmr/wmr1-a.chd".into(),
-            at: "/rt/game/NM00005/NM00005.chd".into(),
+            target: src.join("wanganmr/wmr1-a.chd"),
+            at: game_dir.join("NM00005.chd"),
         }));
         assert!(ops.contains(&Op::Refresh {
-            from: "/c/pcsx2x6/NM00005/boot.elf".into(),
-            to: "/rt/game/NM00005/boot.elf".into(),
+            from: c.join("pcsx2x6").join("NM00005").join("boot.elf"),
+            to: game_dir.join("boot.elf"),
             exec: false,
         }));
-        assert!(ops.contains(&Op::Dir("/rt/config/PCSX2x6/memcards".into())));
+        assert!(ops.contains(&Op::Dir(rt.join("config").join("PCSX2x6").join("memcards"))));
         let none = plan_on(
             game(GameId::WanganR),
             src,
