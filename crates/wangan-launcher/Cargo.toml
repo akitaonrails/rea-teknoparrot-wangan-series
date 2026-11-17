@@ -15,17 +15,11 @@ path = "src/main.rs"
 anyhow = "1"
 eframe = { version = "0.37.0", default-features = false, features = ["glow", "default_fonts", "x11", "wayland"] }
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
-rea-launcher.workspace = true
-rea-launcher-native.workspace = true
+rea-launcher = { workspace = true, features = ["linkfarm"] }
+rea-launcher-native = { workspace = true, features = ["group"] }
+signal-hook = "0.3"
 wangan-core = { path = "../wangan-core" }
 wangan-jvs = { path = "../wangan-jvs" }
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = [
-    "Win32_Foundation",
-    "Win32_System_Diagnostics_ToolHelp",
-    "Win32_System_Threading",
-] }
 
 [dev-dependencies]
 rea-launcher-ui = { workspace = true, features = ["testing"] }

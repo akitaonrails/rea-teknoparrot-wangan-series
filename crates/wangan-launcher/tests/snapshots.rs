@@ -338,7 +338,8 @@ fn every_launch_plan() {
                     continue;
                 };
                 let _ = writeln!(out, "size {}", plan.game_size);
-                let _ = writeln!(out, "gamescope {}", plan.gamescope.join(" "));
+                let gamescope = plan.picture.map(|p| p.args(false).join(" "));
+                let _ = writeln!(out, "gamescope {}", gamescope.unwrap_or_default());
                 if let Some(prefix) = &plan.wine_prefix {
                     let _ = writeln!(out, "wine prefix {}", p(prefix));
                 }

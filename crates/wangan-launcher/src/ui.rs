@@ -524,13 +524,24 @@ impl App {
                             .unwrap_or_default(),
                     });
                     let paths = self.paths.clone();
+                    let libraries: Vec<PathBuf> = self.library.iter().cloned().collect();
                     let (tx, rx) = mpsc::channel();
                     std::thread::Builder::new()
                         .name("session".into())
                         .spawn(move || {
-                            let r = session::run(&paths, game, &prepared, Display::Screen, |_| {})
-                                .map(|_| ())
-                                .map_err(|e| format!("{e:#}"));
+                            let stop = std::sync::atomic::AtomicBool::new(false);
+                            let mut hold = rea_launcher_native::supervise::Hold::default();
+                            let r = session::run(
+                                &paths,
+                                game,
+                                &prepared,
+                                Display::Screen,
+                                &libraries,
+                                &mut hold,
+                                &stop,
+                            )
+                            .map(|_| ())
+                            .map_err(|e| format!("{e:#}"));
                             let _ = tx.send(r);
                         })
                         .expect("spawn session thread");

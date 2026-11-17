@@ -5,10 +5,13 @@ mod log;
 mod paths;
 mod session;
 mod ui;
-mod winproc;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
+use rea_launcher_native::supervise::Hold;
 
 use rea_launcher::library::{Found, HashCache};
 use wangan_core::catalog::{self, Game, Host, Support};
@@ -285,7 +288,7 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
         eprintln!("no library yet: run with --library <folder>");
         return ExitCode::FAILURE;
     };
-    let found = catalog::library(HashCache::default()).scan(&[root.clone()]);
+    let found = catalog::library(HashCache::default()).scan(std::slice::from_ref(&root));
     let Some(entry) = found.by_game().get(&game.id).map(|e| (*e).clone()) else {
         eprintln!("{} is not in {}", game.title, root.display());
         return ExitCode::FAILURE;
@@ -317,9 +320,20 @@ fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) ->
     } else {
         Display::Screen
     };
-    let r = session::run(paths, game, &prepared, display, |pid| {
-        println!("gamescope pid {pid}")
-    });
+    // Ctrl+C or a TERM ends the game the way the window's Stop does
+    let stop = Arc::new(AtomicBool::new(false));
+    for sig in [signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM] {
+        let _ = signal_hook::flag::register(sig, Arc::clone(&stop));
+    }
+    let r = session::run(
+        paths,
+        game,
+        &prepared,
+        display,
+        &[root],
+        &mut Hold::default(),
+        &stop,
+    );
     if let Some(i) = &input {
         i.send(input::Command::Detach);
     }

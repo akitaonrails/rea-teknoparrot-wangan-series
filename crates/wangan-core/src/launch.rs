@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::catalog::{Game, GameId, Route};
-use rea_launcher::gamescope::Size;
+use rea_launcher::gamescope::{Picture, Size};
 
 use crate::settings::Settings;
 
@@ -29,8 +29,9 @@ pub struct Plan {
     pub helpers: Vec<Command>,
     /// The game; the session lasts as long as it runs.
     pub game: Command,
-    /// Arguments for gamescope, which wraps everything.
-    pub gamescope: Vec<String>,
+    /// The picture gamescope shows, wrapping everything (Linux); `None`:
+    /// the game sets its own screen mode (Windows).
+    pub picture: Option<Picture>,
     /// The game runs under Wine in this prefix.
     pub wine_prefix: Option<PathBuf>,
     /// Native size the game draws at.
@@ -185,7 +186,7 @@ fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
                 native_path(&rt.join(es3b_exe(game.id))),
             ],
         ),
-        gamescope: vec![],
+        picture: None,
         wine_prefix: None,
         game_size: ES3B_SIZE,
     })
@@ -264,7 +265,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     env: wine_env,
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: s.picture(ES3B_SIZE).args(false),
+                picture: Some(s.picture(ES3B_SIZE)),
                 wine_prefix: Some(prefix.to_path_buf()),
                 game_size: ES3B_SIZE,
             })
@@ -299,7 +300,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     ],
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: s.picture(render).args(false),
+                picture: Some(s.picture(render)),
                 wine_prefix: None,
                 game_size: render,
             })
@@ -336,7 +337,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     ],
                     cwd: rt.to_path_buf(),
                 },
-                gamescope: s.picture(window).args(false),
+                picture: Some(s.picture(window)),
                 wine_prefix: None,
                 game_size: window,
             })
@@ -418,8 +419,9 @@ mod tests {
                 .1
                 .contains("[General]\nInput API=DirectInput\nFreePlay=1")
         );
-        assert_eq!(&p.gamescope[..4], ["-w", "1360", "-h", "768"]);
-        assert!(p.gamescope.windows(2).any(|w| w == ["-F", "fsr"]));
+        let args = p.picture.unwrap().args(false);
+        assert_eq!(&args[..4], ["-w", "1360", "-h", "768"]);
+        assert!(args.windows(2).any(|w| w == ["-F", "fsr"]));
     }
 
     #[test]
@@ -545,8 +547,9 @@ mod tests {
             "WANGAN_INPUT_BLOCK".into(),
             rt.join("input.block").to_string_lossy().into_owned()
         )));
-        assert!(!p.gamescope.contains(&"-f".to_string()));
-        assert!(!p.gamescope.contains(&"--sharpness".to_string()));
+        let args = p.picture.unwrap().args(false);
+        assert!(!args.contains(&"-f".to_string()));
+        assert!(!args.contains(&"--sharpness".to_string()));
         assert!(p.wine_prefix.is_none());
     }
 
@@ -609,7 +612,7 @@ mod tests {
             assert!(c.env.is_empty(), "no Wine variables: {:?}", c.env);
             assert_eq!(c.cwd, rt);
         }
-        assert!(p.gamescope.is_empty());
+        assert!(p.picture.is_none());
         assert!(p.wine_prefix.is_none());
         assert!(p.files[0].0.ends_with("teknoparrot.ini"));
         assert!(p.files[0].1.contains("[Resolution]\nRES=1360x768"));

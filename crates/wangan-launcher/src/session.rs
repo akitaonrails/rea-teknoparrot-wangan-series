@@ -1,19 +1,29 @@
-//! One game run: prepare the runtime and the Wine prefix, start gamescope
-//! with the helpers and the game, wait, and leave nothing behind.
+//! One game run: prepare the runtime and the Wine prefix, start the game's
+//! processes as one group tied to the launcher, feed its input, wait, and
+//! leave nothing behind (`rea_launcher_native::{group, supervise}`).
 //!
-//! On Windows there is no Wine, prefix or gamescope: the helpers and the
-//! game start directly, and after the game the board is told to quit and
-//! anything still running from the runtime folder is stopped.
+//! Linux: gamescope (and bubblewrap, binding the game folders read-only)
+//! runs a small script that starts the helpers (the I/O board, the auth
+//! daemon) and then the game, all under Wine where the game is a Windows
+//! program. Windows: the helpers and the game start directly, each as a
+//! group of its own. Either way the session ends in the order the cabinet
+//! needs ([`Ending`]).
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, ExitStatus, Stdio};
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
+use rea_launcher::fsx;
+use rea_launcher::gamescope::{CommandLine, Picture};
 use rea_launcher::library::Entry;
 use rea_launcher::linkfarm::{self, Occupied};
+use rea_launcher::session::{EARLY_END, early_end};
+use rea_launcher_native::group::{Group, Tag};
+use rea_launcher_native::supervise::{self, Feed, Log, Options, Outcome, Watcher};
 use wangan_core::catalog::{Game, Route};
 use wangan_core::launch::{self, Host, Plan};
 use wangan_core::runtime;
@@ -34,6 +44,16 @@ pub enum Display {
 /// Bumped when the prefix setup changes, so old prefixes get the new steps.
 const PREFIX_VERSION: &str = "1";
 
+/// What marks the session's processes on Linux (its value: the runtime).
+const TAG: &str = "WANGAN_SESSION";
+
+/// How long the game, then what it leaves (the board, Wine), get to end
+/// by themselves before the session is killed.
+const GRACE: Duration = Duration::from_secs(5);
+
+/// The pause after each helper, as TeknoParrotUI makes.
+const HELPER_PAUSE: Duration = Duration::from_secs(2);
+
 pub struct Prepared {
     pub plan: Plan,
     pub runtime: PathBuf,
@@ -53,9 +73,9 @@ pub fn prepare(
     {
         bail!("{} can't start here: {why}", game.title);
     }
+    check_components(game, paths)?;
     let comps = paths.runtime_components();
     let host = host(paths);
-    check_components(game, &comps, &host)?;
     if rt.is_dir() {
         for gone in linkfarm::dangling(&rt)? {
             linkfarm::remove_link(&gone)?;
@@ -83,11 +103,11 @@ pub fn prepare(
     let plan = launch::plan_on(game, &rt, &paths.prefix(), settings, &host)
         .context("this game has no launch route yet")?;
     for (path, text) in &plan.files {
-        write_atomic(path, text.as_bytes())?;
+        fsx::write_atomic(path, text)?;
     }
     let block = launch::block_path(&rt);
     // a fresh block: everything released, quit clear
-    write_atomic(&block, &Snapshot::default().encode())?;
+    fsx::write_atomic(&block, Snapshot::default().encode())?;
     log::line(
         paths,
         &format!("prepared {} in {}", game.slug, rt.display()),
@@ -119,18 +139,16 @@ fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry<Game>, rt: &Path) ->
         // the emulator writes .nvm/.mec beside the BIOS: a copy in the runtime
         let to = data.join("bios").join(f.name);
         if fs::read(&to).map(|b| !f.matches(&b)).unwrap_or(true) {
-            write_atomic(&to, &fs::read(fw.join(f.name))?)?;
+            fsx::write_atomic(&to, fs::read(fw.join(f.name))?)?;
         }
     }
     let zip = entry.dir.join(game.main_file);
     let card = sys246::dongle_from_zip(&zip)
         .with_context(|| format!("making the dongle card from {}", zip.display()))?;
-    write_atomic(
-        &data
-            .join("memcards")
-            .join(format!("{}.ps2", sys246::GAME_ID)),
-        &card,
-    )
+    let card_file = data
+        .join("memcards")
+        .join(format!("{}.ps2", sys246::GAME_ID));
+    Ok(fsx::write_atomic(&card_file, card)?)
 }
 
 /// How this launcher starts the Windows games: directly on Windows; on
@@ -176,7 +194,10 @@ fn wine_bin(paths: &Paths, name: &str) -> PathBuf {
     }
 }
 
-fn check_components(game: &Game, c: &runtime::Components, host: &Host) -> Result<()> {
+/// Whether the launcher's components `game` needs are all in place.
+pub fn check_components(game: &Game, paths: &Paths) -> Result<()> {
+    let c = &paths.runtime_components();
+    let host = &host(paths);
     let need: Vec<PathBuf> = match game.route {
         Route::Es3b => {
             let mut v = vec![
@@ -240,16 +261,6 @@ fn link_nvidia_glx32(dir: &Path) -> Result<()> {
             std::os::unix::fs::symlink(target, &at)?;
         }
     }
-    Ok(())
-}
-
-fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
-    if let Some(p) = path.parent() {
-        fs::create_dir_all(p)?;
-    }
-    let tmp = path.with_extension("rea-tmp");
-    fs::write(&tmp, bytes)?;
-    fs::rename(&tmp, path)?;
     Ok(())
 }
 
@@ -395,13 +406,6 @@ fn wineserver_wait(paths: &Paths, pfx: &Path) {
         .status();
 }
 
-fn wineserver_kill(paths: &Paths, pfx: &Path) {
-    let _ = Command::new(wine_bin(paths, "wineserver"))
-        .arg("-k")
-        .env("WINEPREFIX", pfx)
-        .status();
-}
-
 fn sh_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
@@ -423,7 +427,7 @@ fn sh_command(c: &launch::Command) -> String {
 
 /// The shell script gamescope runs: helpers in the background (a short
 /// pause each, as TeknoParrotUI waits a second per helper), then the game.
-pub fn script(plan: &Plan) -> String {
+pub fn script_text(plan: &Plan) -> String {
     let mut s = String::from("set -u\n");
     for h in &plan.helpers {
         s.push_str(&format!(
@@ -438,173 +442,295 @@ pub fn script(plan: &Plan) -> String {
     s
 }
 
-pub fn gamescope_command(plan: &Plan, display: Display, rt: &Path) -> Result<Command> {
-    let script_path = rt.join("session.sh");
-    write_atomic(&script_path, script(plan).as_bytes())?;
-    let mut c = Command::new("gamescope");
-    if display == Display::Headless {
-        c.args(["--backend", "headless"]);
-        c.args(plan.gamescope.iter().filter(|a| a.as_str() != "-f"));
-    } else {
-        c.args(&plan.gamescope);
-    }
-    c.arg("--").arg("sh").arg(&script_path);
-    Ok(c)
+/// The game's own log of one run (its output, the board's, the
+/// session's `#` lines), started afresh at every start.
+pub fn session_log(paths: &Paths, game: &Game) -> PathBuf {
+    paths.data.join(format!("{}.log", game.slug))
 }
 
-/// Run a prepared game to the end. `on_start` gets the gamescope pid.
+/// Runs a prepared game until it ends or `stop` is set, then ends
+/// everything the session started. A game that ended by itself at once
+/// didn't start: that is an error, with the session log's reasons.
+/// `libraries` are bound read-only around the game (Linux).
 pub fn run(
     paths: &Paths,
     game: &Game,
     p: &Prepared,
     display: Display,
-    on_start: impl FnOnce(u32),
-) -> Result<std::process::ExitStatus> {
-    if p.plan.gamescope.is_empty() {
-        return run_direct(paths, game, p, on_start);
+    libraries: &[PathBuf],
+    feed: &mut dyn Feed,
+    stop: &AtomicBool,
+) -> Result<ExitStatus> {
+    let log_path = session_log(paths, game);
+    let start = |path: &Path| {
+        fs::File::create(path)?;
+        fs::OpenOptions::new().append(true).open(path)
+    };
+    let file = start(&log_path).with_context(|| format!("starting {}", log_path.display()))?;
+    let log: Log = Arc::new(Mutex::new(file.try_clone()?));
+    log::line(paths, &format!("starting {} ({display:?})", game.slug));
+    let outcome = match p.plan.picture {
+        Some(picture) => run_in_gamescope(
+            paths, game, p, picture, display, libraries, feed, stop, &log,
+        )?,
+        None => run_direct(p, &file, feed, stop, &log)?,
+    };
+    log::line(paths, &format!("{} ended: {}", game.slug, outcome.status));
+    if let Some(why) = didnt_start(&outcome, &fs::read_to_string(&log_path).unwrap_or_default()) {
+        bail!("{why}");
     }
-    if p.plan.wine_prefix.is_some() {
+    Ok(outcome.status)
+}
+
+/// Why a game that ended by itself at once didn't start (a missing
+/// library, a refused program), from its session log.
+fn didnt_start(o: &Outcome, log: &str) -> Option<String> {
+    o.ended_early(EARLY_END)
+        .then(|| early_end(o.ran, &o.status.to_string(), log))
+        .flatten()
+}
+
+fn options<'a>(stop: &'a AtomicBool, log: &Log) -> Options<'a> {
+    Options {
+        stop,
+        log: log.clone(),
+        grace: GRACE,
+        sink: None,
+    }
+}
+
+/// Linux: gamescope runs the session script; everything it starts carries
+/// the session's tag.
+#[allow(clippy::too_many_arguments)]
+fn run_in_gamescope(
+    paths: &Paths,
+    game: &Game,
+    p: &Prepared,
+    picture: Picture,
+    display: Display,
+    libraries: &[PathBuf],
+    feed: &mut dyn Feed,
+    stop: &AtomicBool,
+    log: &Log,
+) -> Result<Outcome> {
+    let mut wine = None;
+    if let Some(prefix) = &p.plan.wine_prefix {
         let env = match host(paths) {
             Host::Linux { wine_env, .. } => wine_env,
             Host::Windows => vec![],
         };
         prepare_prefix(paths, &env)?;
+        wine = Some(WineServer {
+            program: wine_bin(paths, "wineserver"),
+            prefix: prefix.clone(),
+        });
     }
     if display == Display::Headless && game.route == Route::System246 {
         // test runs reach no sound server: pcsx2x6 would stop on an error box
-        write_atomic(
-            &launch::sys246_ini(&p.runtime),
-            wangan_core::sys246::pcsx2_ini(
-                wangan_core::sys246::upscale_for(p.plan.game_size.h),
-                true,
-            )
-            .as_bytes(),
-        )?;
+        let ini = wangan_core::sys246::pcsx2_ini(
+            wangan_core::sys246::upscale_for(p.plan.game_size.h),
+            true,
+        );
+        fsx::write_atomic(&launch::sys246_ini(&p.runtime), ini)?;
     }
-    let mut cmd = gamescope_command(&p.plan, display, &p.runtime)?;
-    let log_file = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(paths.data.join(format!("{}.log", game.slug)))?;
-    cmd.stdout(log_file.try_clone()?).stderr(log_file);
-    log::line(paths, &format!("starting {} ({:?})", game.slug, display));
-    let mut child = rea_launcher_native::child::spawn_tied(&mut cmd)
-        .context("starting gamescope (is it installed?)")?;
-    on_start(child.id());
-    let status = child.wait()?;
-    log::line(paths, &format!("{} ended: {status}", game.slug));
-    finish(paths, p);
-    Ok(status)
+    let script = p.runtime.join("session.sh");
+    fsx::write_atomic(&script, script_text(&p.plan))?;
+    let argv = command_line(
+        picture,
+        display,
+        which("bwrap").is_some().then_some(libraries),
+        &script,
+    );
+    let mut cmd = Command::new(&argv[0]);
+    cmd.args(&argv[1..])
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let group = Group::spawn(&mut cmd, &Tag::new(TAG, p.runtime.to_string_lossy()))
+        .context("starting gamescope")?;
+    let mut ending = Ending::new(&p.block, wine);
+    Ok(supervise::run(
+        group,
+        feed,
+        &mut ending,
+        options(stop, log),
+    )?)
 }
 
-/// A planned process as a direct child (Windows): its own folder, no
-/// console window.
-fn direct_command(c: &launch::Command) -> Command {
+/// The command gamescope starts: bubblewrap with `read_only` bound
+/// read-only (no loader can write to the player's dumps), then `sh script`.
+fn command_line(
+    picture: Picture,
+    display: Display,
+    read_only: Option<&[PathBuf]>,
+    script: &Path,
+) -> Vec<String> {
+    CommandLine {
+        gamescope: picture.args(display == Display::Headless),
+        homes: None,
+        read_only: read_only.map(<[PathBuf]>::to_vec),
+        cpus: None,
+    }
+    .argv(Path::new("sh"), &[script.to_string_lossy().into_owned()])
+}
+
+fn which(program: &str) -> Option<PathBuf> {
+    std::env::var_os("PATH").and_then(|path| {
+        std::env::split_paths(&path)
+            .map(|d| d.join(program))
+            .find(|p| p.is_file())
+    })
+}
+
+/// A planned process as Windows starts it: its own folder, its output in
+/// the session log (`log`, opened to append).
+fn direct_command(c: &launch::Command, log: &fs::File) -> Result<Command> {
     let mut cmd = Command::new(&c.program);
     cmd.args(&c.args)
         .current_dir(&c.cwd)
-        .envs(c.env.iter().map(|(k, v)| (k, v)));
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    cmd
+        .envs(c.env.iter().map(|(k, v)| (k, v)))
+        .stdin(Stdio::null())
+        .stdout(log.try_clone()?)
+        .stderr(log.try_clone()?);
+    Ok(cmd)
 }
 
-/// Windows: the helpers (board, auth daemon), a pause after each as
-/// TeknoParrotUI makes, then the loader, which waits for the game.
+/// Windows: the helpers (board, auth daemon), a pause after each, then the
+/// loader, which waits for the game. Each is a group of its own (a job);
+/// the helpers end after the game ([`end_helpers`]).
 fn run_direct(
-    paths: &Paths,
-    game: &Game,
     p: &Prepared,
-    on_start: impl FnOnce(u32),
-) -> Result<std::process::ExitStatus> {
-    let log_file = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(paths.data.join(format!("{}.log", game.slug)))?;
-    log::line(paths, &format!("starting {} (direct)", game.slug));
+    file: &fs::File,
+    feed: &mut dyn Feed,
+    stop: &AtomicBool,
+    log: &Log,
+) -> Result<Outcome> {
+    let tag = Tag::new(TAG, p.runtime.to_string_lossy());
     let mut helpers = Vec::new();
-    let started = (|| -> Result<std::process::Child> {
-        for h in &p.plan.helpers {
-            let mut c = direct_command(h);
-            c.stdout(log_file.try_clone()?)
-                .stderr(log_file.try_clone()?);
-            helpers.push(
-                rea_launcher_native::child::spawn_tied(&mut c)
-                    .with_context(|| format!("starting {}", h.program))?,
-            );
-            std::thread::sleep(Duration::from_secs(2));
-        }
-        let mut c = direct_command(&p.plan.game);
-        c.stdout(log_file.try_clone()?)
-            .stderr(log_file.try_clone()?);
-        rea_launcher_native::child::spawn_tied(&mut c)
-            .with_context(|| format!("starting {}", p.plan.game.program))
-    })();
-    let mut child = match started {
-        Ok(c) => c,
-        Err(e) => {
-            finish_direct(paths, p, &mut helpers);
-            return Err(e);
-        }
-    };
-    on_start(child.id());
-    let status = child.wait()?;
-    log::line(paths, &format!("{} ended: {status}", game.slug));
-    finish_direct(paths, p, &mut helpers);
-    Ok(status)
+    for h in &p.plan.helpers {
+        let mut c = direct_command(h, file)?;
+        helpers
+            .push(Group::spawn(&mut c, &tag).with_context(|| format!("starting {}", h.program))?);
+        std::thread::sleep(HELPER_PAUSE);
+    }
+    let mut c = direct_command(&p.plan.game, file)?;
+    c.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let group =
+        Group::spawn(&mut c, &tag).with_context(|| format!("starting {}", p.plan.game.program))?;
+    let mut ending = Ending::new(&p.block, None);
+    let outcome = supervise::run(group, feed, &mut ending, options(stop, log))?;
+    ending.end();
+    end_helpers(helpers, &p.runtime, log);
+    Ok(outcome)
 }
 
-/// Tell the board to quit (the game has ended: the stop order of
-/// [`finish`]), give the helpers a moment, then stop what is left: the
-/// helpers, and whatever else runs from the runtime folder (the auth daemon
-/// the loader started).
-fn finish_direct(paths: &Paths, p: &Prepared, helpers: &mut [std::process::Child]) {
-    signal_quit(&p.block);
-    let deadline = Instant::now() + Duration::from_secs(3);
-    while Instant::now() < deadline && helpers.iter_mut().any(|h| matches!(h.try_wait(), Ok(None)))
-    {
+/// The helpers, told to quit by [`Ending`], get [`GRACE`] to do so; then
+/// what is left of them is ended, and whatever else runs from the runtime
+/// folder (the auth daemon the loader started, should it have left its
+/// job).
+fn end_helpers(helpers: Vec<Group>, rt: &Path, log: &Log) {
+    let deadline = Instant::now() + GRACE;
+    while Instant::now() < deadline && helpers.iter().any(Group::any_left) {
         std::thread::sleep(Duration::from_millis(100));
     }
-    for h in helpers.iter_mut() {
-        if matches!(h.try_wait(), Ok(None)) {
-            let _ = h.kill();
-            let _ = h.wait();
-        }
-    }
     #[cfg(windows)]
-    {
-        let n = crate::winproc::kill_under(&p.runtime);
+    if let Some(first) = helpers.first() {
+        let n = first.kill_under(rt);
         if n > 0 {
-            log::line(
-                paths,
-                &format!("stopped {n} leftover process(es) in the runtime"),
+            say(
+                log,
+                &format!("# stopped {n} leftover process(es) in the runtime"),
             );
         }
     }
     #[cfg(not(windows))]
-    let _ = paths;
-}
-
-fn signal_quit(block: &Path) {
-    if let Ok(mut f) = fs::OpenOptions::new().write(true).open(block) {
-        use std::io::{Seek, SeekFrom};
-        let _ = f
-            .seek(SeekFrom::Start(QUIT as u64))
-            .and_then(|_| f.write_all(&[1]));
+    let _ = (rt, log);
+    for h in helpers {
+        let _ = h.finish();
     }
 }
 
-/// Game first, then the board, then Wine (stopping the board while the
-/// game runs shows E0303 on the cabinet screen).
-pub fn finish(paths: &Paths, p: &Prepared) {
-    signal_quit(&p.block);
-    if let Some(pfx) = &p.plan.wine_prefix {
-        std::thread::sleep(Duration::from_millis(300));
-        wineserver_kill(paths, pfx);
+#[cfg(windows)]
+fn say(log: &Log, line: &str) {
+    if let Ok(mut f) = log.lock() {
+        let _ = writeln!(f, "{line}");
+    }
+}
+
+/// The Wine server of the session's prefix.
+struct WineServer {
+    program: PathBuf,
+    prefix: PathBuf,
+}
+
+impl WineServer {
+    /// Ends every Wine process of the prefix, and the server (which saves
+    /// the prefix's registry as it goes).
+    fn kill(&self) {
+        let _ = Command::new(&self.program)
+            .arg("-k")
+            .env("WINEPREFIX", &self.prefix)
+            .status();
+    }
+}
+
+/// How a session ends, in the order the cabinet needs: the game first (it
+/// ended, or was asked to), then the I/O board, told through the block's
+/// quit byte (stopping the board while the game runs shows E0303 on the
+/// cabinet's screen), then Wine's server for the prefix.
+struct Ending<'a> {
+    block: &'a Path,
+    wine: Option<WineServer>,
+    done: bool,
+}
+
+impl<'a> Ending<'a> {
+    fn new(block: &'a Path, wine: Option<WineServer>) -> Ending<'a> {
+        Ending {
+            block,
+            wine,
+            done: false,
+        }
+    }
+
+    /// Tells the board, then Wine, to end (once).
+    fn end(&mut self) {
+        if std::mem::replace(&mut self.done, true) {
+            return;
+        }
+        signal_quit(self.block);
+        if let Some(wine) = &self.wine {
+            std::thread::sleep(Duration::from_millis(300));
+            wine.kill();
+        }
+    }
+}
+
+impl Watcher for Ending<'_> {
+    fn ask_to_stop(&mut self, group: &Group) {
+        group.terminate();
+        self.end();
+    }
+
+    /// What the game leaves (the board, Wine) is told to end and gets the
+    /// grace to do so, rather than being killed at once.
+    fn saving(&mut self, _: &Group) -> bool {
+        self.end();
+        true
+    }
+
+    fn saves_after_exit(&self) -> bool {
+        true
+    }
+}
+
+/// Sets the block's quit byte: the I/O board ends on it.
+fn signal_quit(block: &Path) {
+    if let Ok(mut f) = fs::OpenOptions::new().write(true).open(block) {
+        use std::io::{Seek, SeekFrom, Write};
+        let _ = f
+            .seek(SeekFrom::Start(QUIT as u64))
+            .and_then(|_| f.write_all(&[1]));
     }
 }
 
@@ -668,11 +794,11 @@ mod tests {
                 env: vec![],
                 cwd: "/rt".into(),
             },
-            gamescope: vec![],
+            picture: None,
             wine_prefix: None,
             game_size: rea_launcher::gamescope::Size::new(1360, 768),
         };
-        let s = script(&plan);
+        let s = script_text(&plan);
         assert!(
             s.contains("( cd '/rt/it'\\''s' && env 'A=x y' 'wine' 'io.exe' ) >/dev/null 2>&1 &"),
             "{s}"
@@ -680,6 +806,72 @@ mod tests {
         assert!(
             s.contains("cd '/rt' && exec env 'wine' 'Z:\\a b\\g.exe'"),
             "{s}"
+        );
+    }
+
+    #[test]
+    fn the_board_is_told_to_quit_once_the_game_has_ended() {
+        let t = tempfile::tempdir().unwrap();
+        let block = t.path().join("input.block");
+        fs::write(&block, Snapshot::default().encode()).unwrap();
+        let mut ending = Ending::new(&block, None);
+        assert_eq!(fs::read(&block).unwrap()[QUIT], 0);
+        ending.end();
+        assert_eq!(fs::read(&block).unwrap()[QUIT], 1);
+        // what the input thread writes afterwards never clears it
+        fs::write(&block, Snapshot::default().encode()).unwrap();
+        ending.end();
+        assert_eq!(fs::read(&block).unwrap()[QUIT], 0, "told once");
+        assert!(ending.saves_after_exit());
+    }
+
+    #[test]
+    fn gamescope_runs_the_script_inside_bubblewrap_and_headless_on_request() {
+        let picture = Settings::default().picture(launch::ES3B_SIZE);
+        let script = Path::new("/rt/mt6/session.sh");
+        let libraries = [PathBuf::from("/games"), PathBuf::from("/more games")];
+        let screen = command_line(picture, Display::Screen, Some(&libraries), script).join(" ");
+        assert!(
+            screen.starts_with("gamescope -w 1360 -h 768 -W 3840 -H 2160 -r 60 -F fsr"),
+            "{screen}"
+        );
+        assert!(
+            screen.ends_with(
+                " -f -- bwrap --dev-bind / / --ro-bind /games /games --ro-bind /more games \
+                 /more games sh /rt/mt6/session.sh"
+            ),
+            "{screen}"
+        );
+        let headless = command_line(picture, Display::Headless, None, script).join(" ");
+        assert!(
+            headless.ends_with("-F linear --backend headless -- sh /rt/mt6/session.sh"),
+            "{headless}"
+        );
+    }
+
+    #[test]
+    fn a_game_that_ended_by_itself_at_once_didnt_start_and_says_why() {
+        #[cfg(unix)]
+        use std::os::unix::process::ExitStatusExt;
+        #[cfg(windows)]
+        use std::os::windows::process::ExitStatusExt;
+        let outcome = |secs, ended| Outcome {
+            status: ExitStatus::from_raw(1),
+            ran: Duration::from_secs(secs),
+            ended,
+            leftovers: 0,
+        };
+        let log = "# gamescope\nerror while loading shared libraries: libGL.so.1\n";
+        let why = didnt_start(&outcome(2, supervise::Ended::Itself), log).unwrap();
+        assert!(why.contains("closed by itself 2 s after starting"), "{why}");
+        assert!(why.contains("libGL.so.1"), "{why}");
+        assert_eq!(
+            didnt_start(&outcome(600, supervise::Ended::Itself), log),
+            None
+        );
+        assert_eq!(
+            didnt_start(&outcome(2, supervise::Ended::Stopped), log),
+            None
         );
     }
 }
