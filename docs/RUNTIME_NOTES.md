@@ -243,3 +243,46 @@ SHA-1s) in `EmuMediaBoard/`, a probe prefix.
 Next to look at: what V307 waits for at the black screen (the dump
 ships YACardEmu, a card-reader emulator on a named pipe; Cxbx-R's
 media-board stub answers only some commands).
+
+## Sega Chihiro: TeknoParrot's Cxbx-Reloaded fork under Wine 11.21 (Maximum Tune 1, 2026-11-16)
+
+Boots and plays some of the time, freezes most of the time: **not
+ready**. Probe only (`.work/c1/`). Emulator: TeknoParrot's
+`cxbxr_1.0.0.20.zip` (`cxbxr-emu.dll` sha256 4396e61e…), built from
+the public GPL-2.0 fork `ReaverTeknoGods/Cxbx-Reloaded` master
+2ed90fe6 (2026-08-08, no newer commits on 2026-11-16). Upstream
+CI-585c49a lacks the fork's MT1 symbol fixes, hence its black screen.
+
+| Step | Result |
+|---|---|
+| Data layout | "TeknoParrot mode": `<exe>/TeknoParrot/settings.ini`, `EmuMediaBoard/fpr21042_m29w160et.bin`, `EmuMediaBoard/Chihiro/{ic10_g24lc64,pc20_g24lc64,ic11_24lc024}.bin`; per-game state under `TeknoParrot/Games/<key>/` |
+| `beta.ini` beside the exe | `wmmt_device_poll_yield_ms=1` and `wmmt_gamepad_init_bypass=1` needed under Wine (both 0: black screen; yield only: white screen) |
+| Card reader | the fork is a client of `\\.\pipe\YACardEmu`, connecting once: the dump's `YACardEmu.exe` (`targetdevice = C1231LR`, API bound to 127.0.0.1) must start first, else "Card writer error E55" |
+| Controls | read only from the `TeknoParrot_JvsState` section; `wangan-io --chihiro` fills it from the launcher block: coins (CREDIT(S) 2/2), gas, wheel and the card screens work |
+| Seen in the game | handle check, attract (Namco logo, Sofdec intro, ranking), Purchase card → brand → body color (Chaser) → transmission → time zone → C1 inbound race running (once) |
+| Freeze | most runs stall on a black screen at the attract or right after the gas press: render thread idle, six emulator threads at ~50 % CPU each (also normal in good runs) |
+
+Freeze rate, 75 s runs (coin at 35 s, gas at 45 s), "good" = card
+screen shown by 65 s:
+
+| beta.ini | good |
+|---|---|
+| shipped | 2/8 (and 1/4 in an earlier batch) |
+| `apc_try_lock=1`, `timer_try_lock=0` | 0/8 |
+| `apc_try_lock=1` | 1/4 |
+
+Also no help: `periodic_irq10=1`; `cooperative_self_suspend=1` with
+`notification_event_wait_recheck=1`; pinning to 4 cores (worse); the
+card-reader thread's 1 s read timeout patched to INFINITE (0/4; the
+card protocol going quiet is a symptom, it only stopped mid-command in
+one of four hangs). winedbg attaching kills or freezes the game; gdb
+inside the box attaches cleanly but cannot unwind past Wine's syscall
+layer into the 32-bit code.
+
+Building the fork with clang-cl + xwin gets through SDL, the loader
+and XbSymbolDatabase after local fixes (case symlinks, no -Werror,
+gnu C mode, CRT shims), then stops on 43 MSVC `__declspec(naked)`
+functions mixing C and inline asm (`Direct3D9.cpp`, `EmuFS.cpp`):
+a source build needs MSVC (Windows CI or msvc-wine). The fork's
+scheduler/CRI trace (`scheduler_io_trace`) is compiled out of release
+builds and would be the next tool.

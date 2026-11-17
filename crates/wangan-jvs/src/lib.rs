@@ -16,6 +16,7 @@
 //!   program, hands those bytes to the board running under Wine.
 
 pub mod board;
+pub mod chihiro;
 pub mod controls;
 pub mod frame;
 pub mod shared;

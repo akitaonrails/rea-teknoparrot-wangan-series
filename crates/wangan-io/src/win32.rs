@@ -74,6 +74,15 @@ impl JvsState {
         // SAFETY: the view is at least 64 bytes and aligned to a page.
         unsafe { std::ptr::write_volatile(self.view.Value as *mut i32, on as i32) };
     }
+
+    /// Stores a little-endian u32 at a 4-byte aligned `offset` (< 61).
+    pub fn put_u32(&self, offset: usize, v: u32) {
+        assert!(offset.is_multiple_of(4) && offset + 4 <= 64);
+        // SAFETY: in bounds and aligned (the view is page-aligned).
+        unsafe {
+            std::ptr::write_volatile((self.view.Value as *mut u8).add(offset) as *mut u32, v)
+        };
+    }
 }
 
 impl Drop for JvsState {

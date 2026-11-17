@@ -2,14 +2,16 @@
 //! run by the launcher inside the game's Wine session.
 //!
 //! ```text
-//! wangan-io.exe --block <file> [--log <file>]
+//! wangan-io.exe --block <file> [--log <file>] [--chihiro]
 //! ```
 //!
 //! `--block` is the 64-byte input block the launcher writes
 //! (`wangan_jvs::shared`); the board answers the game's JVS packets from it
 //! on `\\.\pipe\teknoparrot_jvs` and keeps the "addressed" flag in the
 //! `TeknoParrot_JvsState` section that OpenParrot reads. It exits when the
-//! launcher sets the block's quit byte.
+//! launcher sets the block's quit byte. With `--chihiro` (Maximum Tune 1)
+//! there is no pipe: the emulator holds the board and reads the controls
+//! from `TeknoParrot_JvsState`, which this keeps filled (`wangan_jvs::chihiro`).
 
 #[cfg(windows)]
 mod win32;
@@ -35,23 +37,27 @@ fn main() {
 struct Args {
     block: String,
     log: Option<String>,
+    chihiro: bool,
 }
 
 #[cfg(windows)]
 fn parse_args() -> Result<Args, String> {
     let mut block = None;
     let mut log = None;
+    let mut chihiro = false;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
             "--block" => block = it.next(),
             "--log" => log = it.next(),
+            "--chihiro" => chihiro = true,
             other => return Err(format!("unknown argument {other}")),
         }
     }
     Ok(Args {
         block: block.ok_or("--block is required")?,
         log,
+        chihiro,
     })
 }
 
@@ -107,6 +113,10 @@ fn run() -> Result<(), String> {
         });
     }
 
+    if args.chihiro {
+        return chihiro(&state, &block, &say);
+    }
+
     let mut board = Board::new(NAMCO_WMMT);
     let mut logged = 0usize;
     loop {
@@ -145,5 +155,28 @@ fn run() -> Result<(), String> {
             }
         }
         say("game disconnected".into());
+    }
+}
+
+/// Maximum Tune 1: the emulator has the board inside and polls
+/// `TeknoParrot_JvsState`; keep it filled from the launcher's block
+/// (`wangan_jvs::chihiro`). Runs until the quit watcher exits.
+#[cfg(windows)]
+fn chihiro(
+    state: &win32::JvsState,
+    block: &win32::InputBlock,
+    say: &dyn Fn(String),
+) -> Result<(), String> {
+    use wangan_jvs::chihiro::{ANALOG, COIN, CONTROL, CoinSwitch, analog, control};
+    say("chihiro mode: writing TeknoParrot_JvsState".into());
+    let start = std::time::Instant::now();
+    let mut coin = CoinSwitch::default();
+    loop {
+        let s = block.snapshot().unwrap_or_default();
+        state.put_u32(CONTROL, control(&s));
+        state.put_u32(ANALOG, u32::from_le_bytes(analog(&s)));
+        let down = coin.down(s.coins[0], start.elapsed().as_millis() as u64);
+        state.put_u32(COIN, down as u32);
+        std::thread::sleep(std::time::Duration::from_millis(2));
     }
 }
