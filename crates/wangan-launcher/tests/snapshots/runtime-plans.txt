@@ -11,8 +11,8 @@ dir /data/runtimes/wangan-r/config/PCSX2x6/inis
 == mt3 on Linux
 dir /data/runtimes/mt3
 link /data/runtimes/mt3/data -> /games/mt3/data
-refresh /data/runtimes/mt3/main <- /games/mt3/main (exec)
 link /data/runtimes/mt3/readme.txt -> /games/mt3/readme.txt
+refresh /data/runtimes/mt3/main <- /games/mt3/main (exec)
 dir /data/runtimes/mt3/libso
 refresh /data/runtimes/mt3/libwal_3dxp.so <- /pkg/components/wal/libwal_3dxp.so
 refresh /data/runtimes/mt3/libopenal.so <- /pkg/components/wal/libopenal.so
@@ -27,8 +27,8 @@ copy once /data/runtimes/mt3/tmp/sys_04.wav <- /games/mt3/data/sound/bgm/maxi3/s
 == mt3dxp on Linux
 dir /data/runtimes/mt3dxp
 link /data/runtimes/mt3dxp/data -> /games/mt3dxp/data
-refresh /data/runtimes/mt3dxp/main <- /games/mt3dxp/main (exec)
 link /data/runtimes/mt3dxp/readme.txt -> /games/mt3dxp/readme.txt
+refresh /data/runtimes/mt3dxp/main <- /games/mt3dxp/main (exec)
 dir /data/runtimes/mt3dxp/libso
 refresh /data/runtimes/mt3dxp/libwal_3dxp.so <- /pkg/components/wal/libwal_3dxp.so
 refresh /data/runtimes/mt3dxp/libopenal.so <- /pkg/components/wal/libopenal.so
@@ -46,12 +46,12 @@ tree once /data/runtimes/mt5/AMCUS <- /games/mt5/AMCUS
 copy once /data/runtimes/mt5/BK_0001.dat <- /games/mt5/BK_0001.dat
 dir /data/runtimes/mt5/TP
 link /data/runtimes/mt5/data -> /games/mt5/data
+tree once /data/runtimes/mt5/html <- /games/mt5/html
+link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
 dir /data/runtimes/mt5/data_jp
 tree once /data/runtimes/mt5/data_jp/network <- /games/mt5/data_jp/network
 link /data/runtimes/mt5/data_jp/sound -> /games/mt5/data_jp/sound
 link /data/runtimes/mt5/data_jp/movie.bin -> /games/mt5/data_jp/movie.bin
-tree once /data/runtimes/mt5/html <- /games/mt5/html
-link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
 refresh /data/runtimes/mt5/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt5/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt5/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -65,12 +65,12 @@ tree once /data/runtimes/mt5dxp/AMCUS <- /games/mt5dxp/AMCUS
 copy once /data/runtimes/mt5dxp/BK_0001.dat <- /games/mt5dxp/BK_0001.dat
 dir /data/runtimes/mt5dxp/TP
 link /data/runtimes/mt5dxp/data -> /games/mt5dxp/data
+tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
+link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
 dir /data/runtimes/mt5dxp/data_jp
 tree once /data/runtimes/mt5dxp/data_jp/network <- /games/mt5dxp/data_jp/network
 link /data/runtimes/mt5dxp/data_jp/sound -> /games/mt5dxp/data_jp/sound
 link /data/runtimes/mt5dxp/data_jp/movie.bin -> /games/mt5dxp/data_jp/movie.bin
-tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
-link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
 refresh /data/runtimes/mt5dxp/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt5dxp/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt5dxp/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -84,12 +84,12 @@ tree once /data/runtimes/mt6/AMCUS <- /games/mt6/AMCUS
 copy once /data/runtimes/mt6/BK_0001.dat <- /games/mt6/BK_0001.dat
 dir /data/runtimes/mt6/TP
 link /data/runtimes/mt6/data -> /games/mt6/data
+tree once /data/runtimes/mt6/html <- /games/mt6/html
+link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
 dir /data/runtimes/mt6/data_jp
 tree once /data/runtimes/mt6/data_jp/network <- /games/mt6/data_jp/network
 link /data/runtimes/mt6/data_jp/sound -> /games/mt6/data_jp/sound
 link /data/runtimes/mt6/data_jp/movie.bin -> /games/mt6/data_jp/movie.bin
-tree once /data/runtimes/mt6/html <- /games/mt6/html
-link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
 refresh /data/runtimes/mt6/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt6/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -103,12 +103,12 @@ tree once /data/runtimes/mt6r/AMCUS <- /games/mt6r/AMCUS
 copy once /data/runtimes/mt6r/BK_0001.dat <- /games/mt6r/BK_0001.dat
 dir /data/runtimes/mt6r/TP
 link /data/runtimes/mt6r/data -> /games/mt6r/data
+tree once /data/runtimes/mt6r/html <- /games/mt6r/html
+link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
 dir /data/runtimes/mt6r/data_jp
 tree once /data/runtimes/mt6r/data_jp/network <- /games/mt6r/data_jp/network
 link /data/runtimes/mt6r/data_jp/sound -> /games/mt6r/data_jp/sound
 link /data/runtimes/mt6r/data_jp/movie.bin -> /games/mt6r/data_jp/movie.bin
-tree once /data/runtimes/mt6r/html <- /games/mt6r/html
-link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
 refresh /data/runtimes/mt6r/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt6r/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6r/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -122,12 +122,12 @@ tree once /data/runtimes/mt6rr/AMCUS <- /games/mt6rr/AMCUS
 copy once /data/runtimes/mt6rr/BK_0001.dat <- /games/mt6rr/BK_0001.dat
 dir /data/runtimes/mt6rr/TP
 link /data/runtimes/mt6rr/data -> /games/mt6rr/data
+tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
+link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
 dir /data/runtimes/mt6rr/data_jp
 tree once /data/runtimes/mt6rr/data_jp/network <- /games/mt6rr/data_jp/network
 link /data/runtimes/mt6rr/data_jp/sound -> /games/mt6rr/data_jp/sound
 link /data/runtimes/mt6rr/data_jp/movie.bin -> /games/mt6rr/data_jp/movie.bin
-tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
-link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
 refresh /data/runtimes/mt6rr/OpenParrot64.dll <- /pkg/components/openparrot-6rr/OpenParrot64.dll
 refresh /data/runtimes/mt6rr/OpenParrotLoader64.exe <- /pkg/components/openparrot-6rr/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6rr/iDmacDrv64.dll <- /pkg/components/openparrot-6rr/iDmacDrv64.dll
@@ -145,12 +145,12 @@ tree once /data/runtimes/mt5/AMCUS <- /games/mt5/AMCUS
 copy once /data/runtimes/mt5/BK_0001.dat <- /games/mt5/BK_0001.dat
 dir /data/runtimes/mt5/TP
 link /data/runtimes/mt5/data -> /games/mt5/data
+tree once /data/runtimes/mt5/html <- /games/mt5/html
+link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
 dir /data/runtimes/mt5/data_jp
 tree once /data/runtimes/mt5/data_jp/network <- /games/mt5/data_jp/network
 link /data/runtimes/mt5/data_jp/sound -> /games/mt5/data_jp/sound
 link /data/runtimes/mt5/data_jp/movie.bin -> /games/mt5/data_jp/movie.bin
-tree once /data/runtimes/mt5/html <- /games/mt5/html
-link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
 refresh /data/runtimes/mt5/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt5/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt5/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -162,12 +162,12 @@ tree once /data/runtimes/mt5dxp/AMCUS <- /games/mt5dxp/AMCUS
 copy once /data/runtimes/mt5dxp/BK_0001.dat <- /games/mt5dxp/BK_0001.dat
 dir /data/runtimes/mt5dxp/TP
 link /data/runtimes/mt5dxp/data -> /games/mt5dxp/data
+tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
+link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
 dir /data/runtimes/mt5dxp/data_jp
 tree once /data/runtimes/mt5dxp/data_jp/network <- /games/mt5dxp/data_jp/network
 link /data/runtimes/mt5dxp/data_jp/sound -> /games/mt5dxp/data_jp/sound
 link /data/runtimes/mt5dxp/data_jp/movie.bin -> /games/mt5dxp/data_jp/movie.bin
-tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
-link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
 refresh /data/runtimes/mt5dxp/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt5dxp/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt5dxp/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -179,12 +179,12 @@ tree once /data/runtimes/mt6/AMCUS <- /games/mt6/AMCUS
 copy once /data/runtimes/mt6/BK_0001.dat <- /games/mt6/BK_0001.dat
 dir /data/runtimes/mt6/TP
 link /data/runtimes/mt6/data -> /games/mt6/data
+tree once /data/runtimes/mt6/html <- /games/mt6/html
+link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
 dir /data/runtimes/mt6/data_jp
 tree once /data/runtimes/mt6/data_jp/network <- /games/mt6/data_jp/network
 link /data/runtimes/mt6/data_jp/sound -> /games/mt6/data_jp/sound
 link /data/runtimes/mt6/data_jp/movie.bin -> /games/mt6/data_jp/movie.bin
-tree once /data/runtimes/mt6/html <- /games/mt6/html
-link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
 refresh /data/runtimes/mt6/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt6/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -196,12 +196,12 @@ tree once /data/runtimes/mt6r/AMCUS <- /games/mt6r/AMCUS
 copy once /data/runtimes/mt6r/BK_0001.dat <- /games/mt6r/BK_0001.dat
 dir /data/runtimes/mt6r/TP
 link /data/runtimes/mt6r/data -> /games/mt6r/data
+tree once /data/runtimes/mt6r/html <- /games/mt6r/html
+link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
 dir /data/runtimes/mt6r/data_jp
 tree once /data/runtimes/mt6r/data_jp/network <- /games/mt6r/data_jp/network
 link /data/runtimes/mt6r/data_jp/sound -> /games/mt6r/data_jp/sound
 link /data/runtimes/mt6r/data_jp/movie.bin -> /games/mt6r/data_jp/movie.bin
-tree once /data/runtimes/mt6r/html <- /games/mt6r/html
-link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
 refresh /data/runtimes/mt6r/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
 refresh /data/runtimes/mt6r/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6r/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
@@ -213,12 +213,12 @@ tree once /data/runtimes/mt6rr/AMCUS <- /games/mt6rr/AMCUS
 copy once /data/runtimes/mt6rr/BK_0001.dat <- /games/mt6rr/BK_0001.dat
 dir /data/runtimes/mt6rr/TP
 link /data/runtimes/mt6rr/data -> /games/mt6rr/data
+tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
+link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
 dir /data/runtimes/mt6rr/data_jp
 tree once /data/runtimes/mt6rr/data_jp/network <- /games/mt6rr/data_jp/network
 link /data/runtimes/mt6rr/data_jp/sound -> /games/mt6rr/data_jp/sound
 link /data/runtimes/mt6rr/data_jp/movie.bin -> /games/mt6rr/data_jp/movie.bin
-tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
-link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
 refresh /data/runtimes/mt6rr/OpenParrot64.dll <- /pkg/components/openparrot-6rr/OpenParrot64.dll
 refresh /data/runtimes/mt6rr/OpenParrotLoader64.exe <- /pkg/components/openparrot-6rr/OpenParrotLoader64.exe
 refresh /data/runtimes/mt6rr/iDmacDrv64.dll <- /pkg/components/openparrot-6rr/iDmacDrv64.dll

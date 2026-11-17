@@ -12,11 +12,12 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use rea_launcher::gamescope::{Size, Upscaler};
+use rea_launcher::linkfarm::{Item, Op};
 use rea_launcher::wheel::Control as _;
 use wangan_core::catalog::{self, GAMES};
 use wangan_core::input::{Button, default_pad_map};
 use wangan_core::launch::{self, Host};
-use wangan_core::runtime::{self, Components, Item, Op};
+use wangan_core::runtime::{self, Components};
 use wangan_core::settings::Settings;
 use wangan_jvs::board::{Board, NAMCO_WMMT};
 use wangan_jvs::controls::{Cabinet, Controls};
@@ -480,6 +481,7 @@ fn write_op(out: &mut String, op: &Op) {
             let x = if *exec { " (exec)" } else { "" };
             writeln!(out, "refresh {} <- {}{x}", p(to), p(from))
         }
+        other => writeln!(out, "{other:?}"),
     };
 }
 
@@ -493,7 +495,15 @@ fn every_runtime_plan() {
             let (items, jp) = listing(g.slug);
             let src = PathBuf::from("/games").join(g.slug);
             let rt = PathBuf::from("/data/runtimes").join(g.slug);
-            for op in runtime::plan_on(g, &src, &items, &jp, &rt, &components(), platform) {
+            let ls = |dir: &Path| {
+                Ok(match dir.strip_prefix(&src).unwrap().to_str() {
+                    Some("") => items.clone(),
+                    Some("data_jp") => jp.clone(),
+                    _ => vec![],
+                })
+            };
+            let ops = runtime::plan(g, &src, &rt, &components(), platform, &ls).unwrap();
+            for op in ops {
                 write_op(&mut out, &op);
             }
         }

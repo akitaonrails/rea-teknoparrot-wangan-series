@@ -11,11 +11,7 @@ repository.workspace = true
 wangan-jvs = { path = "../wangan-jvs" }
 sha1 = "0.10"
 zip = { version = "2", default-features = false, features = ["deflate"] }
-rea-launcher.workspace = true
-
-# Directory junctions for the runtime folder (no administrator rights needed)
-[target.'cfg(windows)'.dependencies]
-junction = "2"
+rea-launcher = { workspace = true, features = ["linkfarm"] }
 
 [dev-dependencies]
 tempfile = "3"

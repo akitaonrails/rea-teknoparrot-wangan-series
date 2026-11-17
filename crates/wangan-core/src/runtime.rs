@@ -1,73 +1,27 @@
 //! The private runtime folder each game runs from.
 //!
 //! The player's game folder is read-only (it may be on a network share).
-//! The runtime holds symlinks to the big read-only files, copies of the few
+//! The runtime holds links to the big read-only files, copies of the few
 //! files the game or its loader writes, empty save folders, and the
-//! launcher's components. On Windows, where a symlink needs administrator
-//! rights or developer mode, a linked folder is a directory junction and a
-//! linked file is a copy, refreshed when the game folder's file changes. [`plan`] decides from a listing of the game
-//! folder; [`apply`] carries it out without ever overwriting a file the
-//! game wrote (saves, backups) — only launcher-owned files are refreshed.
-//! Every rule here was seen to matter in docs/RUNTIME_NOTES.md.
+//! launcher's components (`rea_launcher::linkfarm`: on Windows a linked
+//! folder is a directory junction and a linked file a copy kept in step).
+//! [`plan`] decides from a listing of the game folder by each route's
+//! [`Policy`]; `linkfarm::apply` carries it out without ever overwriting a
+//! file the game wrote (saves, backups): only launcher-owned files are
+//! refreshed, and a real file where a link goes is kept. Every rule here
+//! was seen to matter in docs/RUNTIME_NOTES.md.
 
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::catalog::{Game, Host, Route};
+use rea_launcher::linkfarm::{self, Item, Op, Place, Policy};
+
+use crate::catalog::{Game, GameId, Host, Route};
 
 /// Files below this size in an ES3B folder's top level are copied: the
 /// game rewrites its backup files (`F*/G*/BK_*`) there.
 const SMALL: u64 = 8 * 1024 * 1024;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Op {
-    Dir(PathBuf),
-    /// Symlink `at` → `target`.
-    Link {
-        target: PathBuf,
-        at: PathBuf,
-    },
-    /// Copy once; an existing file is the game's and is kept.
-    CopyOnce {
-        from: PathBuf,
-        to: PathBuf,
-    },
-    /// Copy a folder tree once (folders the game writes into).
-    TreeOnce {
-        from: PathBuf,
-        to: PathBuf,
-    },
-    /// Launcher-owned: replaced whenever the content differs.
-    Refresh {
-        from: PathBuf,
-        to: PathBuf,
-        exec: bool,
-    },
-}
-
-/// One entry of the game folder.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Item {
-    pub name: String,
-    pub dir: bool,
-    pub size: u64,
-}
-
-pub fn list(dir: &Path) -> io::Result<Vec<Item>> {
-    let mut v = Vec::new();
-    for e in fs::read_dir(dir)? {
-        let e = e?;
-        let m = fs::metadata(e.path())?;
-        v.push(Item {
-            name: e.file_name().to_string_lossy().into_owned(),
-            dir: m.is_dir(),
-            size: m.len(),
-        });
-    }
-    v.sort_by(|a, b| a.name.cmp(&b.name));
-    Ok(v)
-}
 
 /// Where the launcher's own components live (one folder per route).
 #[derive(Debug, Clone)]
@@ -88,71 +42,96 @@ pub struct Components {
     pub pcsx2x6: PathBuf,
 }
 
-/// Names never brought into an ES3B runtime: leftovers in the owner's dumps
-/// (dgVoodoo DLLs, a replaced card-reader DLL, scripts, NTFS metadata) and
-/// files the launcher writes itself.
-fn es3b_skip(name: &str) -> bool {
-    matches!(
-        name,
-        "D3D8.dll"
-            | "D3D9.dll"
-            | "DDraw.dll"
-            | "D3DImm.dll"
-            | "bngrw.dll"
-            | "bngrw.dll.bak"
-            | "[SYSTEM]"
-            | "data_jp_ori"
-            | "teknoparrot.ini"
-            | "card.ini"
-            | "d3d11.dll"
-            | "dxgi.dll"
-    ) || name.ends_with(".ps1")
-        || name.ends_with(".jpg")
+impl Components {
+    /// The OpenParrot build `game` runs with.
+    pub fn openparrot_for(&self, game: &Game) -> &Path {
+        if game.id == GameId::Mt6rr {
+            &self.openparrot_6rr
+        } else {
+            &self.openparrot
+        }
+    }
 }
 
-/// [`plan_on`] for the platform this launcher was built for.
+/// An ES3B dump: what the game and OpenParrot write is copied or made
+/// empty, the rest linked. Never brought in: leftovers in the owner's dumps
+/// (dgVoodoo DLLs, a replaced card-reader DLL, scripts, NTFS metadata) and
+/// files the launcher writes itself.
+struct Es3b;
+
+impl Policy for Es3b {
+    fn place(&self, rel: &str, it: &Item) -> Place {
+        let top = !rel.contains('/');
+        let skip = matches!(
+            rel,
+            "D3D8.dll"
+                | "D3D9.dll"
+                | "DDraw.dll"
+                | "D3DImm.dll"
+                | "bngrw.dll"
+                | "bngrw.dll.bak"
+                | "[SYSTEM]"
+                | "data_jp_ori"
+                | "teknoparrot.ini"
+                | "card.ini"
+                | "d3d11.dll"
+                | "dxgi.dll"
+        ) || rel.ends_with(".ps1")
+            || rel.ends_with(".jpg");
+        match (rel, it.dir) {
+            _ if top && skip => Place::Skip,
+            // save folders OpenParrot redirects the game to: start empty
+            ("TP" | "TeknoParrot", true) => Place::Empty,
+            ("AMCUS" | "html", true) => Place::CopyOnce,
+            ("data_jp", true) => Place::Open,
+            // OpenParrot's WMMT6 module writes certificates here
+            ("data_jp/network", true) => Place::CopyOnce,
+            (_, false) if top && it.size < SMALL => Place::CopyOnce,
+            _ => Place::Link,
+        }
+    }
+}
+
+/// An N2 dump: everything linked but the loader's files, the config the
+/// launcher writes, and `main` (a launcher-owned copy: the share may not
+/// keep the execute bit).
+struct N2;
+
+impl Policy for N2 {
+    fn place(&self, rel: &str, _: &Item) -> Place {
+        match rel {
+            "libso" | "tmp" | "config.toml" | "keyconfig.toml" | "plugins" | "main" => Place::Skip,
+            _ => Place::Link,
+        }
+    }
+}
+
+/// The runtime `rt` for `game` (its folder `src`) on `host`; `ls` lists a
+/// folder ([`linkfarm::list`], or a fake in tests). Windows runs the games
+/// on its own Direct3D 11, so DXVK goes in on Linux only; the N2 games and
+/// Wangan R have no Windows runtime.
 pub fn plan(
     game: &Game,
     src: &Path,
-    items: &[Item],
-    network_items: &[Item],
     rt: &Path,
     c: &Components,
-) -> Vec<Op> {
-    plan_on(game, src, items, network_items, rt, c, Host::current())
-}
-
-/// The runtime for `game` on `platform`. Windows runs the games on its own
-/// Direct3D 11, so DXVK goes in on Linux only; the N2 games have no
-/// Windows runtime.
-pub fn plan_on(
-    game: &Game,
-    src: &Path,
-    items: &[Item],
-    network_items: &[Item],
-    rt: &Path,
-    c: &Components,
-    platform: Host,
-) -> Vec<Op> {
-    match game.route {
-        Route::Es3b => {
-            let op = if game.id == crate::catalog::GameId::Mt6rr {
-                &c.openparrot_6rr
-            } else {
-                &c.openparrot
-            };
-            let mut ops = plan_es3b(src, items, network_items, rt, c, op);
-            if platform == Host::Windows {
-                ops.retain(|o| !matches!(o, Op::Refresh { from, .. } if from.starts_with(&c.dxvk)));
-            }
+    host: Host,
+    ls: &dyn Fn(&Path) -> io::Result<Vec<Item>>,
+) -> io::Result<Vec<Op>> {
+    Ok(match (game.route, host) {
+        (Route::Es3b, _) => {
+            let mut ops = linkfarm::plan(src, rt, &Es3b, ls)?;
+            ops.extend(es3b_components(rt, c, c.openparrot_for(game), host));
             ops
         }
-        Route::NativeN2 if platform == Host::Windows => vec![],
-        Route::NativeN2 => plan_n2(src, items, rt, c),
-        Route::System246 if platform == Host::Windows => vec![],
-        Route::System246 => plan_sys246(src, rt, c),
-        Route::Chihiro => vec![],
-    }
+        (Route::NativeN2, Host::Linux) => {
+            let mut ops = linkfarm::plan(src, rt, &N2, ls)?;
+            ops.extend(n2_components(src, rt, c));
+            ops
+        }
+        (Route::System246, Host::Linux) => plan_sys246(src, rt, c),
+        _ => vec![],
+    })
 }
 
 /// Wangan R: the emulator linked in, the game folder pcsx2x6 expects
@@ -186,97 +165,41 @@ fn plan_sys246(src: &Path, rt: &Path, c: &Components) -> Vec<Op> {
     ]
 }
 
-fn plan_es3b(
-    src: &Path,
-    items: &[Item],
-    data_jp: &[Item],
-    rt: &Path,
-    c: &Components,
-    op: &Path,
-) -> Vec<Op> {
-    let mut ops = vec![Op::Dir(rt.to_path_buf())];
-    for it in items {
-        if es3b_skip(&it.name) {
-            continue;
-        }
-        let from = src.join(&it.name);
-        let to = rt.join(&it.name);
-        match (it.name.as_str(), it.dir) {
-            // save folders OpenParrot redirects the game to: start empty
-            ("TP" | "TeknoParrot", true) => ops.push(Op::Dir(to)),
-            ("AMCUS" | "html", true) => ops.push(Op::TreeOnce { from, to }),
-            ("data_jp", true) => {
-                ops.push(Op::Dir(to.clone()));
-                for child in data_jp {
-                    let cf = from.join(&child.name);
-                    let ct = to.join(&child.name);
-                    if child.name == "network" {
-                        // OpenParrot's WMMT6 module writes certificates here
-                        ops.push(Op::TreeOnce { from: cf, to: ct });
-                    } else {
-                        ops.push(Op::Link { target: cf, at: ct });
-                    }
-                }
-            }
-            (_, true) => ops.push(Op::Link {
-                target: from,
-                at: to,
-            }),
-            (_, false) if it.size < SMALL => ops.push(Op::CopyOnce { from, to }),
-            (_, false) => ops.push(Op::Link {
-                target: from,
-                at: to,
-            }),
-        }
-    }
-    for f in [
+/// The launcher's files in an ES3B runtime: OpenParrot, DXVK (Linux) and
+/// the I/O board.
+fn es3b_components(rt: &Path, c: &Components, op: &Path, host: Host) -> Vec<Op> {
+    let refresh = |from: PathBuf, name: &str| Op::Refresh {
+        from,
+        to: rt.join(name),
+        exec: false,
+    };
+    let mut ops: Vec<Op> = [
         "OpenParrot64.dll",
         "OpenParrotLoader64.exe",
         "iDmacDrv64.dll",
         "bngrw.dll",
-    ] {
-        ops.push(Op::Refresh {
-            from: op.join(f),
-            to: rt.join(f),
-            exec: false,
-        });
+    ]
+    .into_iter()
+    .map(|f| refresh(op.join(f), f))
+    .collect();
+    if host == Host::Linux {
+        ops.extend(["d3d11.dll", "dxgi.dll"].map(|f| refresh(c.dxvk.join(f), f)));
     }
-    for f in ["d3d11.dll", "dxgi.dll"] {
-        ops.push(Op::Refresh {
-            from: c.dxvk.join(f),
-            to: rt.join(f),
-            exec: false,
-        });
-    }
-    ops.push(Op::Refresh {
-        from: c.io_board.join("wangan-io.exe"),
-        to: rt.join("wangan-io.exe"),
-        exec: false,
-    });
+    ops.push(refresh(c.io_board.join("wangan-io.exe"), "wangan-io.exe"));
     ops
 }
 
-fn plan_n2(src: &Path, items: &[Item], rt: &Path, c: &Components) -> Vec<Op> {
-    let mut ops = vec![Op::Dir(rt.to_path_buf())];
-    for it in items {
-        let from = src.join(&it.name);
-        let to = rt.join(&it.name);
-        match it.name.as_str() {
-            // the loader's files and the launcher-written config
-            "libso" | "tmp" | "config.toml" | "keyconfig.toml" | "plugins" => {}
-            // the share may not keep the execute bit: run a copy
-            "main" => ops.push(Op::Refresh {
-                from,
-                to,
-                exec: true,
-            }),
-            _ => ops.push(Op::Link {
-                target: from,
-                at: to,
-            }),
-        }
-    }
-    ops.push(Op::Dir(rt.join("libso")));
+/// The launcher's files in an N2 runtime: the game's program, the loader
+/// and its temporary folder, the folders the game writes its data to.
+fn n2_components(src: &Path, rt: &Path, c: &Components) -> Vec<Op> {
+    let mut ops = vec![
+        Op::Refresh {
+            from: src.join("main"),
+            to: rt.join("main"),
+            exec: true,
+        },
+        Op::Dir(rt.join("libso")),
+    ];
     for f in ["libwal_3dxp.so", "libopenal.so", "gamecontrollerdb.txt"] {
         ops.push(Op::Refresh {
             from: c.wal.join(f),
@@ -386,180 +309,11 @@ pub fn elf32_soname(b: &[u8]) -> Option<String> {
     String::from_utf8(b[start..end].to_vec()).ok()
 }
 
-/// Carry out a plan. Idempotent; never touches a file the game wrote.
-pub fn apply(ops: &[Op]) -> io::Result<()> {
-    for op in ops {
-        match op {
-            Op::Dir(d) => fs::create_dir_all(d)?,
-            Op::Link { target, at } => link(target, at)?,
-            Op::CopyOnce { from, to } => {
-                if fs::symlink_metadata(to).is_err() && from.exists() {
-                    copy_atomic(from, to)?;
-                }
-            }
-            Op::TreeOnce { from, to } => {
-                if fs::symlink_metadata(to).is_err() && from.is_dir() {
-                    copy_tree(from, to)?;
-                }
-            }
-            Op::Refresh { from, to, exec } => {
-                let same = match (fs::read(from), fs::read(to)) {
-                    (Ok(a), Ok(b)) => a == b,
-                    _ => false,
-                };
-                if !same {
-                    copy_atomic(from, to)?;
-                }
-                #[cfg(unix)]
-                if *exec {
-                    use std::os::unix::fs::PermissionsExt;
-                    fs::set_permissions(to, fs::Permissions::from_mode(0o755))?;
-                }
-                #[cfg(not(unix))]
-                let _ = exec;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// A symlink `at` → `target`; an existing real file or folder (the game
-/// made it) is kept.
-#[cfg(unix)]
-fn link(target: &Path, at: &Path) -> io::Result<()> {
-    if let Ok(m) = fs::symlink_metadata(at) {
-        if fs::read_link(at).ok().as_deref() == Some(target) {
-            return Ok(());
-        }
-        if !m.file_type().is_symlink() {
-            return Ok(()); // a real file/folder the game made: keep it
-        }
-        fs::remove_file(at)?;
-    }
-    std::os::unix::fs::symlink(target, at)
-}
-
-/// Windows: a folder becomes a directory junction (no administrator rights
-/// needed), a file a copy kept in step with the game folder's.
-#[cfg(windows)]
-fn link(target: &Path, at: &Path) -> io::Result<()> {
-    if target.is_dir() {
-        junction_dir(target, at)
-    } else {
-        mirror_file(target, at)
-    }
-}
-
-#[cfg(windows)]
-fn junction_dir(target: &Path, at: &Path) -> io::Result<()> {
-    if let Ok(m) = fs::symlink_metadata(at) {
-        if !m.file_type().is_symlink() {
-            return Ok(()); // a real folder the game made: keep it
-        }
-        if junction::get_target(at).ok().as_deref() == Some(target) {
-            return Ok(());
-        }
-        // a junction or symlink to somewhere else: drop the link, never what it points to
-        fs::remove_dir(at).or_else(|_| fs::remove_file(at))?;
-    }
-    junction::create(target, at).or_else(|e| {
-        // a junction can't point at a network share; a directory symlink
-        // can, where the player allowed them (developer mode)
-        std::os::windows::fs::symlink_dir(target, at).map_err(|_| {
-            io::Error::new(
-                e.kind(),
-                format!(
-                    "cannot link {} into the runtime folder ({e}); \
-                     a game folder on a network share needs Windows developer mode",
-                    target.display()
-                ),
-            )
-        })
-    })
-}
-
-/// What [`mirror_file`] does with the runtime's copy of a game file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Mirror {
-    /// Missing, or the game folder's file changed: copy it.
-    Copy,
-    /// A link left by an older layout: replace it with a copy.
-    Replace,
-    /// Same size and modification time as the source.
-    Keep,
-}
-
-/// Decide from the two files' metadata (`at` is `None` when missing).
-pub fn mirror_action(src: &fs::Metadata, at: Option<&fs::Metadata>) -> Mirror {
-    match at {
-        None => Mirror::Copy,
-        Some(m) if m.file_type().is_symlink() || m.is_dir() => Mirror::Replace,
-        Some(m) if m.len() == src.len() && m.modified().ok() == src.modified().ok() => Mirror::Keep,
-        Some(_) => Mirror::Copy,
-    }
-}
-
-/// Keep `at` a copy of `target` (Windows's stand-in for a file symlink):
-/// copied when missing or when size or modification time differ; the copy
-/// gets the source's modification time.
-pub fn mirror_file(target: &Path, at: &Path) -> io::Result<()> {
-    let src = fs::metadata(target)?;
-    let cur = fs::symlink_metadata(at).ok();
-    match mirror_action(&src, cur.as_ref()) {
-        Mirror::Keep => return Ok(()),
-        Mirror::Replace => {
-            let m = cur.as_ref().expect("Replace has metadata");
-            if m.is_dir() && !m.file_type().is_symlink() {
-                return Ok(()); // a real folder in a file's place: the game's, keep it
-            }
-            fs::remove_file(at).or_else(|_| fs::remove_dir(at))?;
-        }
-        Mirror::Copy => {}
-    }
-    let tmp = at.with_extension("rea-tmp");
-    let _ = fs::remove_file(&tmp);
-    fs::copy(target, &tmp)?;
-    if let Ok(t) = src.modified() {
-        fs::File::options()
-            .write(true)
-            .open(&tmp)?
-            .set_modified(t)?;
-    }
-    if fs::symlink_metadata(at).is_ok() {
-        fs::remove_file(at)?;
-    }
-    fs::rename(&tmp, at)
-}
-
-/// Whole-file swap (never write through an existing link).
-fn copy_atomic(from: &Path, to: &Path) -> io::Result<()> {
-    let tmp = to.with_extension("rea-tmp");
-    let _ = fs::remove_file(&tmp);
-    fs::copy(from, &tmp)?;
-    if fs::symlink_metadata(to).is_ok() {
-        fs::remove_file(to)?;
-    }
-    fs::rename(&tmp, to)
-}
-
-fn copy_tree(from: &Path, to: &Path) -> io::Result<()> {
-    fs::create_dir_all(to)?;
-    for e in fs::read_dir(from)? {
-        let e = e?;
-        let t = to.join(e.file_name());
-        if e.file_type()?.is_dir() || (e.file_type()?.is_symlink() && e.path().is_dir()) {
-            copy_tree(&e.path(), &t)?;
-        } else {
-            fs::copy(e.path(), t)?;
-        }
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::catalog::{GameId, game};
+    use crate::catalog::game;
+    use rea_launcher::linkfarm::Occupied;
 
     fn comps(base: &Path) -> Components {
         Components {
@@ -572,19 +326,35 @@ mod tests {
         }
     }
 
+    fn item(name: &str, dir: bool, size: u64) -> Item {
+        Item {
+            name: name.into(),
+            dir,
+            size,
+        }
+    }
+
+    /// A listing per folder, relative to `src`.
+    fn fake<'a>(
+        src: &'a Path,
+        tree: &'a [(&'a str, Vec<Item>)],
+    ) -> impl Fn(&Path) -> io::Result<Vec<Item>> + 'a {
+        move |dir| {
+            let rel = dir.strip_prefix(src).unwrap().to_string_lossy();
+            Ok(tree
+                .iter()
+                .find(|(d, _)| *d == rel)
+                .map(|(_, items)| items.clone())
+                .unwrap_or_default())
+        }
+    }
+
     #[test]
     fn wangan_r_gets_the_emulator_the_chd_and_proverb_under_the_game_id() {
         let (src, rt, c) = (Path::new("/lib/wmr"), Path::new("/rt"), Path::new("/c"));
-        // the Linux plan (Wangan R has none on Windows yet; checked below)
-        let ops = plan_on(
-            game(GameId::WanganR),
-            src,
-            &[],
-            &[],
-            rt,
-            &comps(c),
-            Host::Linux,
-        );
+        let none = |_: &Path| -> io::Result<Vec<Item>> { Ok(vec![]) };
+        let wr = game(GameId::WanganR);
+        let ops = plan(wr, src, rt, &comps(c), Host::Linux, &none).unwrap();
         let game_dir = rt.join("game").join("NM00005");
         assert!(ops.contains(&Op::Link {
             target: c.join("pcsx2x6").join("app"),
@@ -600,51 +370,50 @@ mod tests {
             exec: false,
         }));
         assert!(ops.contains(&Op::Dir(rt.join("config").join("PCSX2x6").join("memcards"))));
-        let none = plan_on(
-            game(GameId::WanganR),
-            src,
-            &[],
-            &[],
-            rt,
-            &comps(Path::new("/c")),
-            Host::Windows,
-        );
-        assert!(none.is_empty());
-    }
-
-    fn item(name: &str, dir: bool, size: u64) -> Item {
-        Item {
-            name: name.into(),
-            dir,
-            size,
-        }
+        let windows = plan(wr, src, rt, &comps(c), Host::Windows, &none).unwrap();
+        assert!(windows.is_empty());
     }
 
     #[test]
     fn es3b_plan_follows_the_runtime_rules() {
         let src = Path::new("/games/MT6");
         let rt = Path::new("/rt/mt6");
-        let items = vec![
-            item("wmn6r.exe", false, 33_000_000),
-            item("Fsetting.lua.gz", false, 408),
-            item("D3D9.dll", false, 400_000),
-            item("bngrw.dll", false, 342_000),
-            item("init.ps1", false, 2_700),
-            item("TP", true, 0),
-            item("AMCUS", true, 0),
-            item("data", true, 0),
-            item("data_jp", true, 0),
-            item("[SYSTEM]", true, 0),
+        let tree = [
+            (
+                "",
+                vec![
+                    item("wmn6r.exe", false, 33_000_000),
+                    item("Fsetting.lua.gz", false, 408),
+                    item("D3D9.dll", false, 400_000),
+                    item("bngrw.dll", false, 342_000),
+                    item("init.ps1", false, 2_700),
+                    item("TP", true, 0),
+                    item("AMCUS", true, 0),
+                    item("data", true, 0),
+                    item("data_jp", true, 0),
+                    item("[SYSTEM]", true, 0),
+                ],
+            ),
+            (
+                "data_jp",
+                vec![
+                    item("movie", true, 0),
+                    item("network", true, 0),
+                    item("big.bin", false, 64 << 20),
+                    item("small.bin", false, 10),
+                ],
+            ),
         ];
-        let jp = vec![item("movie", true, 0), item("network", true, 0)];
+        let c = comps(Path::new("/c"));
         let ops = plan(
             game(GameId::Mt6),
             src,
-            &items,
-            &jp,
             rt,
-            &comps(Path::new("/c")),
-        );
+            &c,
+            Host::Linux,
+            &fake(src, &tree),
+        )
+        .unwrap();
         assert!(ops.contains(&Op::Link {
             target: src.join("wmn6r.exe"),
             at: rt.join("wmn6r.exe")
@@ -658,6 +427,7 @@ mod tests {
             from: src.join("AMCUS"),
             to: rt.join("AMCUS")
         }));
+        assert!(ops.contains(&Op::Dir(rt.join("data_jp"))));
         assert!(ops.contains(&Op::Link {
             target: src.join("data_jp/movie"),
             at: rt.join("data_jp/movie")
@@ -665,6 +435,11 @@ mod tests {
         assert!(ops.contains(&Op::TreeOnce {
             from: src.join("data_jp/network"),
             to: rt.join("data_jp/network")
+        }));
+        // only the top level's small files are the game's backups
+        assert!(ops.contains(&Op::Link {
+            target: src.join("data_jp/small.bin"),
+            at: rt.join("data_jp/small.bin")
         }));
         assert!(ops.contains(&Op::Refresh {
             from: PathBuf::from("/c/op/bngrw.dll"),
@@ -686,13 +461,11 @@ mod tests {
 
     #[test]
     fn six_rr_takes_the_fork_build_and_the_others_upstream() {
-        let src = Path::new("/g");
-        let rt = Path::new("/rt");
-        let items = vec![item("wmn6r.exe", false, 33_000_000)];
+        let (src, rt) = (Path::new("/g"), Path::new("/rt"));
+        let tree = [("", vec![item("wmn6r.exe", false, 33_000_000)])];
         let c = comps(Path::new("/c"));
-        let rr = plan(game(GameId::Mt6rr), src, &items, &[], rt, &c);
-        let r = plan(game(GameId::Mt6r), src, &items, &[], rt, &c);
-        let dll = |ops: &[Op]| {
+        let dll = |id| {
+            let ops = plan(game(id), src, rt, &c, Host::Linux, &fake(src, &tree)).unwrap();
             ops.iter().find_map(|o| match o {
                 Op::Refresh { from, to, .. } if to.ends_with("OpenParrot64.dll") => {
                     Some(from.clone())
@@ -700,8 +473,14 @@ mod tests {
                 _ => None,
             })
         };
-        assert_eq!(dll(&rr), Some(PathBuf::from("/c/op6rr/OpenParrot64.dll")));
-        assert_eq!(dll(&r), Some(PathBuf::from("/c/op/OpenParrot64.dll")));
+        assert_eq!(
+            dll(GameId::Mt6rr),
+            Some(PathBuf::from("/c/op6rr/OpenParrot64.dll"))
+        );
+        assert_eq!(
+            dll(GameId::Mt6r),
+            Some(PathBuf::from("/c/op/OpenParrot64.dll"))
+        );
     }
 
     #[test]
@@ -728,21 +507,14 @@ mod tests {
             fs::write(c.join("dxvk").join(f), b"v1").unwrap();
         }
         fs::write(c.join("io/wangan-io.exe"), b"v1").unwrap();
-        let items = list(&src).unwrap();
-        let comps = Components {
-            openparrot: c.join("op"),
-            openparrot_6rr: c.join("op6rr"),
-            dxvk: c.join("dxvk"),
-            io_board: c.join("io"),
-            wal: c.join("wal"),
-            pcsx2x6: c.join("pcsx2x6"),
-        };
-        let ops = plan(game(GameId::Mt5), &src, &items, &[], &rt, &comps);
-        apply(&ops).unwrap();
+        let comps = comps(&c);
+        let mt5 = game(GameId::Mt5);
+        let ops = plan(mt5, &src, &rt, &comps, Host::current(), &linkfarm::list).unwrap();
+        linkfarm::apply(&ops, Occupied::Keep).unwrap();
         // the game writes its backup file; a later launch must keep it
         fs::write(rt.join("FBK.bin"), b"player save").unwrap();
         fs::write(c.join("op/OpenParrot64.dll"), b"v2").unwrap();
-        apply(&ops).unwrap();
+        linkfarm::apply(&ops, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("FBK.bin")).unwrap(), b"player save");
         assert_eq!(fs::read(rt.join("OpenParrot64.dll")).unwrap(), b"v2");
         assert!(rt.join("TP").is_dir());
@@ -752,17 +524,18 @@ mod tests {
 
     #[test]
     fn windows_runtime_leaves_dxvk_out_and_has_no_n2_games() {
-        let src = Path::new("/g");
-        let rt = Path::new("/rt");
-        let items = vec![item("wmn5r.exe", false, 33_000_000)];
+        let (src, rt) = (Path::new("/g"), Path::new("/rt"));
+        let tree = [("", vec![item("wmn5r.exe", false, 33_000_000)])];
+        let ls = fake(src, &tree);
         let c = comps(Path::new("/c"));
         let dxvk = |ops: &[Op]| {
             ops.iter()
                 .filter(|o| matches!(o, Op::Refresh { from, .. } if from.starts_with("/c/dxvk")))
                 .count()
         };
-        let linux = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Host::Linux);
-        let windows = plan_on(game(GameId::Mt5), src, &items, &[], rt, &c, Host::Windows);
+        let mt5 = game(GameId::Mt5);
+        let linux = plan(mt5, src, rt, &c, Host::Linux, &ls).unwrap();
+        let windows = plan(mt5, src, rt, &c, Host::Windows, &ls).unwrap();
         assert_eq!(dxvk(&linux), 2);
         assert_eq!(dxvk(&windows), 0);
         // everything else is the same runtime
@@ -772,45 +545,15 @@ mod tests {
             to: rt.join("wangan-io.exe"),
             exec: false
         }));
-        let n2 = vec![item("main", false, 9_000_000)];
-        assert!(plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Host::Windows).is_empty());
-        assert!(!plan_on(game(GameId::Mt3), src, &n2, &[], rt, &c, Host::Linux).is_empty());
-    }
-
-    #[test]
-    fn mirrored_files_are_copied_once_and_follow_the_source() {
-        let t = tempfile::tempdir().unwrap();
-        let src = t.path().join("wmn5r.exe");
-        let at = t.path().join("rt.exe");
-        fs::write(&src, b"v1").unwrap();
-        assert_eq!(
-            mirror_action(&fs::metadata(&src).unwrap(), None),
-            Mirror::Copy
+        let n2 = [("", vec![item("main", false, 9_000_000)])];
+        let ls = fake(src, &n2);
+        let mt3 = game(GameId::Mt3);
+        assert!(
+            plan(mt3, src, rt, &c, Host::Windows, &ls)
+                .unwrap()
+                .is_empty()
         );
-        mirror_file(&src, &at).unwrap();
-        assert_eq!(fs::read(&at).unwrap(), b"v1");
-        let (s, a) = (fs::metadata(&src).unwrap(), fs::metadata(&at).unwrap());
-        assert_eq!(a.modified().unwrap(), s.modified().unwrap());
-        assert_eq!(mirror_action(&s, Some(&a)), Mirror::Keep);
-        // the game folder's file changes: the copy follows
-        fs::write(&src, b"v2 longer").unwrap();
-        mirror_file(&src, &at).unwrap();
-        assert_eq!(fs::read(&at).unwrap(), b"v2 longer");
-        assert!(!at.with_extension("rea-tmp").exists());
-        // a folder where the file goes is the game's and is kept
-        let dir = t.path().join("dir.exe");
-        fs::create_dir(&dir).unwrap();
-        assert_eq!(
-            mirror_action(
-                &fs::metadata(&src).unwrap(),
-                Some(&fs::metadata(&dir).unwrap())
-            ),
-            Mirror::Replace
-        );
-        mirror_file(&src, &dir).unwrap();
-        assert!(dir.is_dir());
-        // and the source is never written
-        assert_eq!(fs::read(&src).unwrap(), b"v2 longer");
+        assert!(!plan(mt3, src, rt, &c, Host::Linux, &ls).unwrap().is_empty());
     }
 
     /// Links in the runtime: the folder is reachable through it, the source
@@ -837,8 +580,8 @@ mod tests {
                 at: rt.join("big.exe"),
             },
         ];
-        apply(&ops).unwrap();
-        apply(&ops).unwrap();
+        linkfarm::apply(&ops, Occupied::Keep).unwrap();
+        linkfarm::apply(&ops, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("data/a.bin")).unwrap(), b"data");
         assert_eq!(fs::read(rt.join("big.exe")).unwrap(), b"exe");
         // a link pointing elsewhere is moved, the folder it pointed to untouched
@@ -846,17 +589,17 @@ mod tests {
             target: src.join("movie"),
             at: rt.join("data"),
         }];
-        apply(&moved).unwrap();
+        linkfarm::apply(&moved, Occupied::Keep).unwrap();
         assert!(rt.join("data").read_dir().unwrap().next().is_none());
         assert_eq!(fs::read(src.join("data/a.bin")).unwrap(), b"data");
         // a real folder in a link's place is kept
         fs::create_dir_all(rt.join("TP")).unwrap();
         fs::write(rt.join("TP/save"), b"s").unwrap();
-        apply(&[Op::Link {
+        let tp = [Op::Link {
             target: src.join("data"),
             at: rt.join("TP"),
-        }])
-        .unwrap();
+        }];
+        linkfarm::apply(&tp, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("TP/save")).unwrap(), b"s");
     }
 

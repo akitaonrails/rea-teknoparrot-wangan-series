@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use rea_launcher::library::Entry;
+use rea_launcher::linkfarm::{self, Occupied};
 use wangan_core::catalog::{Game, Route};
 use wangan_core::launch::{self, Host, Plan};
 use wangan_core::runtime;
@@ -47,14 +48,6 @@ pub fn prepare(
     settings: &Settings,
 ) -> Result<Prepared> {
     let rt = paths.runtime(game.slug);
-    let items =
-        runtime::list(&entry.dir).with_context(|| format!("reading {}", entry.dir.display()))?;
-    let jp = entry.dir.join("data_jp");
-    let jp_items = if jp.is_dir() {
-        runtime::list(&jp)?
-    } else {
-        vec![]
-    };
     if let wangan_core::catalog::Support::Blocked(why) =
         game.support_on(wangan_core::catalog::Host::current())
     {
@@ -63,14 +56,25 @@ pub fn prepare(
     let comps = paths.runtime_components();
     let host = host(paths);
     check_components(game, &comps, &host)?;
-    let ops = runtime::plan(game, &entry.dir, &items, &jp_items, &rt, &comps);
-    runtime::apply(&ops).context("building the runtime folder")?;
+    if rt.is_dir() {
+        for gone in linkfarm::dangling(&rt)? {
+            linkfarm::remove_link(&gone)?;
+        }
+    }
+    let ops = runtime::plan(
+        game,
+        &entry.dir,
+        &rt,
+        &comps,
+        wangan_core::catalog::Host::current(),
+        &linkfarm::list,
+    )
+    .with_context(|| format!("reading {}", entry.dir.display()))?;
+    linkfarm::apply(&ops, Occupied::Keep).context("building the runtime folder")?;
     #[cfg(unix)]
     if game.route == Route::NativeN2 {
-        runtime::apply(&runtime::plan_libso(
-            &entry.dir.join("libso"),
-            &rt.join("libso"),
-        )?)?;
+        let libso = runtime::plan_libso(&entry.dir.join("libso"), &rt.join("libso"))?;
+        linkfarm::apply(&libso, Occupied::Keep)?;
         link_nvidia_glx32(&rt.join("glfix"))?;
     }
     if game.route == Route::System246 {
@@ -129,14 +133,6 @@ fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry<Game>, rt: &Path) ->
     )
 }
 
-fn op_dir<'a>(game: &Game, c: &'a runtime::Components) -> &'a Path {
-    if game.id == wangan_core::catalog::GameId::Mt6rr {
-        &c.openparrot_6rr
-    } else {
-        &c.openparrot
-    }
-}
-
 /// How this launcher starts the Windows games: directly on Windows; on
 /// Linux under the bundled (or chosen) Wine, else `wine` from PATH.
 pub fn host(paths: &Paths) -> Host {
@@ -184,8 +180,8 @@ fn check_components(game: &Game, c: &runtime::Components, host: &Host) -> Result
     let need: Vec<PathBuf> = match game.route {
         Route::Es3b => {
             let mut v = vec![
-                op_dir(game, c).join("OpenParrot64.dll"),
-                op_dir(game, c).join("OpenParrotLoader64.exe"),
+                c.openparrot_for(game).join("OpenParrot64.dll"),
+                c.openparrot_for(game).join("OpenParrotLoader64.exe"),
                 c.io_board.join("wangan-io.exe"),
             ];
             if matches!(host, Host::Linux { .. }) {
