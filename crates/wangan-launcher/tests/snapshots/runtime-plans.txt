@@ -1,0 +1,226 @@
+== wangan-r on Linux
+dir /data/runtimes/wangan-r
+link /data/runtimes/wangan-r/pcsx2x6 -> /pkg/components/pcsx2x6/app
+dir /data/runtimes/wangan-r/game/NM00005
+link /data/runtimes/wangan-r/game/NM00005/NM00005.chd -> /games/wangan-r/wanganmr/wmr1-a.chd
+refresh /data/runtimes/wangan-r/game/NM00005/boot.elf <- /pkg/components/pcsx2x6/NM00005/boot.elf
+dir /data/runtimes/wangan-r/config/PCSX2x6/bios
+dir /data/runtimes/wangan-r/config/PCSX2x6/memcards
+dir /data/runtimes/wangan-r/config/PCSX2x6/inis
+== mt1 on Linux
+== mt3 on Linux
+dir /data/runtimes/mt3
+link /data/runtimes/mt3/data -> /games/mt3/data
+refresh /data/runtimes/mt3/main <- /games/mt3/main (exec)
+link /data/runtimes/mt3/readme.txt -> /games/mt3/readme.txt
+dir /data/runtimes/mt3/libso
+refresh /data/runtimes/mt3/libwal_3dxp.so <- /pkg/components/wal/libwal_3dxp.so
+refresh /data/runtimes/mt3/libopenal.so <- /pkg/components/wal/libopenal.so
+refresh /data/runtimes/mt3/gamecontrollerdb.txt <- /pkg/components/wal/gamecontrollerdb.txt
+tree once /data/runtimes/mt3/tmp <- /pkg/components/wal/tmp
+dir /data/runtimes/mt3/tmp/data/etc
+dir /data/runtimes/mt3/tmp/data/joinstar
+dir /data/runtimes/mt3/tmp/data/maxicoin
+dir /data/runtimes/mt3/tmp/data/ranking
+dir /data/runtimes/mt3/tmp/data/target
+copy once /data/runtimes/mt3/tmp/sys_04.wav <- /games/mt3/data/sound/bgm/maxi3/sys_04.wav
+== mt3dxp on Linux
+dir /data/runtimes/mt3dxp
+link /data/runtimes/mt3dxp/data -> /games/mt3dxp/data
+refresh /data/runtimes/mt3dxp/main <- /games/mt3dxp/main (exec)
+link /data/runtimes/mt3dxp/readme.txt -> /games/mt3dxp/readme.txt
+dir /data/runtimes/mt3dxp/libso
+refresh /data/runtimes/mt3dxp/libwal_3dxp.so <- /pkg/components/wal/libwal_3dxp.so
+refresh /data/runtimes/mt3dxp/libopenal.so <- /pkg/components/wal/libopenal.so
+refresh /data/runtimes/mt3dxp/gamecontrollerdb.txt <- /pkg/components/wal/gamecontrollerdb.txt
+tree once /data/runtimes/mt3dxp/tmp <- /pkg/components/wal/tmp
+dir /data/runtimes/mt3dxp/tmp/data/etc
+dir /data/runtimes/mt3dxp/tmp/data/joinstar
+dir /data/runtimes/mt3dxp/tmp/data/maxicoin
+dir /data/runtimes/mt3dxp/tmp/data/ranking
+dir /data/runtimes/mt3dxp/tmp/data/target
+copy once /data/runtimes/mt3dxp/tmp/sys_04.wav <- /games/mt3dxp/data/sound/bgm/maxi3/sys_04.wav
+== mt5 on Linux
+dir /data/runtimes/mt5
+tree once /data/runtimes/mt5/AMCUS <- /games/mt5/AMCUS
+copy once /data/runtimes/mt5/BK_0001.dat <- /games/mt5/BK_0001.dat
+dir /data/runtimes/mt5/TP
+link /data/runtimes/mt5/data -> /games/mt5/data
+dir /data/runtimes/mt5/data_jp
+tree once /data/runtimes/mt5/data_jp/network <- /games/mt5/data_jp/network
+link /data/runtimes/mt5/data_jp/sound -> /games/mt5/data_jp/sound
+link /data/runtimes/mt5/data_jp/movie.bin -> /games/mt5/data_jp/movie.bin
+tree once /data/runtimes/mt5/html <- /games/mt5/html
+link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
+refresh /data/runtimes/mt5/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt5/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt5/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt5/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt5/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
+refresh /data/runtimes/mt5/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
+refresh /data/runtimes/mt5/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt5dxp on Linux
+dir /data/runtimes/mt5dxp
+tree once /data/runtimes/mt5dxp/AMCUS <- /games/mt5dxp/AMCUS
+copy once /data/runtimes/mt5dxp/BK_0001.dat <- /games/mt5dxp/BK_0001.dat
+dir /data/runtimes/mt5dxp/TP
+link /data/runtimes/mt5dxp/data -> /games/mt5dxp/data
+dir /data/runtimes/mt5dxp/data_jp
+tree once /data/runtimes/mt5dxp/data_jp/network <- /games/mt5dxp/data_jp/network
+link /data/runtimes/mt5dxp/data_jp/sound -> /games/mt5dxp/data_jp/sound
+link /data/runtimes/mt5dxp/data_jp/movie.bin -> /games/mt5dxp/data_jp/movie.bin
+tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
+link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
+refresh /data/runtimes/mt5dxp/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt5dxp/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt5dxp/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt5dxp/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt5dxp/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
+refresh /data/runtimes/mt5dxp/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
+refresh /data/runtimes/mt5dxp/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6 on Linux
+dir /data/runtimes/mt6
+tree once /data/runtimes/mt6/AMCUS <- /games/mt6/AMCUS
+copy once /data/runtimes/mt6/BK_0001.dat <- /games/mt6/BK_0001.dat
+dir /data/runtimes/mt6/TP
+link /data/runtimes/mt6/data -> /games/mt6/data
+dir /data/runtimes/mt6/data_jp
+tree once /data/runtimes/mt6/data_jp/network <- /games/mt6/data_jp/network
+link /data/runtimes/mt6/data_jp/sound -> /games/mt6/data_jp/sound
+link /data/runtimes/mt6/data_jp/movie.bin -> /games/mt6/data_jp/movie.bin
+tree once /data/runtimes/mt6/html <- /games/mt6/html
+link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
+refresh /data/runtimes/mt6/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt6/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt6/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt6/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
+refresh /data/runtimes/mt6/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
+refresh /data/runtimes/mt6/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6r on Linux
+dir /data/runtimes/mt6r
+tree once /data/runtimes/mt6r/AMCUS <- /games/mt6r/AMCUS
+copy once /data/runtimes/mt6r/BK_0001.dat <- /games/mt6r/BK_0001.dat
+dir /data/runtimes/mt6r/TP
+link /data/runtimes/mt6r/data -> /games/mt6r/data
+dir /data/runtimes/mt6r/data_jp
+tree once /data/runtimes/mt6r/data_jp/network <- /games/mt6r/data_jp/network
+link /data/runtimes/mt6r/data_jp/sound -> /games/mt6r/data_jp/sound
+link /data/runtimes/mt6r/data_jp/movie.bin -> /games/mt6r/data_jp/movie.bin
+tree once /data/runtimes/mt6r/html <- /games/mt6r/html
+link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
+refresh /data/runtimes/mt6r/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt6r/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6r/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt6r/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt6r/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
+refresh /data/runtimes/mt6r/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
+refresh /data/runtimes/mt6r/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6rr on Linux
+dir /data/runtimes/mt6rr
+tree once /data/runtimes/mt6rr/AMCUS <- /games/mt6rr/AMCUS
+copy once /data/runtimes/mt6rr/BK_0001.dat <- /games/mt6rr/BK_0001.dat
+dir /data/runtimes/mt6rr/TP
+link /data/runtimes/mt6rr/data -> /games/mt6rr/data
+dir /data/runtimes/mt6rr/data_jp
+tree once /data/runtimes/mt6rr/data_jp/network <- /games/mt6rr/data_jp/network
+link /data/runtimes/mt6rr/data_jp/sound -> /games/mt6rr/data_jp/sound
+link /data/runtimes/mt6rr/data_jp/movie.bin -> /games/mt6rr/data_jp/movie.bin
+tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
+link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
+refresh /data/runtimes/mt6rr/OpenParrot64.dll <- /pkg/components/openparrot-6rr/OpenParrot64.dll
+refresh /data/runtimes/mt6rr/OpenParrotLoader64.exe <- /pkg/components/openparrot-6rr/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6rr/iDmacDrv64.dll <- /pkg/components/openparrot-6rr/iDmacDrv64.dll
+refresh /data/runtimes/mt6rr/bngrw.dll <- /pkg/components/openparrot-6rr/bngrw.dll
+refresh /data/runtimes/mt6rr/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
+refresh /data/runtimes/mt6rr/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
+refresh /data/runtimes/mt6rr/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== wangan-r on Windows
+== mt1 on Windows
+== mt3 on Windows
+== mt3dxp on Windows
+== mt5 on Windows
+dir /data/runtimes/mt5
+tree once /data/runtimes/mt5/AMCUS <- /games/mt5/AMCUS
+copy once /data/runtimes/mt5/BK_0001.dat <- /games/mt5/BK_0001.dat
+dir /data/runtimes/mt5/TP
+link /data/runtimes/mt5/data -> /games/mt5/data
+dir /data/runtimes/mt5/data_jp
+tree once /data/runtimes/mt5/data_jp/network <- /games/mt5/data_jp/network
+link /data/runtimes/mt5/data_jp/sound -> /games/mt5/data_jp/sound
+link /data/runtimes/mt5/data_jp/movie.bin -> /games/mt5/data_jp/movie.bin
+tree once /data/runtimes/mt5/html <- /games/mt5/html
+link /data/runtimes/mt5/wmn6r.exe -> /games/mt5/wmn6r.exe
+refresh /data/runtimes/mt5/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt5/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt5/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt5/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt5/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt5dxp on Windows
+dir /data/runtimes/mt5dxp
+tree once /data/runtimes/mt5dxp/AMCUS <- /games/mt5dxp/AMCUS
+copy once /data/runtimes/mt5dxp/BK_0001.dat <- /games/mt5dxp/BK_0001.dat
+dir /data/runtimes/mt5dxp/TP
+link /data/runtimes/mt5dxp/data -> /games/mt5dxp/data
+dir /data/runtimes/mt5dxp/data_jp
+tree once /data/runtimes/mt5dxp/data_jp/network <- /games/mt5dxp/data_jp/network
+link /data/runtimes/mt5dxp/data_jp/sound -> /games/mt5dxp/data_jp/sound
+link /data/runtimes/mt5dxp/data_jp/movie.bin -> /games/mt5dxp/data_jp/movie.bin
+tree once /data/runtimes/mt5dxp/html <- /games/mt5dxp/html
+link /data/runtimes/mt5dxp/wmn6r.exe -> /games/mt5dxp/wmn6r.exe
+refresh /data/runtimes/mt5dxp/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt5dxp/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt5dxp/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt5dxp/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt5dxp/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6 on Windows
+dir /data/runtimes/mt6
+tree once /data/runtimes/mt6/AMCUS <- /games/mt6/AMCUS
+copy once /data/runtimes/mt6/BK_0001.dat <- /games/mt6/BK_0001.dat
+dir /data/runtimes/mt6/TP
+link /data/runtimes/mt6/data -> /games/mt6/data
+dir /data/runtimes/mt6/data_jp
+tree once /data/runtimes/mt6/data_jp/network <- /games/mt6/data_jp/network
+link /data/runtimes/mt6/data_jp/sound -> /games/mt6/data_jp/sound
+link /data/runtimes/mt6/data_jp/movie.bin -> /games/mt6/data_jp/movie.bin
+tree once /data/runtimes/mt6/html <- /games/mt6/html
+link /data/runtimes/mt6/wmn6r.exe -> /games/mt6/wmn6r.exe
+refresh /data/runtimes/mt6/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt6/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt6/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt6/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6r on Windows
+dir /data/runtimes/mt6r
+tree once /data/runtimes/mt6r/AMCUS <- /games/mt6r/AMCUS
+copy once /data/runtimes/mt6r/BK_0001.dat <- /games/mt6r/BK_0001.dat
+dir /data/runtimes/mt6r/TP
+link /data/runtimes/mt6r/data -> /games/mt6r/data
+dir /data/runtimes/mt6r/data_jp
+tree once /data/runtimes/mt6r/data_jp/network <- /games/mt6r/data_jp/network
+link /data/runtimes/mt6r/data_jp/sound -> /games/mt6r/data_jp/sound
+link /data/runtimes/mt6r/data_jp/movie.bin -> /games/mt6r/data_jp/movie.bin
+tree once /data/runtimes/mt6r/html <- /games/mt6r/html
+link /data/runtimes/mt6r/wmn6r.exe -> /games/mt6r/wmn6r.exe
+refresh /data/runtimes/mt6r/OpenParrot64.dll <- /pkg/components/openparrot/OpenParrot64.dll
+refresh /data/runtimes/mt6r/OpenParrotLoader64.exe <- /pkg/components/openparrot/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6r/iDmacDrv64.dll <- /pkg/components/openparrot/iDmacDrv64.dll
+refresh /data/runtimes/mt6r/bngrw.dll <- /pkg/components/openparrot/bngrw.dll
+refresh /data/runtimes/mt6r/wangan-io.exe <- /pkg/components/io/wangan-io.exe
+== mt6rr on Windows
+dir /data/runtimes/mt6rr
+tree once /data/runtimes/mt6rr/AMCUS <- /games/mt6rr/AMCUS
+copy once /data/runtimes/mt6rr/BK_0001.dat <- /games/mt6rr/BK_0001.dat
+dir /data/runtimes/mt6rr/TP
+link /data/runtimes/mt6rr/data -> /games/mt6rr/data
+dir /data/runtimes/mt6rr/data_jp
+tree once /data/runtimes/mt6rr/data_jp/network <- /games/mt6rr/data_jp/network
+link /data/runtimes/mt6rr/data_jp/sound -> /games/mt6rr/data_jp/sound
+link /data/runtimes/mt6rr/data_jp/movie.bin -> /games/mt6rr/data_jp/movie.bin
+tree once /data/runtimes/mt6rr/html <- /games/mt6rr/html
+link /data/runtimes/mt6rr/wmn6r.exe -> /games/mt6rr/wmn6r.exe
+refresh /data/runtimes/mt6rr/OpenParrot64.dll <- /pkg/components/openparrot-6rr/OpenParrot64.dll
+refresh /data/runtimes/mt6rr/OpenParrotLoader64.exe <- /pkg/components/openparrot-6rr/OpenParrotLoader64.exe
+refresh /data/runtimes/mt6rr/iDmacDrv64.dll <- /pkg/components/openparrot-6rr/iDmacDrv64.dll
+refresh /data/runtimes/mt6rr/bngrw.dll <- /pkg/components/openparrot-6rr/bngrw.dll
+refresh /data/runtimes/mt6rr/wangan-io.exe <- /pkg/components/io/wangan-io.exe

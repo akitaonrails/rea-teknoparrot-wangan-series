@@ -1,0 +1,138 @@
+== 1280x720
+-- accesskit
+Window
+  GenericContainer
+    GenericContainer
+      GenericContainer
+        Unknown [row 0] @ 60,214 856,272
+        Unknown [left 0] @ 572,223 600,263
+        Unknown [right 0] @ 818,223 846,263
+        Unknown [row 1] @ 60,272 856,330
+        Unknown [left 1] @ 572,281 600,321
+        Unknown [right 1] @ 818,281 846,321
+        Unknown [row 2] @ 60,330 856,388
+        Unknown [left 2] @ 572,339 600,379
+        Unknown [right 2] @ 818,339 846,379
+        Unknown [row 3] @ 60,388 856,446
+        Unknown [left 3] @ 572,397 600,437
+        Unknown [right 3] @ 818,397 846,437
+        Unknown [row 4] @ 60,446 856,504
+        Unknown [row 5] @ 60,504 856,562
+        Unknown [left 5] @ 572,513 600,553
+        Unknown [right 5] @ 818,513 846,553
+        Unknown [button rescan] @ 904,286 1204,332
+        Unknown [button folder] @ 904,346 1204,392
+        Unknown [tab Games] @ 326,17 404,55
+        Unknown [tab Controls] @ 412,17 504,55
+        Unknown [tab Settings] @ 512,17 602,55
+-- painted text
+56,86 "Wangan Midnight Maximum Tune 6RR settings"
+56,130 "Changes are saved as you make them and used the next time you press Play."
+76,180 "Picture and controls"
+78,223 "Output size"
+78,246 "The size of the picture on your screen. Pick your screen's size."
+645,233 "3840 × 2160 (4K)"
+78,281 "Upscaler"
+78,304 "How the game's picture is stretched to the output size."
+630,291 "FSR 1 (sharp upscale)"
+78,339 "Sharpness"
+78,362 "How crisp the upscaler makes edges. 0 is the sharpest."
+704,349 "5"
+78,397 "Fullscreen"
+78,420 "Fill the whole screen, or play in a window."
+698,407 "On"
+78,455 "Game render size"
+78,478 "This game draws at its own size; the upscaler sizes it to your screen."
+667,465 "1360 × 768"
+78,513 "Dead zone"
+78,536 "How far a controller stick moves before the car starts to steer."
+697,523 "6%"
+904,180 "Your games folder"
+904,226 "/srv/games/Wangan"
+904,251 "1 of 9 games found."
+1020,297 "Rescan"
+944,357 "Choose another folder"
+904,414 "Saved. The game uses it the next time you press Play."
+64,28 "B"
+93,22 "Wangan Midnight"
+338,26 "Games"
+424,26 "Controls"
+524,26 "Settings"
+1135,28 "No controller"
+108,674 "Change"
+188,675 "A"
+212,674 "Next choice"
+318,675 "B / Esc"
+370,674 "Back"
+433,675 "LB RB"
+482,674 "Switch page"
+1149,675 "Version <version>"
+== 1280x800
+-- accesskit
+Window
+  GenericContainer
+    GenericContainer
+      GenericContainer
+        Unknown [row 0] @ 67,238 809,302
+        Unknown [left 0] @ 493,248 524,292
+        Unknown [right 0] @ 767,248 798,292
+        Unknown [row 1] @ 67,302 809,367
+        Unknown [left 1] @ 493,312 524,357
+        Unknown [right 1] @ 767,312 798,357
+        Unknown [row 2] @ 67,367 809,431
+        Unknown [left 2] @ 493,377 524,421
+        Unknown [right 2] @ 767,377 798,421
+        Unknown [row 3] @ 67,431 809,496
+        Unknown [left 3] @ 493,441 524,486
+        Unknown [right 3] @ 767,441 798,486
+        Unknown [row 4] @ 67,496 809,560
+        Unknown [row 5] @ 67,560 809,624
+        Unknown [left 5] @ 493,570 524,614
+        Unknown [right 5] @ 767,570 798,614
+        Unknown [button rescan] @ 862,318 1196,369
+        Unknown [button folder] @ 862,385 1196,436
+        Unknown [tab Games] @ 362,19 449,61
+        Unknown [tab Controls] @ 458,19 560,61
+        Unknown [tab Settings] @ 569,19 669,61
+-- painted text
+56,86 "Wangan Midnight Maximum Tune 6RR settings"
+56,130 "Changes are saved as you make them and used the next time you press Play."
+76,180 "Picture and controls"
+78,223 "Output size"
+78,246 "The size of the picture on your screen. Pick your screen's size."
+517,233 "3840 × 2160 (4K)"
+78,281 "Upscaler"
+78,304 "How the game's picture is stretched to the output size."
+502,291 "FSR 1 (sharp upscale)"
+78,339 "Sharpness"
+78,362 "How crisp the upscaler makes edges. 0 is the sharpest."
+576,349 "5"
+78,397 "Fullscreen"
+78,420 "Fill the whole screen, or play in a window."
+570,407 "On"
+78,455 "Game render size"
+78,478 "This game draws at its own size; the upscaler sizes it to your…"
+539,465 "1360 × 768"
+78,513 "Dead zone"
+78,536 "How far a controller stick moves before the car starts to steer."
+569,523 "6%"
+776,180 "Your games folder"
+776,226 "/srv/games/Wangan"
+776,251 "1 of 9 games found."
+892,297 "Rescan"
+816,357 "Choose another folder"
+776,414 "Saved. The game uses it the next time you press Play."
+64,28 "B"
+93,22 "Wangan Midnight"
+338,26 "Games"
+424,26 "Controls"
+524,26 "Settings"
+1007,27 "No controller"
+108,674 "Change"
+188,674 "A"
+212,674 "Next choice"
+318,674 "B / Esc"
+370,674 "Back"
+433,674 "LB RB"
+482,674 "Switch page"
+1021,674 "Version <version>"

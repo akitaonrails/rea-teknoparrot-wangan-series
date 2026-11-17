@@ -1,0 +1,508 @@
+$ wangan-launcher -h
+exit Some(0)
+-- stdout
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+-- stderr
+
+$ wangan-launcher --nope
+exit Some(2)
+-- stdout
+-- stderr
+unknown option --nope
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --library
+exit Some(2)
+-- stdout
+-- stderr
+--library needs a folder
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --play
+exit Some(2)
+-- stdout
+-- stderr
+--play needs a game
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game
+exit Some(2)
+-- stdout
+-- stderr
+--game needs a game
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --add-files
+exit Some(2)
+-- stdout
+-- stderr
+--add-files needs a folder or zip
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt5 --output
+exit Some(2)
+-- stdout
+-- stderr
+--output needs a value
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --list
+exit Some(1)
+-- stdout
+-- stderr
+no library yet: run with --library <folder>
+
+$ wangan-launcher --play mt5
+exit Some(1)
+-- stdout
+-- stderr
+no library yet: run with --library <folder>
+
+$ wangan-launcher --library /no/such/folder
+exit Some(2)
+-- stdout
+-- stderr
+/no/such/folder is not a folder
+
+$ wangan-launcher --library <tmp>/games
+exit Some(0)
+-- stdout
+-- stderr
+
+== <tmp>/data/launcher.cfg
+library = <tmp>/games
+# my note
+future = 1
+
+$ wangan-launcher --list
+exit Some(0)
+-- stdout
+unknown  wmn6r.exe sha256 957d7bf0323df209dd69bc8eaa9c9edf028e38bd5154d4923dc548d5fbd1bf21
+         <tmp>/games/MT6 [TP]
+unknown  main sha256 e1807d6074ae3a873cba12cfbfefa23dc7d914fb68f58c1b49aabd8388ee0adb
+         <tmp>/games/Maximum Tune 3
+unknown  wanganmr.zip sha256 aa498f1aec7060b9a017c48a4393500243ec3870a9df469d3f42bceca2210fdf
+         <tmp>/games/Wangan R
+-- stderr
+
+$ wangan-launcher --library <tmp>/games --list
+exit Some(0)
+-- stdout
+unknown  wmn6r.exe sha256 957d7bf0323df209dd69bc8eaa9c9edf028e38bd5154d4923dc548d5fbd1bf21
+         <tmp>/games/MT6 [TP]
+unknown  main sha256 e1807d6074ae3a873cba12cfbfefa23dc7d914fb68f58c1b49aabd8388ee0adb
+         <tmp>/games/Maximum Tune 3
+unknown  wanganmr.zip sha256 aa498f1aec7060b9a017c48a4393500243ec3870a9df469d3f42bceca2210fdf
+         <tmp>/games/Wangan R
+-- stderr
+
+$ wangan-launcher --add-files /no/such/folder
+exit Some(2)
+-- stdout
+-- stderr
+/no/such/folder is not a folder or file
+
+$ wangan-launcher --add-files <tmp>/bios
+exit Some(0)
+-- stdout
+Namco System 246 BIOS (1 looked at)
+  missing    r27v1602f.7d
+Sega Chihiro media-board files (2 looked at)
+  missing    fpr21042_m29w160et.bin
+  missing    ic10_g24lc64.bin
+  missing    ic11_24lc024.bin
+  missing    pc20_g24lc64.bin
+-- stderr
+
+$ wangan-launcher --play nope
+exit Some(2)
+-- stdout
+-- stderr
+unknown game nope
+
+$ wangan-launcher --play mt1
+exit Some(1)
+-- stdout
+-- stderr
+Wangan Midnight Maximum Tune can't start: Your board files are in. Under Wine the Chihiro emulator freezes in most runs of this game, so Play stays off for now.
+
+$ wangan-launcher --play mt5 --no-input
+exit Some(1)
+-- stdout
+-- stderr
+Wangan Midnight Maximum Tune 5 is not in <tmp>/games
+
+$ wangan-launcher --play mt3 --headless --no-input
+exit Some(1)
+-- stdout
+-- stderr
+Wangan Midnight Maximum Tune 3 is not in <tmp>/games
+
+$ wangan-launcher --play wangan-r --no-input
+exit Some(1)
+-- stdout
+-- stderr
+Wangan Midnight R is not in <tmp>/games
+
+$ wangan-launcher --output 1920x1080
+exit Some(2)
+-- stdout
+-- stderr
+options need --play <game> or --game <game>
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game nope --deadzone 0.1
+exit Some(2)
+-- stdout
+-- stderr
+unknown game nope
+
+$ wangan-launcher --game mt5 --deadzone 0.9
+exit Some(2)
+-- stdout
+-- stderr
+bad value for --deadzone: 0.9
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt5 --render 1x1
+exit Some(2)
+-- stdout
+-- stderr
+bad value for --render: 1x1
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt5 --upscaler bicubic
+exit Some(2)
+-- stdout
+-- stderr
+bad value for --upscaler: bicubic
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt5 --fullscreen maybe
+exit Some(2)
+-- stdout
+-- stderr
+bad value for --fullscreen: maybe
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt5 --sharpness 21
+exit Some(2)
+-- stdout
+-- stderr
+bad value for --sharpness: 21
+
+wangan-launcher — Wangan Midnight arcade series
+
+  wangan-launcher                      open the launcher window
+  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --list               list the games found and their state
+  wangan-launcher --add-files <path>   look in a folder or zip for the board files
+                                       Wangan Midnight R and Maximum Tune need
+  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
+  wangan-launcher --game <game> <options>   save options for a game without starting it
+  Options (saved in that game's settings, same as the window):
+      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
+      --upscaler <fsr|nis|linear|nearest>   (Linux)
+      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
+      --fullscreen <on|off>            (Linux)
+      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
+      --deadzone <0-0.3>               controller stick dead zone
+      --headless                       run it in an invisible display (tests; Linux)
+      --no-input                       leave the input block to another program (tests)
+  wangan-launcher --help               this text
+
+
+$ wangan-launcher --game mt3 --render 1920x1080 --deadzone 0.12
+exit Some(0)
+-- stdout
+-- stderr
+
+== <tmp>/data/settings/mt3.cfg
+# mine
+sharpness = 7
+future_key = yes
+render = 1920x1080
+output = 3840x2160
+upscaler = fsr
+fullscreen = true
+deadzone = 0.12
+
+$ wangan-launcher --game mt3 --output 2560x1440 --upscaler nis --sharpness 3 --fullscreen off
+exit Some(0)
+-- stdout
+-- stderr
+
+== <tmp>/data/settings/mt3.cfg
+# mine
+sharpness = 3
+future_key = yes
+render = 1920x1080
+output = 2560x1440
+upscaler = nis
+fullscreen = false
+deadzone = 0.12
+
+$ wangan-launcher --game mt6rr --render native --deadzone 0
+exit Some(0)
+-- stdout
+-- stderr
+
+== <tmp>/data/settings/mt6rr.cfg
+render = native
+output = 3840x2160
+upscaler = fsr
+sharpness = 5
+fullscreen = true
+deadzone = 0.00
+
+$ wangan-launcher --game mt5 --render 1920x1080
+exit Some(0)
+-- stdout
+-- stderr
+
+== <tmp>/data/settings/mt5.cfg
+render = 1920x1080
+output = 3840x2160
+upscaler = fsr
+sharpness = 5
+fullscreen = true
+deadzone = 0.05
+

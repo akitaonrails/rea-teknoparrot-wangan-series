@@ -1,0 +1,66 @@
+fresh block
+  57 49 4f 31 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+poll e0 01 08 20 02 02 21 02 22 03 75
+== Wmmt5: released
+  block 57 49 4f 31 07 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 7f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 00 00 00 01 00 02 00 00 01 7f 00 00 00 00 00 99
+  chihiro control 00000000 analog 7f 00 00 00
+== Wmmt5: full left, gas, 3rd gear, view
+  block 57 49 4f 31 07 00 00 00 00 00 82 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 82 00 00 01 00 02 00 00 01 00 00 ff 00 00 00 9b
+  chihiro control 00400200 analog 00 ff 00 00
+== Wmmt5: half right, half brake, 6th, intrude, card
+  block 57 49 4f 31 07 00 00 00 00 00 51 04 00 00 00 00 00 02 00 00 00 00 00 00 00 bf 00 00 00 7f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 51 00 00 01 00 02 00 00 01 bf 00 00 00 7f 00 a9
+  chihiro control 08280000 analog bf 00 7f 00
+== Wmmt5: test menu
+  block 57 49 4f 31 07 00 00 00 80 72 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 7f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 80 72 00 00 00 01 00 02 00 00 01 7f 00 00 00 00 00 8b
+  chihiro control 00002845 analog 7f 00 00 00
+== Wmmt6RR: released
+  block 57 49 4f 31 07 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 00 00 00 01 00 02 00 00 01 80 00 00 00 00 00 9a
+  chihiro control 00000000 analog 80 00 00 00
+== Wmmt6RR: full left, gas, 3rd gear, view
+  block 57 49 4f 31 07 00 00 00 00 00 82 00 00 00 00 00 00 02 00 00 00 00 00 00 00 14 00 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 82 00 00 01 00 02 00 00 01 14 00 ff 00 00 00 af
+  chihiro control 00400200 analog 14 ff 00 00
+== Wmmt6RR: half right, half brake, 6th, intrude, card
+  block 57 49 4f 31 07 00 00 00 00 00 51 04 00 00 00 00 00 02 00 00 00 00 00 00 00 b6 00 00 00 7f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 00 00 51 00 00 01 00 02 00 00 01 b6 00 00 00 7f 00 a0
+  chihiro control 08280000 analog b6 00 7f 00
+== Wmmt6RR: test menu
+  block 57 49 4f 31 07 00 00 00 80 72 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  board reply e0 00 14 01 01 80 72 00 00 00 01 00 02 00 00 01 80 00 00 00 00 00 8c
+  chihiro control 00002845 analog 80 00 00 00
+== default pad map
+PadMap {
+    bits: [
+        128,
+        64,
+        32,
+        16,
+        8,
+        4,
+        256,
+        0,
+        0,
+        0,
+        0,
+        1,
+        512,
+    ],
+    controls: PhantomData<wangan_core::input::Button>,
+}
+== buttons
+gear_up 0x0001 Shift up
+gear_down 0x0002 Shift down
+view 0x0004 View change
+intrude 0x0008 Intrude (accept a challenger)
+card 0x0010 Insert card
+test 0x0020 Operator test menu
+service 0x0040 Service
+menu_up 0x0080 Test menu up
+menu_down 0x0100 Test menu down
+enter 0x0200 Test menu enter
+coin 0x0400 Insert coin

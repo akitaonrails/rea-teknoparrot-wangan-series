@@ -83,6 +83,24 @@ impl InputService {
     }
 }
 
+#[cfg(test)]
+impl InputService {
+    /// No SDL and no thread: the test sends the pad's menu moves and sets
+    /// what the window shows.
+    pub fn fake() -> (Self, Sender<Nav>, Arc<Mutex<Snapshot>>) {
+        let (tx, _) = mpsc::channel();
+        let (nav_tx, nav) = mpsc::channel();
+        let snapshot = Arc::new(Mutex::new(Snapshot::default()));
+        let service = Self {
+            tx,
+            nav,
+            snapshot: Arc::clone(&snapshot),
+            thread: None,
+        };
+        (service, nav_tx, snapshot)
+    }
+}
+
 impl Drop for InputService {
     fn drop(&mut self) {
         let (tx, _) = mpsc::channel();

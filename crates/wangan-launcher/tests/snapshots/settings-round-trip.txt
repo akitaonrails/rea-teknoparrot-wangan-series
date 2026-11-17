@@ -1,0 +1,29 @@
+== parsed
+Settings {
+    render: None,
+    output: Size {
+        w: 2560,
+        h: 1440,
+    },
+    upscaler: Nis,
+    sharpness: 5,
+    fullscreen: true,
+    deadzone: 0.15,
+}
+== problems
+line 7: bad value for sharpness: 50
+line 10: no '='
+== saved
+# my Wangan notes
+output = 2560x1440
+
+upscaler = nis
+fsr_sharpness = 3
+# output = 1920x1080
+sharpness = 5
+render = native
+deadzone = 0.15
+no equals sign here
+deadzone = 0.15
+future_key = keep me
+fullscreen = true

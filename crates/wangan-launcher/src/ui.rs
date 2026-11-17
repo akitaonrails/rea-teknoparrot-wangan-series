@@ -111,6 +111,10 @@ struct App {
 
 impl App {
     fn new(paths: Paths) -> Self {
+        Self::with_input(paths, InputService::start())
+    }
+
+    fn with_input(paths: Paths, input: InputService) -> Self {
         // WANGAN_LIBRARY wins for this run (tests); never written
         let library = std::env::var_os("WANGAN_LIBRARY")
             .map(PathBuf::from)
@@ -119,7 +123,7 @@ impl App {
         let mut app = Self {
             model: Model::new(GAMES.len(), library.is_some()),
             library,
-            input: InputService::start(),
+            input,
             snap: Snapshot::default(),
             entries: None,
             scan: None,
@@ -2344,6 +2348,9 @@ fn ellipsized_text(p: &egui::Painter, pos: Pos2, s: &str, font: FontId, color: C
     let t = ellipsize(p, s, font.clone(), max);
     text(p, pos, Align2::LEFT_TOP, &t, font, color);
 }
+
+#[cfg(test)]
+mod window_tests;
 
 #[cfg(test)]
 mod tests {

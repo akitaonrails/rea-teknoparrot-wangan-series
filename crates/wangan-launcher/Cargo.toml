@@ -28,5 +28,5 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
-rea-launcher-ui.workspace = true
+rea-launcher-ui = { workspace = true, features = ["testing"] }
 tempfile = "3"

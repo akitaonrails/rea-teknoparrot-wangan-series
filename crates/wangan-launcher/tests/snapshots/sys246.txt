@@ -1,0 +1,56 @@
+block /data/runtimes/wangan-r/input.block
+acgame /data/runtimes/wangan-r/game/NM00005.acgame
+ini /data/runtimes/wangan-r/config/PCSX2x6/inis/PCSX2.ini
+wine path Z:\data\x\y.exe
+upscale for 240 lines: 1
+upscale for 480 lines: 1
+upscale for 720 lines: 2
+upscale for 768 lines: 2
+upscale for 1080 lines: 3
+upscale for 1440 lines: 4
+upscale for 2160 lines: 6
+upscale for 4320 lines: 8
+== acgame
+[game]
+gameid=NM00005
+== PCSX2.ini, null audio
+; Written by the launcher before every start.
+[UI]
+SettingsVersion = 1
+SetupWizardIncomplete = false
+ConfirmShutdown = false
+StartFullscreen = true
+HideMouseCursor = true
+[Filenames]
+BIOS = r27v1602f.7d
+[EmuCore/GS]
+upscale_multiplier = 3
+[SPU2/Output]
+Backend = Null
+[Hotkeys]
+ShutdownVM = Keyboard/Escape
+[JVS]
+Coin1 = Keyboard/5
+Coin1 = SDL-0/Back
+P1_Start = Keyboard/1
+P1_Start = SDL-0/Start
+P1_Up = Keyboard/W
+P1_Up = SDL-0/DPadUp
+P1_Down = Keyboard/S
+P1_Down = SDL-0/DPadDown
+P1_Service = Keyboard/F2
+ToggleTestMode = Keyboard/F1
+Racing_View = Keyboard/V
+Racing_View = SDL-0/Y
+Racing_ShiftUp = Keyboard/E
+Racing_ShiftUp = SDL-0/RightShoulder
+Racing_ShiftDown = Keyboard/Q
+Racing_ShiftDown = SDL-0/LeftShoulder
+SteerLeft = Keyboard/Left
+SteerLeft = SDL-0/-LeftX
+SteerRight = Keyboard/Right
+SteerRight = SDL-0/+LeftX
+Gas = Keyboard/Up
+Gas = SDL-0/+RightTrigger
+Brake = Keyboard/Down
+Brake = SDL-0/+LeftTrigger

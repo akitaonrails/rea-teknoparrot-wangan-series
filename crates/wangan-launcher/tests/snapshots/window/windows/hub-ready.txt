@@ -1,0 +1,118 @@
+== 1280x720
+-- accesskit
+Window
+  GenericContainer
+    GenericContainer
+      GenericContainer
+        Unknown [button play] @ 56,454 226,504
+        Unknown [button game-settings] @ 242,454 412,504
+        Unknown [tile wangan-r] @ 56,548 175,615
+        Unknown [tile mt1] @ 187,548 306,615
+        Unknown [tile mt3] @ 318,548 437,615
+        Unknown [tile mt3dxp] @ 449,548 568,615
+        Unknown [tile mt5] @ 580,548 700,615
+        Unknown [tile mt5dxp] @ 712,548 831,615
+        Unknown [tile mt6] @ 843,548 962,615
+        Unknown [tile mt6r] @ 974,548 1093,615
+        Unknown [tile mt6rr] @ 1105,548 1224,615
+        Unknown [tab Games] @ 326,17 404,55
+        Unknown [tab Controls] @ 412,17 504,55
+        Unknown [tab Settings] @ 512,17 602,55
+-- painted text
+56,204 "Wangan Midnight Maximum Tune 5"
+58,344 "Namco ES3B · 2014 · 5.00 (Japan)"
+68,386 "Ready"
+56,418 "Found in Wangan Midnight Maximum Tune 5 [TP]"
+121,467 "Play"
+287,467 "Settings"
+56,519 "Your games · 3 of 9 found"
+70,587 "R"
+113,557 "Not found"
+200,587 "MT"
+244,557 "Not found"
+331,587 "MT3"
+391,557 "Locked"
+462,587 "MT3DX+"
+522,557 "Locked"
+593,587 "MT5"
+725,587 "MT5DX+"
+768,557 "Not found"
+856,587 "MT6"
+899,557 "Not found"
+987,587 "MT6R"
+1030,557 "Not found"
+1118,587 "MT6RR"
+64,28 "B"
+93,22 "Wangan Midnight"
+338,26 "Games"
+424,26 "Controls"
+524,26 "Settings"
+1135,28 "No controller"
+63,675 "A"
+86,674 "Play"
+145,675 "Y"
+167,674 "Settings"
+251,675 "B"
+275,674 "Back"
+337,675 "Start / Esc"
+410,674 "Quit"
+1149,675 "Version <version>"
+== 1280x800
+-- accesskit
+Window
+  GenericContainer
+    GenericContainer
+      GenericContainer
+        Unknown [button play] @ 62,504 251,560
+        Unknown [button game-settings] @ 269,504 458,560
+        Unknown [tile wangan-r] @ 62,609 179,674
+        Unknown [tile mt1] @ 192,609 309,674
+        Unknown [tile mt3] @ 322,609 439,674
+        Unknown [tile mt3dxp] @ 452,609 568,674
+        Unknown [tile mt5] @ 582,609 698,674
+        Unknown [tile mt5dxp] @ 712,609 828,674
+        Unknown [tile mt6] @ 841,609 958,674
+        Unknown [tile mt6r] @ 971,609 1088,674
+        Unknown [tile mt6rr] @ 1101,609 1218,674
+        Unknown [tab Games] @ 362,19 449,61
+        Unknown [tab Controls] @ 458,19 560,61
+        Unknown [tab Settings] @ 569,19 669,61
+-- painted text
+56,205 "Wangan Midnight Maximum Tune 5"
+58,344 "Namco ES3B · 2014 · 5.00 (Japan)"
+68,385 "Ready"
+56,418 "Found in Wangan Midnight Maximum Tune 5 [TP]"
+121,466 "Play"
+287,466 "Settings"
+56,519 "Your games · 3 of 9 found"
+70,579 "R"
+98,557 "Not found"
+186,579 "MT"
+215,557 "Not found"
+303,579 "MT3"
+348,557 "Locked"
+420,579 "MT3DX+"
+465,557 "Locked"
+537,579 "MT5"
+653,579 "MT5DX+"
+683,557 "Not found"
+770,579 "MT6"
+800,557 "Not found"
+887,579 "MT6R"
+917,557 "Not found"
+1004,579 "MT6RR"
+64,28 "B"
+93,22 "Wangan Midnight"
+338,26 "Games"
+424,26 "Controls"
+524,26 "Settings"
+1007,27 "No controller"
+63,674 "A"
+86,674 "Play"
+145,674 "Y"
+167,674 "Settings"
+251,674 "B"
+275,674 "Back"
+337,674 "Start / Esc"
+410,674 "Quit"
+1021,674 "Version <version>"

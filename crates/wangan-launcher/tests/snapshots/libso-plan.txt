@@ -1,0 +1,5 @@
+link /data/runtimes/mt3/libso/libGLEW.so.1.5.1 -> <tmp>/libso/libGLEW.so.1.5.1
+link /data/runtimes/mt3/libso/libGLEW.so.1.5 -> <tmp>/libso/libGLEW.so.1.5.1
+link /data/runtimes/mt3/libso/libboost_thread.so.1.40.0 -> <tmp>/libso/libboost_thread.so.1.40.0
+link /data/runtimes/mt3/libso/libcrypto.so.0.9.8 -> <tmp>/libso/libcrypto.so.0.9.8
+link /data/runtimes/mt3/libso/libnoname.so.2 -> <tmp>/libso/libnoname.so.2
