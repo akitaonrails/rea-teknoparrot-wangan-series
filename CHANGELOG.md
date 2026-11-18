@@ -6,6 +6,13 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Security
+
+- The board-file search and Wangan R's dongle card read zip archives with
+  zip 9.7 (was 2.6.1, with RUSTSEC-2026-0367, -0368, -0369, -0429, -0545
+  and -0548). Entries are still read only up to the size they must have,
+  and never unpacked to disk.
+
 ## 0.3.0 - 2026-11-18
 
 ### Fixed

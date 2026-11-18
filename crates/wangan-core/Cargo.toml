@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 wangan-jvs = { path = "../wangan-jvs" }
 sha1 = "0.10"
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9.7", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 rea-launcher = { workspace = true, features = ["linkfarm"] }
 
 [dev-dependencies]
