@@ -185,7 +185,7 @@ Reproducible builds (byte-identical twice). Patches: `patches/clang-cl/*`
 
 ## Release packages (CI-built, 2026-11-13)
 
-Built by `.github/workflows/release.yml` from pinned sources (OpenParrot and
+Built by the release workflow (now `.github/workflows/build.yml`) from pinned sources (OpenParrot and
 OpenParrot_WMMT with MSVC on a Windows runner; WanganArcadeLoader and the
 launcher on Debian bookworm; portable Wine 11.21 with a minimal FFmpeg 4.4.5
 for its `winedmo`). Played headless and silent:
@@ -317,9 +317,10 @@ and were still there 3 s after it.
 
 gamescope 3.17 crashes on its own way out after a TERM (`SIGSEGV` in the
 leader's exit status, also seen by the Initial D launcher before this
-change); nothing of the game is left. With 300 ms between the quit byte
-and `wineserver -k` (as in 0.2.0), the board's log shows no "quit
-requested" line: Wine's end reaches it first.
+change); nothing of the game is left. In these runs the quit byte came
+300 ms after the polite stop and `wineserver -k` reached the board first
+(no "quit requested" in its log); since then a Stop waits for the game to
+go (up to 5 s) before the quit byte, and `wineserver -k` stays last.
 
 `--check` against the owner's library: every game but Maximum Tune 1 ok
 (its emulator stays off).

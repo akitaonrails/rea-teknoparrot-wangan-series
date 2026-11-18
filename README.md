@@ -150,9 +150,12 @@ settings file and a flag for `--play <game>` or `--set <game>`:
 | Game render size | `--render <WxH>\|native` | The size MT3/3DX+ draw at (native: the output size) |
 | Dead zone | `--deadzone 0.00-0.30` | How far a stick moves before the car steers |
 
-The first time a game's settings are read, the Recommended look for your
-screen is saved (the Steam Deck look on a Deck). A flag a game doesn't take
-is refused. Other commands: `--list` (what was found; works while the
+Until you choose a picture, a game uses the Recommended look for your
+screen (the Steam Deck look on a Deck), saved once the window (or, on
+Windows, the command line) sees the screen; the Linux command line uses the
+look for a 1920×1080 screen for that run only. `--look` followed by a
+picture flag makes the picture custom. A flag a game doesn't take is
+refused. Other commands: `--list` (what was found; works while the
 window is open), `--check [<game>]` (what could start, without starting),
 `--library <folder>`, `--add-files <path>`, `--help`. `--game <game>` is
 `--set`'s old name.

@@ -29,9 +29,13 @@ All notable changes to this launcher. The format follows
 ### Added
 
 - Looks: Original, Recommended and Steam Deck set the render size, the
-  output size and the upscaler at once (window and `--look`). The first
-  time a game's settings are read, the Recommended look for your screen
-  is saved (on a Steam Deck, the Steam Deck look).
+  output size and the upscaler at once (window and `--look`). Until you
+  choose a picture, a game uses the Recommended look for your screen (on
+  a Steam Deck, the Steam Deck look), saved the first time the window or
+  the Windows command line sees the screen. The Linux command line, which
+  can't see it, uses the look for a 1920×1080 screen for that run only.
+  `--look` followed by a picture flag (`--render`, `--output`,
+  `--upscaler`) makes the picture custom.
 - Every control of the window has an accessible name for screen readers.
 - A row that is off says its whole reason (it was cut off on Windows).
 - The running game has a Stop button, and closing the window while a game
@@ -48,7 +52,9 @@ All notable changes to this launcher. The format follows
 - On Windows the launcher no longer opens a black console window beside
   its own; commands still print to the terminal that started them.
 - A second launcher no longer starts while one is open (`--list` still
-  works beside it).
+  works beside it; `--list --library <folder>`, which writes, doesn't).
+- Stopping a game tells the I/O board to quit only once the game has
+  gone (or failed to stop politely), then ends Wine.
 - A setting the launcher can't read (`fullscreen = off # mine`) stays as
   you wrote it; saving another setting no longer replaces it with the
   default. A settings file or `launcher.cfg` that can't be read is never
@@ -62,7 +68,10 @@ All notable changes to this launcher. The format follows
 - A tab click followed by a double click on a game no longer counts as a
   triple click: the game starts.
 - Every copy in a game's runtime folder is writable (a read-only file in a
-  dump broke the next start on Windows).
+  dump broke the next start on Windows). On Windows a file in the runtime
+  folder that differs from the dump's and wasn't copied there by the
+  launcher (one the game wrote) is now kept as it is instead of being
+  overwritten with the dump's.
 - Errors before the window opens (a refused `--play`, another launcher
   open) are written to `launcher.log` and, when someone may be watching,
   shown in a message window.
