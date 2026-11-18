@@ -6,6 +6,10 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+The first published release with everything in 0.3.0 below: 0.3.0 was
+tagged, but its release build stopped on the dependency audit (the zip
+advisories fixed here), so it was never published.
+
 ### Security
 
 - The board-file search and Wangan R's dongle card read zip archives with
