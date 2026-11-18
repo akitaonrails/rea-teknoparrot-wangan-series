@@ -30,10 +30,11 @@ use rea_launcher::wheel::Script;
 use rea_launcher_native::feeder::{self, Feeding, Scripted, Tuning};
 use rea_launcher_native::group::{Group, Tag};
 use rea_launcher_native::supervise::{self, Feed, Hold, Log, Options, Outcome, Watcher};
-use wangan_core::catalog::{Game, Route};
+use wangan_core::catalog::{self, Game, Route, Support};
 use wangan_core::launch::{self, Host, Plan};
 use wangan_core::runtime;
 use wangan_core::settings::Settings;
+use wangan_core::sys246;
 use wangan_jvs::controls::Cabinet;
 use wangan_jvs::shared::{QUIT, Snapshot};
 
@@ -119,9 +120,7 @@ pub fn prepare(
     settings: &Settings,
 ) -> Result<Prepared> {
     let rt = paths.runtime(game.slug);
-    if let wangan_core::catalog::Support::Blocked(why) =
-        game.support_on(wangan_core::catalog::Host::current())
-    {
+    if let Support::Blocked(why) = game.support_on(catalog::Host::current()) {
         bail!("{} can't start here: {why}", game.title);
     }
     check_components(game, paths)?;
@@ -137,7 +136,7 @@ pub fn prepare(
         &entry.dir,
         &rt,
         &comps,
-        wangan_core::catalog::Host::current(),
+        catalog::Host::current(),
         &linkfarm::list,
     )
     .with_context(|| format!("reading {}", entry.dir.display()))?;
@@ -174,7 +173,6 @@ pub fn prepare(
 /// the dump's zip at every start (the game writes to the card while it
 /// runs; the dump's copy is never touched).
 fn prepare_sys246(paths: &HubPaths, game: &Game, entry: &Entry<Game>, rt: &Path) -> Result<()> {
-    use wangan_core::sys246;
     let set = game
         .firmware
         .context("no board files are known for this game")?;
@@ -264,9 +262,7 @@ pub fn check_components(game: &Game, paths: &HubPaths) -> Result<()> {
         Route::NativeN2 => vec![c.wal.join("libwal_3dxp.so"), c.wal.join("libopenal.so")],
         Route::System246 => vec![
             c.pcsx2x6.join("app").join("AppRun"),
-            c.pcsx2x6
-                .join(wangan_core::sys246::GAME_ID)
-                .join("boot.elf"),
+            c.pcsx2x6.join(sys246::GAME_ID).join("boot.elf"),
         ],
         Route::Chihiro => vec![],
     };
@@ -595,10 +591,7 @@ fn run_in_gamescope(
     }
     if display == Display::Headless && game.route == Route::System246 {
         // test runs reach no sound server: pcsx2x6 would stop on an error box
-        let ini = wangan_core::sys246::pcsx2_ini(
-            wangan_core::sys246::upscale_for(p.plan.game_size.h),
-            true,
-        );
+        let ini = sys246::pcsx2_ini(sys246::upscale_for(p.plan.game_size.h), true);
         fsx::write_atomic(&launch::sys246_ini(&p.runtime), ini)?;
     }
     let script = p.runtime.join("session.sh");
