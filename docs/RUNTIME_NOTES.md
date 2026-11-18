@@ -336,3 +336,19 @@ gamescope above), by the launcher window's Stop or close button (closing
 the window while a game runs is a Stop, then the window closes), or by
 SIGINT/SIGTERM (Ctrl+C) to `wangan-launcher --play`, which sets the same
 stop flag as `--seconds` above. No leftover processes in any of the runs.
+
+Again on the SDK branch at 860e4da (bubblewrap `--ro-bind-try` with the
+data folder bound back writable, the gear on Controls), each run's sound
+into a private PulseAudio null sink (`PULSE_SINK`, removed after the run;
+`pactl list short sink-inputs` checked during it), and the session's own
+processes followed by ancestry while it ran:
+
+| Game | Stop (`--seconds`) | Launcher killed | Session processes left | Streams |
+|---|---|---|---|---|
+| MT3DX+ | 45 s | 45 s | 0 / 0 | 1, on the run's null sink |
+| Wangan R | 60 s | 60 s | 0 / 0 | none (pcsx2x6's null audio) |
+| MT6 | 90 s | 90 s | 0 / 0 | 1, on the run's null sink |
+
+The earlier runs pointed `PULSE_SERVER` nowhere instead; a game falling
+back to ALSA could then still reach the default output, so the null sink
+is the rule now.
