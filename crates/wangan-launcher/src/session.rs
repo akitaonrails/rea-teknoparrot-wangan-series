@@ -763,8 +763,14 @@ impl<'a> Ending<'a> {
 }
 
 impl Watcher for Ending<'_> {
+    /// The game is asked to stop and gets [`GRACE`] to go; then (gone, or
+    /// its polite stop failed) the board and Wine are told to end.
     fn ask_to_stop(&mut self, group: &Group) {
         group.terminate();
+        let deadline = Instant::now() + GRACE;
+        while Instant::now() < deadline && game_runs(group) {
+            std::thread::sleep(Duration::from_millis(50));
+        }
         self.end();
     }
 
@@ -778,6 +784,20 @@ impl Watcher for Ending<'_> {
     fn saves_after_exit(&self) -> bool {
         true
     }
+}
+
+/// Whether the game still runs: on Linux gamescope, which leads the session
+/// and goes with the game's window (a leader that has exited is a zombie,
+/// never a member); on Windows the loader, which waits for the game, or
+/// anything else of its group.
+#[cfg(target_os = "linux")]
+fn game_runs(group: &Group) -> bool {
+    group.members().iter().any(|m| m.pid == group.id())
+}
+
+#[cfg(windows)]
+fn game_runs(group: &Group) -> bool {
+    group.any_left()
 }
 
 /// Sets the block's quit byte: the I/O board ends on it.
@@ -929,5 +949,30 @@ mod tests {
             didnt_start(&outcome(2, supervise::Ended::Stopped), log),
             None
         );
+    }
+
+    /// The board is told to quit once the game has gone, not while it
+    /// still runs (its cabinet would show E0303).
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_stop_tells_the_board_only_once_the_game_is_gone() {
+        let t = tempfile::tempdir().unwrap();
+        let block = t.path().join("input.block");
+        fs::write(&block, Snapshot::default().encode()).unwrap();
+        // a game that takes a second to go after the polite stop
+        let mut game = Command::new("sh");
+        game.args(["-c", "trap '' TERM; sleep 1"]);
+        let tag = Tag::new(TAG, t.path().to_string_lossy());
+        let group = Group::spawn(&mut game, &tag).unwrap();
+        std::thread::sleep(Duration::from_millis(100));
+        let start = Instant::now();
+        let mut ending = Ending::new(&block, None);
+        ending.ask_to_stop(&group);
+        assert!(
+            start.elapsed() >= Duration::from_millis(700),
+            "{:?}",
+            start.elapsed()
+        );
+        assert_eq!(fs::read(&block).unwrap()[QUIT], 1);
     }
 }
