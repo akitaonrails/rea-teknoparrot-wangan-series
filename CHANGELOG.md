@@ -6,45 +6,6 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
-### Changed
-
-- Updated rea-launcher-sdk to v0.10.0: the window, the command line, the
-  library scan, the runtime folder, the game's processes and the input
-  thread are now the SDK's TeknoParrot hub modules, shared with the
-  Initial D, Nintendo and Sega launchers. The window keeps its look, its
-  colours and its pages.
-- The Barlow typefaces are inside the program; the packages no longer
-  carry a `components/fonts` folder.
-- `launcher.cfg` can name several game folders: `--library` (and the
-  window's Game folders page) adds a folder instead of replacing the one
-  before. The `library = …` line 0.2.0 wrote still reads.
-- The command line is the hub family's: `--set <game> <options>` saves
-  options (`--game` still works), `--check [<game>]` says whether a game
-  could start without starting it, `--look`, `--key=value`, and the test
-  options `--input-script` and `--seconds`. Exit codes: 0 done, 1 refused,
-  2 bad command line.
-- Each game's log (`<game>.log` in the data folder) starts afresh at every
-  start.
-
-### Added
-
-- Looks: Original, Recommended and Steam Deck set the render size, the
-  output size and the upscaler at once (window and `--look`). Until you
-  choose a picture, a game uses the Recommended look for your screen (on
-  a Steam Deck, the Steam Deck look), saved the first time the window or
-  the Windows command line sees the screen. The Linux command line, which
-  can't see it, uses the look for a 1920×1080 screen for that run only.
-  `--look` followed by a picture flag (`--render`, `--output`,
-  `--upscaler`) makes the picture custom.
-- Every control of the window has an accessible name for screen readers.
-- A row that is off says its whole reason (it was cut off on Windows).
-- The running game has a Stop button, and closing the window while a game
-  runs stops the game first.
-- A game that closes by itself within seconds of its start says so, with
-  the lines of its log that tell why.
-- On Linux the game folders are bound read-only around the game when
-  bubblewrap is installed.
-
 ### Fixed
 
 - Closing the window while a game ran left the game, the I/O board and
@@ -64,6 +25,9 @@ All notable changes to this launcher. The format follows
   window shows them off.
 - A folder with a stray file named like another game's main file no longer
   hides the game in it.
+- A game folder on a drive that isn't plugged in no longer stops a game
+  from starting (Linux), and with your home as a game folder
+  (`--library ~`) the launcher's own folder stays writable.
 - The Add files page no longer reads the board files at every frame.
 - A tab click followed by a double click on a game no longer counts as a
   triple click: the game starts.
@@ -75,6 +39,46 @@ All notable changes to this launcher. The format follows
 - Errors before the window opens (a refused `--play`, another launcher
   open) are written to `launcher.log` and, when someone may be watching,
   shown in a message window.
+
+### Added
+
+- Looks: Original, Recommended and Steam Deck set the render size, the
+  output size and the upscaler at once (window and `--look`). Until you
+  choose a picture, a game uses the Recommended look for your screen (on
+  a Steam Deck, the Steam Deck look), saved the first time the window or
+  the Windows command line sees the screen. The Linux command line, which
+  can't see it, uses the look for a 1920×1080 screen for that run only.
+  `--look` followed by a picture flag (`--render`, `--output`,
+  `--upscaler`) makes the picture custom.
+- Every control of the window has an accessible name for screen readers.
+- A settings row that is off says its whole reason (it was cut off on
+  Windows).
+- The running game has a Stop button, and closing the window while a game
+  runs stops the game first.
+- A game that closes by itself within seconds of its start says so, with
+  the lines of its log that tell why.
+- On Linux the game folders are bound read-only around the game when
+  bubblewrap is installed.
+
+### Changed
+
+- The Barlow typefaces are inside the program; the packages no longer
+  carry a `components/fonts` folder.
+- `launcher.cfg` can name several game folders: `--library` (and the
+  window's Game folders page) adds a folder instead of replacing the one
+  before. The `library = …` line 0.2.0 wrote still reads.
+- The command line is the hub family's: `--set <game> <options>` saves
+  options (`--game` still works), `--check [<game>]` says whether a game
+  could start without starting it, `--look`, `--key=value`, and the test
+  options `--input-script` and `--seconds`. Exit codes: 0 done, 1 refused,
+  2 bad command line.
+- Each game's log (`<game>.log` in the data folder) starts afresh at every
+  start.
+- Updated rea-launcher-sdk to v0.10.0: the window, the command line, the
+  library scan, the runtime folder, the game's processes and the input
+  thread are now the SDK's TeknoParrot hub modules, shared with the
+  Initial D, Nintendo and Sega launchers. The window keeps its look, its
+  colours and its pages.
 
 ## 0.2.0 - 2026-11-17
 
