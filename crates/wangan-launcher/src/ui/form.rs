@@ -337,10 +337,12 @@ mod tests {
         let mt3 = game(GameId::Mt3);
         let (s, _) = Settings::load(&path, mt3, None).unwrap();
         let mut f = Form::on(s, mt3, None, Host::Linux);
-        f.adjust("output", -2, false);
+        // the Recommended look for an unknown screen (1080p), not saved
+        assert_eq!(f.value("look"), "Recommended");
+        f.adjust("output", 1, false);
         f.save(&path).unwrap();
         let saved = std::fs::read_to_string(&path).unwrap();
-        assert_eq!(saved, format!("{text}output = 1920x1080\n"));
+        assert_eq!(saved, format!("{text}output = 2560x1440\n"));
         // an unreadable file is left alone
         std::fs::remove_file(&path).unwrap();
         std::fs::create_dir(&path).unwrap();

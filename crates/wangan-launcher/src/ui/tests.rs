@@ -654,10 +654,10 @@ fn every_option_is_saved_like_the_command_line_saves_it() {
     let inv = cli::parse(&crate::CLI, flags.clone()).unwrap();
     crate::set(&cli_paths, catalog::by_slug("mt3").unwrap(), &inv).unwrap();
     let (by_cli, _) = Settings::parse(&std::fs::read_to_string(cli_paths.settings("mt3")).unwrap());
-    let mut want = s.clone();
-    // the command line's look (if any) is applied first: same values
-    want.look = by_cli.look;
-    assert_eq!(by_cli, want, "{flags:?}");
+    for pair in flags[2..].chunks(2) {
+        let key = pair[0].trim_start_matches("--");
+        assert_eq!(by_cli.value(key), s.value(key), "{key} of {flags:?}");
+    }
 }
 
 #[test]

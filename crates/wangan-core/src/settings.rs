@@ -43,6 +43,17 @@ pub const LOOKS: &[(&str, &str)] = &[
 /// The keys a look sets.
 pub const LOOK_KEYS: [&str; 4] = ["look", "render", "output", "upscaler"];
 
+/// Every settings key.
+pub const ALL_KEYS: [&str; 7] = [
+    "look",
+    "output",
+    "upscaler",
+    "sharpness",
+    "fullscreen",
+    "render",
+    "deadzone",
+];
+
 impl Look {
     pub const ALL: [Look; 3] = [Look::Original, Look::Recommended, Look::SteamDeck];
 
@@ -248,15 +259,14 @@ impl Settings {
 
     /// `existing` with `keys` set to these settings' values, every other
     /// line as it was (no look: its line is cleared); a new file starts
-    /// from the commented template and gets every key.
+    /// from the commented template.
     pub fn save(&self, existing: &str, keys: &[&str]) -> String {
-        let fresh = existing.trim().is_empty();
-        let mut out = if fresh {
+        let mut out = if existing.trim().is_empty() {
             template()
         } else {
             existing.to_string()
         };
-        for spec in OPTIONS.iter().filter(|s| fresh || keys.contains(&s.key)) {
+        for spec in OPTIONS.iter().filter(|s| keys.contains(&s.key)) {
             out = match self.value(spec.key) {
                 v if v.is_empty() => cfg::clear_key(&out, spec.key),
                 v => cfg::spec::set_key(&out, spec, &v),
@@ -266,26 +276,31 @@ impl Settings {
     }
 
     /// The settings in `file` for `game`, and what couldn't be read in it;
-    /// an unreadable file is an error. The first time (no file yet) the
-    /// recommended look for `screen` is decided and saved, so a Play or
-    /// `--play` before the settings page ever opened uses it too.
+    /// an unreadable file is an error. While no picture was chosen (no
+    /// look, render size, output size or upscaler in the file) the
+    /// recommended look for `screen` is used; it is saved only when the
+    /// screen is known, so Play or `--play` before the settings page ever
+    /// opened uses it, and a run that can't see the screen (the Linux
+    /// command line) leaves the choice to the window.
     pub fn load(
         file: &Path,
         game: &Game,
         screen: Option<(u32, u32)>,
     ) -> io::Result<(Settings, Vec<String>)> {
-        if let Some(text) = cfg::read_file(file)? {
-            return Ok(Settings::parse(&text));
+        let text = cfg::read_file(file)?.unwrap_or_default();
+        let (mut s, mut problems) = Settings::parse(&text);
+        if cfg::entries(&text).any(|e| LOOK_KEYS.contains(&e.key)) {
+            return Ok((s, problems));
         }
-        let mut s = Settings::default();
         Look::recommended(screen).apply(&mut s, game, screen);
-        let problems = match s.write(file, &[]) {
-            Ok(()) => Vec::new(),
-            Err(e) => vec![format!(
+        if screen.is_some()
+            && let Err(e) = s.write(file, &LOOK_KEYS)
+        {
+            problems.push(format!(
                 "couldn't save the recommended look to {}: {e}",
                 file.display()
-            )],
-        };
+            ));
+        }
         Ok((s, problems))
     }
 
@@ -383,7 +398,7 @@ mod tests {
     fn a_new_file_is_the_template_with_every_key() {
         let mut s = Settings::default();
         Look::Original.apply(&mut s, game(GameId::Mt3), None);
-        let text = s.save("", &[]);
+        let text = s.save("", &ALL_KEYS);
         assert!(text.starts_with("# Settings for one game"), "{text}");
         for spec in OPTIONS {
             assert!(
@@ -449,7 +464,7 @@ mod tests {
     fn a_look_given_up_is_cleared_from_the_file() {
         let mut s = Settings::default();
         Look::Original.apply(&mut s, game(GameId::Mt3), None);
-        let text = s.save("", &[]);
+        let text = s.save("", &ALL_KEYS);
         assert!(text.contains("\nlook = original\n"), "{text}");
         s.look = None;
         let text = s.save(&text, &LOOK_KEYS);
@@ -458,7 +473,7 @@ mod tests {
     }
 
     #[test]
-    fn the_first_load_saves_the_recommended_look() {
+    fn the_first_load_saves_the_recommended_look_for_a_known_screen() {
         let t = tempfile::tempdir().unwrap();
         let file = t.path().join("settings/mt3.cfg");
         let (s, problems) = Settings::load(&file, game(GameId::Mt3), Some((1280, 800))).unwrap();
@@ -472,7 +487,53 @@ mod tests {
     }
 
     #[test]
+    fn with_no_screen_known_the_look_is_this_runs_only() {
+        let t = tempfile::tempdir().unwrap();
+        let file = t.path().join("settings/mt3.cfg");
+        let mt3 = game(GameId::Mt3);
+        let (s, _) = Settings::load(&file, mt3, None).unwrap();
+        assert_eq!(s.look, Some(Look::Recommended));
+        assert_eq!(
+            s.output,
+            Size::new(1920, 1080),
+            "a 1080p screen for this run"
+        );
+        assert!(!file.exists(), "nothing saved: the window decides later");
+        // a file the command line wrote without picture keys: still undecided
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, "# mine\ndeadzone = 0.10\n").unwrap();
+        let (s, _) = Settings::load(&file, mt3, Some((2560, 1440))).unwrap();
+        assert_eq!(
+            (s.look, s.output),
+            (Some(Look::Recommended), Size::new(2560, 1440))
+        );
+        assert!((s.deadzone - 0.10).abs() < 1e-6);
+        let text = std::fs::read_to_string(&file).unwrap();
+        assert!(text.starts_with("# mine\ndeadzone = 0.10\n"), "{text}");
+        assert!(text.contains("look = recommended\n"), "{text}");
+        // a picture chosen by hand is never replaced by a look
+        std::fs::write(&file, "output = 3840x2160\n").unwrap();
+        let (s, _) = Settings::load(&file, mt3, Some((1280, 800))).unwrap();
+        assert_eq!((s.look, s.output), (None, Size::new(3840, 2160)));
+    }
+
+    #[test]
+    fn a_new_file_gets_the_keys_given_and_the_rest_commented() {
+        let s = Settings {
+            deadzone: 0.2,
+            ..Settings::default()
+        };
+        let text = s.save("", &["deadzone"]);
+        assert!(text.starts_with("# Settings for one game"), "{text}");
+        assert!(text.contains("\ndeadzone = 0.20\n"), "{text}");
+        assert!(text.contains("\n#output ="), "{text}");
+        assert!(!text.contains("\noutput ="), "{text}");
+    }
+
+    #[test]
     fn the_template_lists_every_option_commented() {
+        let keys: Vec<&str> = OPTIONS.iter().map(|o| o.key).collect();
+        assert_eq!(keys, ALL_KEYS);
         let t = template();
         for spec in OPTIONS {
             assert!(t.contains(&format!("#{} =", spec.key)), "{}", spec.key);

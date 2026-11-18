@@ -236,7 +236,10 @@ fn every_command_line_mode() {
 
 #[test]
 fn the_settings_file_written_from_defaults() {
-    rea_launcher::snapshot!("settings.cfg.txt", Settings::default().save("", &[]));
+    rea_launcher::snapshot!(
+        "settings.cfg.txt",
+        Settings::default().save("", &wangan_core::settings::ALL_KEYS)
+    );
 }
 
 /// A player's file: comments, blank lines, unknown and old keys, a key

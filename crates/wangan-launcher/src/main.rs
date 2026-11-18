@@ -245,18 +245,30 @@ fn configure(paths: &HubPaths, config: &mut HubConfig, inv: &Invocation) -> Resu
 }
 
 /// The options of the command line over `s`: a look first, so the flags
-/// after it win.
+/// after it win (and make the picture custom: no look).
 fn apply_options(inv: &Invocation, s: &mut Settings, game: &Game) {
     inv.apply_options(settings::OPTIONS, &["look"], |spec, v| match v {
         Value::Choice(key) if spec.key == "look" => {
             if let Some(look) = Look::from_key(key) {
-                look.apply(s, game, None);
+                look.apply(s, game, cli_screen());
             }
         }
         v => {
             let _ = s.apply(spec.key, v);
+            if settings::LOOK_KEYS.contains(&spec.key) {
+                s.look = None;
+            }
         }
     });
+}
+
+/// The screen a command-line run sees: Windows asks the system; on Linux
+/// the program may run under gamescope or a helper, so it doesn't know.
+fn cli_screen() -> Option<(u32, u32)> {
+    #[cfg(windows)]
+    return rea_launcher_win32::display::screen_size();
+    #[cfg(not(windows))]
+    None
 }
 
 /// The options of the command line saved into the game's settings (the
@@ -265,11 +277,14 @@ fn set(paths: &HubPaths, game: &Game, inv: &Invocation) -> Result<(), String> {
     if inv.options.is_empty() {
         return Ok(());
     }
-    let mut s = load_settings(paths, game, None, warn)?;
+    let mut s = load_settings(paths, game, cli_screen(), warn)?;
     apply_options(inv, &mut s, game);
     let mut keys: Vec<&str> = inv.options.iter().map(|(k, _)| *k).collect();
     if keys.contains(&"look") {
+        // a look's values, or its line cleared when a flag made it custom
         keys.extend(settings::LOOK_KEYS);
+    } else if keys.iter().any(|k| settings::LOOK_KEYS.contains(k)) {
+        keys.push("look");
     }
     s.write(&paths.settings(game.slug), &keys)
         .map_err(|e| format!("Could not save the options: {e}"))
@@ -414,7 +429,7 @@ fn play(
         .get(&game.id)
         .map(|e| (*e).clone())
         .ok_or_else(|| format!("{} is not in your game folders.", game.title))?;
-    let settings = load_settings(paths, game, None, warn)?;
+    let settings = load_settings(paths, game, cli_screen(), warn)?;
     let display = if inv.test.headless {
         Display::Headless
     } else {
@@ -523,7 +538,7 @@ mod tests {
                 "off",
             ]);
             apply_options(&inv, &mut s, game_of("mt3"));
-            assert_eq!(s.look, Some(Look::Original));
+            assert_eq!(s.look, None, "a picture flag after a look makes it custom");
             assert_eq!(
                 s.render,
                 Some(Size::new(2560, 1440)),
@@ -533,6 +548,13 @@ mod tests {
             assert_eq!(s.upscaler, Upscaler::Nis);
             assert_eq!(s.sharpness, 3);
             assert!(!s.fullscreen);
+            let inv = parse_v(&["--set", "mt3", "--look", "steam_deck", "--deadzone", "0.2"]);
+            apply_options(&inv, &mut s, game_of("mt3"));
+            assert_eq!(
+                s.look,
+                Some(Look::SteamDeck),
+                "the dead zone is no picture value"
+            );
         }
     }
 
@@ -556,7 +578,10 @@ mod tests {
         let inv = parse_v(&["--set", "mt3", "--deadzone", "0.1"]);
         set(&p, game_of("mt3"), &inv).unwrap();
         let text = std::fs::read_to_string(p.settings("mt3")).unwrap();
-        assert_eq!(text, "# mine\nsharpness = 7\ndeadzone = 0.10\n");
+        assert!(text.starts_with("# mine\nsharpness = 7\n"), "{text}");
+        assert!(text.contains("\ndeadzone = 0.10\n"), "{text}");
+        // only Windows' command line sees the screen and saves its look
+        assert_eq!(text.contains("\nlook = "), cfg!(windows), "{text}");
     }
 
     #[test]

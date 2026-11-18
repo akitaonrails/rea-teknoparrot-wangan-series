@@ -767,6 +767,9 @@ warning: settings line 3: unknown setting "future_key" (ignored, kept in the fil
 # mine
 sharpness = 7
 future_key = yes
+#look =
+output = 1024x768
+upscaler = fsr
 render = 1920x1080
 deadzone = 0.12
 
@@ -810,6 +813,9 @@ Board files:
 # mine
 sharpness = 7
 future_key = yes
+#look =
+output = 1024x768
+upscaler = fsr
 render = 1920x1080
 deadzone = 0.12
 
@@ -929,6 +935,9 @@ Board files:
 # mine
 sharpness = 7
 future_key = yes
+#look =
+output = 1024x768
+upscaler = fsr
 render = 1920x1080
 deadzone = 0.12
 
