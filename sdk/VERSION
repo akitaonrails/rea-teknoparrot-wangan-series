@@ -1,3 +1,3 @@
 # Vendored by rea-launcher-sdk scripts/sdk-sync; do not edit sdk/ by hand.
-tag=untagged
-commit=860e4da1bccec6bb95db7b437d4e4e41194dd527
+tag=v0.10.0
+commit=6b85076c4fc9db85b772d8f6d470c7d2fc9b42e4
