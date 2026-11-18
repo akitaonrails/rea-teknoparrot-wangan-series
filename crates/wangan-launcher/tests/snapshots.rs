@@ -232,6 +232,29 @@ fn every_command_line_mode() {
     rea_launcher::snapshot!(&format!("cli-{}.txt", host_name()), out);
 }
 
+/// While another launcher holds the lock, `--list` still reads, but a
+/// command that writes `launcher.cfg` is refused.
+#[test]
+#[cfg(unix)]
+fn only_a_command_that_writes_runs_beside_an_open_launcher() {
+    let f = Fixture::new();
+    let lock = f.root().join("run/rea-launcher-rea-wangan-launcher.lock");
+    std::fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    let _held = rea_launcher::instance::single_at(&lock).expect("the lock");
+    let games = f.arg("games");
+    let list = f.run(&["--list"]);
+    assert!(
+        list.contains("exit Some(1)") && list.contains("No game folder yet"),
+        "{list}"
+    );
+    let write = f.run(&["--list", "--library", &games]);
+    assert!(write.contains("exit Some(5)"), "{write}");
+    assert!(
+        !f.data().join("launcher.cfg").exists(),
+        "nothing written beside it"
+    );
+}
+
 // ---------------------------------------------------------------- settings
 
 #[test]
