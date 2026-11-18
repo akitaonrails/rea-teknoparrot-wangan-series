@@ -286,3 +286,47 @@ functions mixing C and inline asm (`Direct3D9.cpp`, `EmuFS.cpp`):
 a source build needs MSVC (Windows CI or msvc-wine). The fork's
 scheduler/CRI trace (`scheduler_io_trace`) is compiled out of release
 builds and would be the next tool.
+
+## On the SDK's hub modules (2026-11-17)
+
+The launcher moved onto rea-launcher-sdk's hub pieces (v0.10.0): the game's
+processes are a `group` (Linux: gamescope's process group, every process
+tagged `WANGAN_SESSION`, a sentinel for a killed launcher) run by
+`supervise`; the session ends game first, then the board (quit byte), then
+`wineserver -k`. The input block is written by the SDK's input thread
+(`feeder`, the block as a hex line put in place by `input::BlockSink`).
+Release build, headless (`--linux --play <game> --headless`), silent
+(`PULSE_SERVER`/`PIPEWIRE_REMOTE` pointed nowhere), fresh data folder,
+input from `--input-script` (taps of View and Enter, then gas and
+steering). Box: gamescope 3.17, the box's Wine, NVIDIA RTX 5090.
+"Left" counts the processes of the game's kind (gamescope, Wine, the
+board, the game, the emulator, bwrap, sh) that appeared during the run
+and were still there 3 s after it.
+
+| Game (route) | Ended by | Result | Left |
+|---|---|---|---|
+| MT3DX+ (N2, WanganArcadeLoader) | Stop (`--seconds 105`, the window's Stop flag) | link screen skipped with View from the block, attract mode at 1920×1080 (the Recommended look with no screen known) | 0 |
+| MT3DX+ | the game's window closing (TERM to gamescope at 40 s) | session ended at once, no "couldn't start" message (ran > 20 s) | 0 |
+| MT3DX+ | launcher killed (KILL at 40 s) | the sentinel ended the session | 0 |
+| Wangan R (System 246, pcsx2x6) | Stop at 60 s | Proverb boot, the game's intro movie | 0 |
+| Wangan R | window closing at 60 s | pcsx2x6 shut down gracefully | 0 |
+| Wangan R | launcher killed at 60 s | — | 0 |
+| MT6 (ES3B, OpenParrot under Wine) | Stop at 150 s | Wine prefix created on first start, game connected to `wangan-io`, which answered its JVS polls; DXVK presenting at 1360×768 | 0 |
+| MT6 | window closing at 90 s | as above; two short-lived processes named `main` seen during the window were not this session's (no MT6 process has that name) and were gone a moment later | 0 |
+| MT6 | launcher killed at 90 s | the sentinel ended gamescope, the game, the board and Wine | 0 |
+
+gamescope 3.17 crashes on its own way out after a TERM (`SIGSEGV` in the
+leader's exit status, also seen by the Initial D launcher before this
+change); nothing of the game is left. With 300 ms between the quit byte
+and `wineserver -k` (as in 0.2.0), the board's log shows no "quit
+requested" line: Wine's end reaches it first.
+
+`--check` against the owner's library: every game but Maximum Tune 1 ok
+(its emulator stays off).
+
+Quit paths: the cabinets have no quit from the game menu (only the
+operator's test menu), so a game ends by its window closing (the TERM to
+gamescope above), by the launcher window's Stop or close button (closing
+the window while a game runs is a Stop, then the window closes), or by
+SIGINT/SIGTERM (Ctrl+C) to `wangan-launcher --play`, which sets the same
+stop flag as `--seconds` above. No leftover processes in any of the runs.

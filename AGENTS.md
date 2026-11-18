@@ -2,8 +2,9 @@
 
 One launcher (a hub, like Azimuth for Forza) for the Wangan Midnight arcade
 series the owner dumped: Wangan Midnight R, Maximum Tune 1, 3, 3DX+, 5, 5DX+,
-6, 6R, 6RR. Built on `~/Projects/rea-launcher-sdk`; read its
-`docs/STANDARDS.md` (binding) and `docs/RESEARCH.md` here first.
+6, 6R, 6RR. Built on rea-launcher-sdk (its TeknoParrot hub modules).
+Read sdk/docs/STANDARDS.md before any work; the playbooks are in
+sdk/docs/playbooks/. Read `docs/RESEARCH.md` here first too.
 
 ## Owner decisions (2026-11-13, see docs/RESEARCH.md §6)
 
@@ -28,3 +29,29 @@ series the owner dumped: Wangan Midnight R, Maximum Tune 1, 3, 3DX+, 5, 5DX+,
   is native resolution patches + gamescope FSR/NIS.
 - Game runs are headless (`gamescope --backend headless`) unless the owner
   is told first.
+
+## Layout
+
+- `crates/wangan-core`: the game table (`catalog`, `rea_launcher::catalog::Title`),
+  the board files (`firmware`), the runtime folder rules (`runtime`, a
+  `linkfarm::Policy` per route), the option table (`settings::OPTIONS`,
+  looks), launch plans, Wangan R's files (`sys246`). Host-tested.
+- `crates/wangan-launcher`: the hub's backend (`ui.rs`, a `HubBackend`;
+  the Add files page is its extra page), the settings rows (`ui/form.rs`),
+  the command line (`main.rs`: `rea_launcher::hub::cli` plus
+  `--add-files`), sessions (`session.rs`: `group` + `supervise`, the
+  `Ending` watcher), the input block (`input.rs`, a feeder `Wire`).
+- `crates/wangan-jvs` (GPL port of TeknoParrotUI's JVS code) and
+  `crates/wangan-io` (the board program) stay this launcher's own.
+- Golden snapshots: `crates/wangan-launcher/tests/snapshots/` (the window's
+  in `window/<linux|windows>/`); `REA_UPDATE_SNAPSHOTS=1` rewrites them,
+  only after reading every diff.
+
+## Checks
+
+`cargo fmt --all --check`, `cargo test --workspace`, clippy for the host and
+`x86_64-pc-windows-gnu` (SDL2 from `scripts/build-launcher.sh sdl2`),
+`sdk/scripts/wine-test --target x86_64-pc-windows-gnu --locked --workspace`,
+`sdk/scripts/launcher-check .`. Command-line tests run the launcher with
+`--linux` and no `DISPLAY`/`WAYLAND_DISPLAY`, so a refused command never
+opens a window.

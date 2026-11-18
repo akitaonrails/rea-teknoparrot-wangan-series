@@ -1,9 +1,10 @@
 WANGAN MIDNIGHT LAUNCHER
 ========================
 
-One launcher for the Wangan Midnight Maximum Tune arcade games you
-dumped yourself: Maximum Tune 3, 3DX+ (Linux), 5, 5DX+, 6, 6R and 6RR
-(Linux and Windows). No game files are supplied. Bring your own.
+One launcher for the Wangan Midnight arcade games you dumped yourself:
+Wangan Midnight R, Maximum Tune 3, 3DX+ (Linux), 5, 5DX+, 6, 6R and 6RR
+(Linux and Windows). No game files are supplied. Bring your own; Wangan R
+also needs the System 246 BIOS from the board (Add files on its tile).
 
 Project page: https://github.com/akitaonrails/rea-teknoparrot-wangan-series
 
@@ -33,8 +34,8 @@ WINDOWS
    "More info", then "Run anyway".
 MT3 and 3DX+ are Linux programs: they are listed but can't start on
 Windows. The screen options (output size, upscaler, full screen) are
-gamescope's and exist on Linux only; on Windows the game runs full
-screen at its own 1360 x 768.
+gamescope's and exist on Linux only (shown greyed out, with the reason);
+on Windows the game runs full screen at its own 1360 x 768.
 If your games are on a network share, Windows needs developer mode for
 the launcher to link their folders (Settings > System > For developers).
 
@@ -49,14 +50,20 @@ Pads and wheels are read with SDL. Pad layout:
   Start        insert coin (6RR plays on credits)
   A            test menu enter
 
-The Controls page shows live steering, pedal, gear and button readings.
+The Controls page shows live steering, pedal and button readings. The
+pad also works the launcher's window: d-pad or left stick to move, A to
+choose, B to go back, Start to play, Y for Settings, the shoulder buttons
+change tabs. While a game runs the pad is the game's, and the window has
+a Stop button; closing the window stops the game first.
 
 
 COMMAND LINE
 ------------
-  wangan-launcher --library <folder>   remember where your games are
+  wangan-launcher --library <folder>   add a folder with your games
   wangan-launcher --list               what was found
+  wangan-launcher --check              what could start, without starting
   wangan-launcher --play mt5dxp        start one game
+  wangan-launcher --add-files <path>   add the board files from a folder or zip
   wangan-launcher --help               every option
 
 
