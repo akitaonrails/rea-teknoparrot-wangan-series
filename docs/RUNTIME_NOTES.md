@@ -321,6 +321,11 @@ change); nothing of the game is left. In these runs the quit byte came
 300 ms after the polite stop and `wineserver -k` reached the board first
 (no "quit requested" in its log); since then a Stop waits for the game to
 go (up to 5 s) before the quit byte, and `wineserver -k` stays last.
+Rerun with that order (MT6, Stop at 90 s, twice): 0 of the session's
+processes left; still no "quit requested" line, because gamescope's
+reaper ends everything it started (the board too) as it goes, before the
+quit byte. A shell and a Wine set seen in one of those windows had no
+link to this session (another program on the shared machine).
 
 `--check` against the owner's library: every game but Maximum Tune 1 ok
 (its emulator stays off).
