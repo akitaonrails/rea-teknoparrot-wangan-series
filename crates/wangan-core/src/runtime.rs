@@ -510,11 +510,11 @@ mod tests {
         let comps = comps(&c);
         let mt5 = game(GameId::Mt5);
         let ops = plan(mt5, &src, &rt, &comps, Host::current(), &linkfarm::list).unwrap();
-        linkfarm::apply(&ops, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &ops, Occupied::Keep).unwrap();
         // the game writes its backup file; a later launch must keep it
         fs::write(rt.join("FBK.bin"), b"player save").unwrap();
         fs::write(c.join("op/OpenParrot64.dll"), b"v2").unwrap();
-        linkfarm::apply(&ops, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &ops, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("FBK.bin")).unwrap(), b"player save");
         assert_eq!(fs::read(rt.join("OpenParrot64.dll")).unwrap(), b"v2");
         assert!(rt.join("TP").is_dir());
@@ -580,8 +580,8 @@ mod tests {
                 at: rt.join("big.exe"),
             },
         ];
-        linkfarm::apply(&ops, Occupied::Keep).unwrap();
-        linkfarm::apply(&ops, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &ops, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &ops, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("data/a.bin")).unwrap(), b"data");
         assert_eq!(fs::read(rt.join("big.exe")).unwrap(), b"exe");
         // a link pointing elsewhere is moved, the folder it pointed to untouched
@@ -589,7 +589,7 @@ mod tests {
             target: src.join("movie"),
             at: rt.join("data"),
         }];
-        linkfarm::apply(&moved, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &moved, Occupied::Keep).unwrap();
         assert!(rt.join("data").read_dir().unwrap().next().is_none());
         assert_eq!(fs::read(src.join("data/a.bin")).unwrap(), b"data");
         // a real folder in a link's place is kept
@@ -599,7 +599,7 @@ mod tests {
             target: src.join("data"),
             at: rt.join("TP"),
         }];
-        linkfarm::apply(&tp, Occupied::Keep).unwrap();
+        linkfarm::apply(&rt, &tp, Occupied::Keep).unwrap();
         assert_eq!(fs::read(rt.join("TP/save")).unwrap(), b"s");
     }
 

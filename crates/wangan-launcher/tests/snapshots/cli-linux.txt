@@ -22,7 +22,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -58,7 +58,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -94,7 +94,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -130,7 +130,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -166,7 +166,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -202,7 +202,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -238,7 +238,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -274,7 +274,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -310,7 +310,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -467,7 +467,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -533,7 +533,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -569,7 +569,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -605,7 +605,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -641,7 +641,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -677,7 +677,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -713,7 +713,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -749,7 +749,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -814,7 +814,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text
@@ -852,7 +852,7 @@ Options (saved in that game's settings):
 Test options for --play:
   --headless               run in an invisible display
   --no-input               no controller input
-  --input-script <file>    timed inputs
+  --input-script <file>    timed inputs, into the input block (not Wangan R)
   --seconds <n>            stop the game after n seconds
 
   wangan-launcher --help                   this text

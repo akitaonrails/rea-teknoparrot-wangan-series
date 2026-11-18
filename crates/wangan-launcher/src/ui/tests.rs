@@ -372,10 +372,32 @@ fn two_controllers() -> Snapshot {
 fn page_controls_with_controllers() {
     golden("controls-two", |t, size| {
         let mut h = hub(t, size, &[]);
-        h.state_mut().backend_mut().fake.snapshot = Some(two_controllers());
         key(&mut h, egui::Key::PageDown);
+        shift_up_twice(&mut h);
+        h.state_mut().backend_mut().fake.snapshot = Some(two_controllers());
+        h.run_steps(2);
         h
     });
+}
+
+/// Two shift-up presses, a frame each and released between.
+fn shift_up_twice(h: &mut Hub) {
+    for buttons in [Button::GearUp.bit(), 0, Button::GearUp.bit(), 0] {
+        let mut snap = two_controllers();
+        snap.controls.buttons = buttons;
+        h.state_mut().backend_mut().fake.snapshot = Some(snap);
+        h.run_steps(1);
+    }
+}
+
+#[test]
+fn the_controls_page_shows_the_gear_the_paddles_chose() {
+    let t = tempfile::tempdir().unwrap();
+    let mut h = hub(t.path(), SIZE_720, &[]);
+    open_tab(&mut h, Tab::Controls);
+    assert!(says(&h, "Gear: 1"), "first gear at the start");
+    shift_up_twice(&mut h);
+    assert!(says(&h, "Gear: 3"));
 }
 
 #[test]
@@ -880,7 +902,8 @@ fn rescan_reads_the_folders_again() {
 
 #[test]
 fn the_controls_page_shows_the_pad_layout_and_the_live_buttons() {
-    let v = controls_view(&two_controllers());
+    let v = controls_view(&two_controllers(), 4);
+    assert_eq!(v.lines, [("Gear".to_string(), "4".to_string())]);
     assert_eq!(v.devices[0].name, "Logitech G29 Driving Force Racing Wheel");
     assert!(
         v.layout.contains(&("View change".into(), "Y".into())),

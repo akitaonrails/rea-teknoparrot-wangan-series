@@ -354,8 +354,8 @@ mod tests {
         let (s, p) =
             Settings::parse("output = 99x99\nsharpness = 50\nfullscreen = maybe\nnonsense");
         assert_eq!(s, Settings::default());
-        // a line without `=` is no setting: kept, not reported
-        assert_eq!(p.len(), 3, "{p:?}");
+        // a line without `=` is reported too (and kept in the file)
+        assert_eq!(p.len(), 4, "{p:?}");
     }
 
     #[test]

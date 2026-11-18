@@ -140,11 +140,11 @@ pub fn prepare(
         &linkfarm::list,
     )
     .with_context(|| format!("reading {}", entry.dir.display()))?;
-    linkfarm::apply(&ops, Occupied::Keep).context("building the runtime folder")?;
+    linkfarm::apply(&rt, &ops, Occupied::Keep).context("building the runtime folder")?;
     #[cfg(unix)]
     if game.route == Route::NativeN2 {
         let libso = runtime::plan_libso(&entry.dir.join("libso"), &rt.join("libso"))?;
-        linkfarm::apply(&libso, Occupied::Keep)?;
+        linkfarm::apply(&rt, &libso, Occupied::Keep)?;
         link_nvidia_glx32(&rt.join("glfix"))?;
     }
     if game.route == Route::System246 {
@@ -600,6 +600,7 @@ fn run_in_gamescope(
         picture,
         display,
         which("bwrap").is_some().then_some(libraries),
+        &writable(paths),
         &script,
     );
     let mut cmd = Command::new(&argv[0]);
@@ -613,18 +614,28 @@ fn run_in_gamescope(
     Ok(supervise::run(group, feed, &mut ending, opts)?)
 }
 
+/// What a session writes, bound back writable when a game folder holds it
+/// (`--library ~`): the launcher's data folder, with the runtimes and the
+/// Wine prefix inside.
+fn writable(paths: &HubPaths) -> Vec<PathBuf> {
+    vec![paths.data.clone()]
+}
+
 /// The command gamescope starts: bubblewrap with `read_only` bound
-/// read-only (no loader can write to the player's dumps), then `sh script`.
+/// read-only where present (no loader can write to the player's dumps; an
+/// unplugged drive is skipped) and `writable` bound back, then `sh script`.
 fn command_line(
     picture: Picture,
     display: Display,
     read_only: Option<&[PathBuf]>,
+    writable: &[PathBuf],
     script: &Path,
 ) -> Vec<String> {
     CommandLine {
         gamescope: picture.args(display == Display::Headless),
         homes: None,
         read_only: read_only.map(<[PathBuf]>::to_vec),
+        writable: writable.to_vec(),
         cpus: None,
     }
     .argv(Path::new("sh"), &[script.to_string_lossy().into_owned()])
@@ -906,23 +917,104 @@ mod tests {
         let picture = Settings::default().picture(launch::ES3B_SIZE);
         let script = Path::new("/rt/mt6/session.sh");
         let libraries = [PathBuf::from("/games"), PathBuf::from("/more games")];
-        let screen = command_line(picture, Display::Screen, Some(&libraries), script).join(" ");
+        let none: [PathBuf; 0] = [];
+        let screen =
+            command_line(picture, Display::Screen, Some(&libraries), &none, script).join(" ");
         assert!(
             screen.starts_with("gamescope -w 1360 -h 768 -W 3840 -H 2160 -r 60 -F fsr"),
             "{screen}"
         );
         assert!(
             screen.ends_with(
-                " -f -- bwrap --dev-bind / / --ro-bind /games /games --ro-bind /more games \
+                " -f -- bwrap --dev-bind / / --ro-bind-try /games /games --ro-bind-try /more games \
                  /more games sh /rt/mt6/session.sh"
             ),
             "{screen}"
         );
-        let headless = command_line(picture, Display::Headless, None, script).join(" ");
+        let headless = command_line(picture, Display::Headless, None, &none, script).join(" ");
         assert!(
             headless.ends_with("-F linear --backend headless -- sh /rt/mt6/session.sh"),
             "{headless}"
         );
+    }
+
+    /// `--library ~`: the launcher's own folder is inside a game folder
+    /// bound read-only, and must stay writable; a library on a drive that
+    /// isn't there doesn't stop the game.
+    #[test]
+    fn the_launchers_folder_stays_writable_inside_a_read_only_library() {
+        let picture = Settings::default().picture(launch::ES3B_SIZE);
+        let t = tempfile::tempdir().unwrap();
+        let home = t.path().join("home");
+        let paths = HubPaths {
+            data: home.join(".local/share/rea-wangan"),
+            components: t.path().join("c"),
+            dev_assets: None,
+        };
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let libraries = [home.clone(), t.path().join("unplugged")];
+        let line = command_line(
+            picture,
+            Display::Headless,
+            Some(&libraries),
+            &writable(&paths),
+            Path::new("/rt/session.sh"),
+        )
+        .join(" ");
+        let (h, d, u) = (home.display(), paths.data.display(), libraries[1].display());
+        assert!(
+            line.contains(&format!(
+                "bwrap --dev-bind / / --ro-bind-try {h} {h} --ro-bind-try {u} {u} --bind {d} {d} sh"
+            )),
+            "{line}"
+        );
+    }
+
+    /// The same, run: bubblewrap starts with a missing folder and writes
+    /// into the launcher's folder inside a read-only one.
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn bubblewrap_writes_the_launchers_folder_and_skips_a_missing_drive() {
+        if which("bwrap").is_none() {
+            return;
+        }
+        let t = tempfile::tempdir().unwrap();
+        let home = t.path().join("home");
+        let paths = HubPaths {
+            data: home.join("data"),
+            components: t.path().join("c"),
+            dev_assets: None,
+        };
+        std::fs::create_dir_all(&paths.data).unwrap();
+        let line = CommandLine {
+            gamescope: vec![],
+            homes: None,
+            read_only: Some(vec![home.clone(), t.path().join("unplugged")]),
+            writable: writable(&paths),
+            cpus: None,
+        }
+        .argv(
+            Path::new("sh"),
+            &["-c".into(), "echo ok > data/x && ! echo no > y".into()],
+        );
+        // past gamescope: bubblewrap and the shell
+        let at = line.iter().position(|a| a == "bwrap").unwrap();
+        let st = Command::new(&line[at])
+            .args(&line[at + 1..])
+            .current_dir(&home)
+            .stderr(Stdio::null())
+            .status()
+            .unwrap();
+        if !st.success() && !paths.data.join("x").exists() {
+            // no user namespaces here: nothing to check
+            return;
+        }
+        assert!(st.success());
+        assert!(
+            paths.data.join("x").is_file(),
+            "the launcher's folder is written"
+        );
+        assert!(!home.join("y").exists(), "the game folder stays read-only");
     }
 
     #[test]

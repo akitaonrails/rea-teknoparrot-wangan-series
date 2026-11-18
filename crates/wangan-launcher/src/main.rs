@@ -19,7 +19,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use rea_launcher::cfg::Value;
-use rea_launcher::hub::cli::{self, BAD_COMMAND_LINE, CliSpec, Invocation, Mode, OK, REFUSED};
+use rea_launcher::hub::cli::{
+    self, BAD_COMMAND_LINE, CliSpec, Invocation, Mode, OK, REFUSED, TestOption,
+};
 use rea_launcher::hub::{HubConfig, HubPaths, PathKind, display_path, typed_path};
 use rea_launcher::library::{Found, HashCache, Scan};
 use rea_launcher::log::Log;
@@ -65,7 +67,18 @@ const CLI: CliSpec = CliSpec {
     style: settings::STYLE,
     paths: paths::FIELDS,
     offers: Some(offers),
+    test_options: &[TestOption {
+        flag: "--input-script",
+        help: "timed inputs, into the input block (not Wangan R)",
+        refuses: Some(no_input_block),
+    }],
 };
+
+/// Why game `id` can't take `--input-script`: Wangan R's emulator reads the
+/// pad itself, not the launcher's input block.
+fn no_input_block(id: &str) -> Option<&'static str> {
+    (id == "wangan-r").then_some("Wangan Midnight R's emulator reads the pad itself")
+}
 
 /// `--add-files`, which the hub's command line doesn't have: a search, not
 /// a setting.
@@ -569,6 +582,17 @@ mod tests {
         assert_eq!(gamescope.is_err(), cfg!(windows), "{gamescope:?}");
         let look = cli::parse(&CLI, args(&["--set", "mt5", "--look", "original"]));
         assert_eq!(look.is_err(), cfg!(windows), "{look:?}");
+    }
+
+    #[test]
+    fn wangan_r_takes_no_input_script() {
+        let e = cli::parse(
+            &CLI,
+            args(&["--play", "wangan-r", "--input-script", "s.txt"]),
+        );
+        assert!(e.unwrap_err().contains("reads the pad itself"));
+        assert!(cli::parse(&CLI, args(&["--play", "mt3", "--input-script", "s.txt"])).is_ok());
+        assert!(usage().contains("timed inputs, into the input block (not Wangan R)"));
     }
 
     #[test]

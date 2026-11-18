@@ -294,7 +294,7 @@ future_key = keep me
     let _ = write!(out, "== saved\n{saved}");
     let (again, problems) = Settings::parse(&saved);
     assert_eq!(again, settings);
-    assert_eq!(problems.len(), 3, "{problems:?}");
+    assert_eq!(problems.len(), 4, "{problems:?}");
     assert_eq!(
         again.save(&saved, &["deadzone"]),
         saved,

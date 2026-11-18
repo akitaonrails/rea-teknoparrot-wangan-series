@@ -7,6 +7,7 @@
 
 pub(crate) mod form;
 
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -25,7 +26,7 @@ use rea_launcher_ui::hub::{
 };
 use wangan_core::catalog::{self, GAMES, Game};
 use wangan_core::firmware::{self, FileState, FirmwareSet};
-use wangan_core::input::{Button, default_pad_map};
+use wangan_core::input::{Button, Translator, default_pad_map};
 use wangan_core::settings::Settings;
 
 use crate::paths;
@@ -122,6 +123,8 @@ pub struct Wangan {
     /// The pads' menu buttons held at the last frame (a held direction
     /// repeats, as in 0.2.0).
     pad: PadNav,
+    /// The cabinet's gear, for the Controls page.
+    shifter: RefCell<Translator>,
     /// The tests' controllers, scan and next session.
     #[cfg(test)]
     fake: tests::Fake,
@@ -139,6 +142,7 @@ impl Wangan {
             cache: HashCache::default(),
             input,
             pad: PadNav::with_repeat(Duration::from_millis(400), Duration::from_millis(120)),
+            shifter: RefCell::default(),
             #[cfg(test)]
             fake: tests::Fake::default(),
             paths,
@@ -256,8 +260,9 @@ fn short_label(b: Button) -> &'static str {
     }
 }
 
-/// What the Controls page shows of the input thread's `snap`.
-fn controls_view(snap: &Snapshot) -> ControlsView {
+/// What the Controls page shows of the input thread's `snap`, with the
+/// cabinet's current `gear`.
+fn controls_view(snap: &Snapshot, gear: u8) -> ControlsView {
     let c = snap.controls;
     ControlsView {
         error: snap.error.clone(),
@@ -284,6 +289,7 @@ fn controls_view(snap: &Snapshot) -> ControlsView {
             })
             .collect(),
         feeding: snap.feeding,
+        lines: vec![("Gear".into(), gear.to_string())],
     }
 }
 
@@ -416,8 +422,12 @@ impl HubBackend for Wangan {
         }
     }
 
+    /// The gear follows the shift presses the window sees, as the
+    /// cabinet's lever would.
     fn controls(&self) -> ControlsView {
-        controls_view(&self.snapshot())
+        let snap = self.snapshot();
+        let gear = self.shifter.borrow_mut().step(&snap.controls).gear;
+        controls_view(&snap, gear)
     }
 
     fn pad(&mut self) -> Vec<Input> {
