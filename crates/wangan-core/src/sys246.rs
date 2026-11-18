@@ -53,28 +53,36 @@ pub fn interleave(data: &[u8], spare: &[u8]) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// The dongle card from the dump's `wanganmr.zip`.
+/// The dongle card from the dump's `wanganmr.zip`. Each file is read up to
+/// the size it must have: a damaged or hostile zip can't make this hold
+/// more than one card.
 pub fn dongle_from_zip(zip: &Path) -> io::Result<Vec<u8>> {
     let mut z = zip::ZipArchive::new(fs::File::open(zip)?).map_err(io::Error::other)?;
-    let mut read = |name: &str| -> io::Result<Vec<u8>> {
-        let mut e = z.by_name(name).map_err(|_| {
+    let mut read = |name: &str, size: usize| -> io::Result<Vec<u8>> {
+        let e = z.by_name(name).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::NotFound,
                 format!("{name} is not in {}", zip.display()),
             )
         })?;
-        let mut b = Vec::new();
-        e.read_to_end(&mut b)?;
-        Ok(b)
+        read_at_most(e, size)
     };
-    let data = read(DONGLE_DATA)?;
-    let spare = read(DONGLE_SPARE)?;
+    let data = read(DONGLE_DATA, PAGES * PAGE)?;
+    let spare = read(DONGLE_SPARE, PAGES * SPARE)?;
     interleave(&data, &spare).ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             "the dongle files in wanganmr.zip have the wrong size",
         )
     })
+}
+
+/// What `r` holds, read up to one byte past `size` (so a longer file shows
+/// as the wrong size without being read whole).
+fn read_at_most(r: impl Read, size: usize) -> io::Result<Vec<u8>> {
+    let mut b = Vec::with_capacity(size);
+    r.take(size as u64 + 1).read_to_end(&mut b)?;
+    Ok(b)
 }
 
 /// The `.acgame` file: everything else is pcsx2x6's default.
@@ -160,6 +168,19 @@ mod tests {
         let card = dongle_from_zip(&zp).unwrap();
         assert_eq!(card.len(), CARD_SIZE);
         assert_eq!(card[PAGE], 2);
+
+        // an endless entry is read only to one byte past its size
+        assert_eq!(read_at_most(io::repeat(7), 16).unwrap().len(), 17);
+        // a dongle file larger than a card is the wrong size
+        let big = dir.path().join("big.zip");
+        let mut z = zip::ZipWriter::new(fs::File::create(&big).unwrap());
+        z.start_file(DONGLE_DATA, o).unwrap();
+        z.write_all(&vec![1; PAGES * PAGE * 4]).unwrap();
+        z.start_file(DONGLE_SPARE, o).unwrap();
+        z.write_all(&vec![2; PAGES * SPARE]).unwrap();
+        z.finish().unwrap();
+        let e = dongle_from_zip(&big).unwrap_err();
+        assert_eq!(e.kind(), io::ErrorKind::InvalidData);
 
         let bad = dir.path().join("other.zip");
         zip::ZipWriter::new(fs::File::create(&bad).unwrap())
