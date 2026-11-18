@@ -3,10 +3,15 @@
 
 use std::process::Command;
 
+/// The launcher with no display and a lock of its own (these runs have no
+/// window: a refusal is never a message window).
 fn launcher(data: &std::path::Path) -> Command {
+    let run_dir = data.join("run");
+    std::fs::create_dir_all(&run_dir).unwrap();
     let mut c = Command::new(env!("CARGO_BIN_EXE_wangan-launcher"));
     c.env("WANGAN_DATA", data)
         .env("WANGAN_COMPONENTS", data.join("none"))
+        .env("XDG_RUNTIME_DIR", run_dir)
         .env_remove("DISPLAY")
         .env_remove("WAYLAND_DISPLAY");
     c
@@ -22,7 +27,10 @@ fn help_lists_every_option() {
         "--library",
         "--list",
         "--play",
-        "--game",
+        "--set",
+        "--check",
+        "--add-files",
+        "--look",
         "--output",
         "--upscaler",
         "--sharpness",
@@ -102,7 +110,7 @@ fn options_are_saved_like_the_window_saves_them() {
             .output()
             .unwrap();
         assert_eq!(off.status.code(), Some(2));
-        assert!(String::from_utf8_lossy(&off.stderr).contains("gamescope on Linux"));
+        assert!(String::from_utf8_lossy(&off.stderr).contains("mt5 doesn't take --output"));
     } else {
         assert_eq!(s.output.to_string(), "2560x1440");
         assert_eq!(s.upscaler.key(), "nis");

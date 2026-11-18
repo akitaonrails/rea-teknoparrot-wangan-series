@@ -1,50 +1,16 @@
 == 1280x720
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [folder-field] @ 96,316 856,364
-        Unknown [button look-for-files] @ 96,418 336,468
-        Unknown [button files-back] @ 352,418 502,468
--- painted text
-96,128 "Add the Namco System 246 BIOS"
-96,188 "Wangan Midnight R needs these files from the original board. Type the folder or zip where you keep them: the launcher looks inside (zips and subfolders too), keeps only exact matches whatever their names, and copies them to its own folder."
-108,272 "Missing"
-216,272 "r27v1602f.7d  ·  2 MB"
-112,330 "/srv/bios"
-96,376 "A folder, a zip, or ~/Downloads. Press Enter to look."
-133,431 "Look for the files"
-404,431 "Back"
-64,28 "B"
-93,22 "Wangan Midnight"
-63,675 "Enter"
-110,674 "Look for the files"
-248,675 "Esc"
-282,674 "Back"
-1149,675 "Version <version>"
+Label = "Add the Namco System 246 BIOS"
+Label = "Wangan Midnight R needs these files from the original board. Type the folder or zip where you keep them: the launcher looks inside (zips and subfolders too), keeps only exact matches whatever their names, and copies them to its own folder."
+Label = "r27v1602f.7d  ·  2 MB: Missing"
+TextInput "Folder or zip with the board files" = "/srv/bios" @96,316 760x46
+Label = "A folder, a zip, or ~/Downloads. Press Enter to look."
+Button "Look for the files" @96,408 240x50
+Button "Back" @352,408 150x50
 == 1280x800
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [folder-field] @ 107,350 951,404
-        Unknown [button look-for-files] @ 107,464 373,519
-        Unknown [button files-back] @ 391,464 558,519
--- painted text
-96,128 "Add the Namco System 246 BIOS"
-96,188 "Wangan Midnight R needs these files from the original board. Type the folder or zip where you keep them: the launcher looks inside (zips and subfolders too), keeps only exact matches whatever their names, and copies them to its own folder."
-108,271 "Missing"
-216,271 "r27v1602f.7d  ·  2 MB"
-112,330 "/srv/bios"
-96,375 "A folder, a zip, or ~/Downloads. Press Enter to look."
-133,430 "Look for the files"
-404,430 "Back"
-64,28 "B"
-93,22 "Wangan Midnight"
-63,674 "Enter"
-110,674 "Look for the files"
-248,674 "Esc"
-282,674 "Back"
-1021,674 "Version <version>"
+Label = "Add the Namco System 246 BIOS"
+Label = "Wangan Midnight R needs these files from the original board. Type the folder or zip where you keep them: the launcher looks inside (zips and subfolders too), keeps only exact matches whatever their names, and copies them to its own folder."
+Label = "r27v1602f.7d  ·  2 MB: Missing"
+TextInput "Folder or zip with the board files" = "/srv/bios" @107,353 844x51
+Label = "A folder, a zip, or ~/Downloads. Press Enter to look."
+Button "Look for the files" @107,455 267x56
+Button "Back" @391,455 167x56

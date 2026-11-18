@@ -10,28 +10,35 @@
 //! needs ([`Ending`]).
 
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
 use rea_launcher::fsx;
 use rea_launcher::gamescope::{CommandLine, Picture};
+use rea_launcher::hub::HubPaths;
 use rea_launcher::library::Entry;
 use rea_launcher::linkfarm::{self, Occupied};
+use rea_launcher::log::Log as LauncherLog;
 use rea_launcher::session::{EARLY_END, early_end};
+use rea_launcher::wheel::Script;
+use rea_launcher_native::feeder::{self, Feeding, Scripted, Tuning};
 use rea_launcher_native::group::{Group, Tag};
-use rea_launcher_native::supervise::{self, Feed, Log, Options, Outcome, Watcher};
+use rea_launcher_native::supervise::{self, Feed, Hold, Log, Options, Outcome, Watcher};
 use wangan_core::catalog::{Game, Route};
 use wangan_core::launch::{self, Host, Plan};
 use wangan_core::runtime;
 use wangan_core::settings::Settings;
+use wangan_jvs::controls::Cabinet;
 use wangan_jvs::shared::{QUIT, Snapshot};
 
-use crate::log;
-use crate::paths::Paths;
+use crate::input::{Block, BlockSink};
+use crate::paths;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Display {
@@ -60,9 +67,53 @@ pub struct Prepared {
     pub block: PathBuf,
 }
 
+/// What drives the game's input block.
+pub enum Input {
+    /// The input thread (pads and wheels through SDL); `deadzone` is the
+    /// pad stick dead zone, 0–0.3.
+    Devices {
+        tx: Sender<feeder::Command>,
+        deadzone: f32,
+    },
+    /// A timed script (headless tests).
+    Script(Script),
+    /// Nothing: the block stays released (another program may write it).
+    None,
+}
+
+impl Input {
+    /// The feed of one start and its sink, the input block (no feed:
+    /// no sink).
+    fn feed(&self, cabinet: Cabinet, block: &Path) -> Result<(Box<dyn Feed>, Option<Sink>)> {
+        let sink = || -> Result<Option<Sink>> { Ok(Some(Box::new(BlockSink::open(block)?))) };
+        Ok(match self {
+            Input::Devices { tx, deadzone } => {
+                let tuning = Tuning {
+                    deadzone: *deadzone,
+                    ..Tuning::default()
+                };
+                let feeding = Feeding::new(tx.clone(), Block::boxed(cabinet), tuning);
+                (Box::new(feeding), sink()?)
+            }
+            Input::Script(script) => (
+                Box::new(Scripted::new(Block::boxed(cabinet), script.clone())),
+                sink()?,
+            ),
+            Input::None => (Box::new(Hold::default()), None),
+        })
+    }
+}
+
+type Sink = Box<dyn Write + Send>;
+
+/// One line in `launcher.log`.
+fn say_launcher(paths: &HubPaths, line: &str) {
+    LauncherLog::new(paths.log()).line(line);
+}
+
 /// Build the runtime folder and write the game's config files.
 pub fn prepare(
-    paths: &Paths,
+    paths: &HubPaths,
     game: &Game,
     entry: &Entry<Game>,
     settings: &Settings,
@@ -74,7 +125,7 @@ pub fn prepare(
         bail!("{} can't start here: {why}", game.title);
     }
     check_components(game, paths)?;
-    let comps = paths.runtime_components();
+    let comps = paths::components(paths);
     let host = host(paths);
     if rt.is_dir() {
         for gone in linkfarm::dangling(&rt)? {
@@ -100,7 +151,7 @@ pub fn prepare(
     if game.route == Route::System246 {
         prepare_sys246(paths, game, entry, &rt)?;
     }
-    let plan = launch::plan_on(game, &rt, &paths.prefix(), settings, &host)
+    let plan = launch::plan_on(game, &rt, &paths::prefix(paths), settings, &host)
         .context("this game has no launch route yet")?;
     for (path, text) in &plan.files {
         fsx::write_atomic(path, text)?;
@@ -108,7 +159,7 @@ pub fn prepare(
     let block = launch::block_path(&rt);
     // a fresh block: everything released, quit clear
     fsx::write_atomic(&block, Snapshot::default().encode())?;
-    log::line(
+    say_launcher(
         paths,
         &format!("prepared {} in {}", game.slug, rt.display()),
     );
@@ -122,7 +173,7 @@ pub fn prepare(
 /// Wangan R: the BIOS from the board files, and a fresh dongle card from
 /// the dump's zip at every start (the game writes to the card while it
 /// runs; the dump's copy is never touched).
-fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry<Game>, rt: &Path) -> Result<()> {
+fn prepare_sys246(paths: &HubPaths, game: &Game, entry: &Entry<Game>, rt: &Path) -> Result<()> {
     use wangan_core::sys246;
     let set = game
         .firmware
@@ -153,11 +204,11 @@ fn prepare_sys246(paths: &Paths, game: &Game, entry: &Entry<Game>, rt: &Path) ->
 
 /// How this launcher starts the Windows games: directly on Windows; on
 /// Linux under the bundled (or chosen) Wine, else `wine` from PATH.
-pub fn host(paths: &Paths) -> Host {
+pub fn host(paths: &HubPaths) -> Host {
     if cfg!(windows) {
         return Host::Windows;
     }
-    match &paths.wine {
+    match &paths::wine(paths) {
         None => Host::system_wine(),
         Some(dir) => {
             let ffmpeg = dir.join("lib").join("ffmpeg");
@@ -187,16 +238,16 @@ pub fn wine_lib_env(ffmpeg: Option<&Path>, current: Option<&str>) -> Vec<(String
     vec![("LD_LIBRARY_PATH".into(), v)]
 }
 
-fn wine_bin(paths: &Paths, name: &str) -> PathBuf {
-    match &paths.wine {
+fn wine_bin(paths: &HubPaths, name: &str) -> PathBuf {
+    match &paths::wine(paths) {
         Some(dir) => dir.join("bin").join(name),
         None => PathBuf::from(name),
     }
 }
 
 /// Whether the launcher's components `game` needs are all in place.
-pub fn check_components(game: &Game, paths: &Paths) -> Result<()> {
-    let c = &paths.runtime_components();
+pub fn check_components(game: &Game, paths: &HubPaths) -> Result<()> {
+    let c = &paths::components(paths);
     let host = &host(paths);
     let need: Vec<PathBuf> = match game.route {
         Route::Es3b => {
@@ -265,14 +316,14 @@ fn link_nvidia_glx32(dir: &Path) -> Result<()> {
 }
 
 /// Create and fix up the shared Wine prefix once (per [`PREFIX_VERSION`]).
-pub fn prepare_prefix(paths: &Paths, wine_env: &[(String, String)]) -> Result<()> {
-    let pfx = paths.prefix();
+pub fn prepare_prefix(paths: &HubPaths, wine_env: &[(String, String)]) -> Result<()> {
+    let pfx = paths::prefix(paths);
     let marker = pfx.join(".rea-wangan-prefix");
     if fs::read_to_string(&marker).ok().as_deref() == Some(PREFIX_VERSION) {
         return Ok(());
     }
     fs::create_dir_all(&pfx)?;
-    log::line(paths, "creating the Wine prefix");
+    say_launcher(paths, "creating the Wine prefix");
     let wine = |args: &[&str]| run_wine(paths, wine_env, &pfx, args);
     wine(&["wineboot", "-u"])?;
     wineserver_wait(paths, &pfx);
@@ -379,7 +430,7 @@ pub fn wmv_output_types(reg: &str) -> Option<Vec<u8>> {
     Some(bytes)
 }
 
-fn run_wine(paths: &Paths, env: &[(String, String)], pfx: &Path, args: &[&str]) -> Result<()> {
+fn run_wine(paths: &HubPaths, env: &[(String, String)], pfx: &Path, args: &[&str]) -> Result<()> {
     let st = Command::new(wine_bin(paths, "wine"))
         .args(args)
         .envs(env.iter().map(|(k, v)| (k, v)))
@@ -399,7 +450,7 @@ fn run_wine(paths: &Paths, env: &[(String, String)], pfx: &Path, args: &[&str]) 
     Ok(())
 }
 
-fn wineserver_wait(paths: &Paths, pfx: &Path) {
+fn wineserver_wait(paths: &HubPaths, pfx: &Path) {
     let _ = Command::new(wine_bin(paths, "wineserver"))
         .arg("-w")
         .env("WINEPREFIX", pfx)
@@ -444,7 +495,7 @@ pub fn script_text(plan: &Plan) -> String {
 
 /// The game's own log of one run (its output, the board's, the
 /// session's `#` lines), started afresh at every start.
-pub fn session_log(paths: &Paths, game: &Game) -> PathBuf {
+pub fn session_log(paths: &HubPaths, game: &Game) -> PathBuf {
     paths.data.join(format!("{}.log", game.slug))
 }
 
@@ -453,14 +504,16 @@ pub fn session_log(paths: &Paths, game: &Game) -> PathBuf {
 /// didn't start: that is an error, with the session log's reasons.
 /// `libraries` are bound read-only around the game (Linux).
 pub fn run(
-    paths: &Paths,
+    paths: &HubPaths,
     game: &Game,
     p: &Prepared,
     display: Display,
     libraries: &[PathBuf],
-    feed: &mut dyn Feed,
+    input: &Input,
     stop: &AtomicBool,
 ) -> Result<ExitStatus> {
+    let (mut feed, sink) = input.feed(game.cabinet, &p.block)?;
+    let feed = feed.as_mut();
     let log_path = session_log(paths, game);
     let start = |path: &Path| {
         fs::File::create(path)?;
@@ -468,14 +521,20 @@ pub fn run(
     };
     let file = start(&log_path).with_context(|| format!("starting {}", log_path.display()))?;
     let log: Log = Arc::new(Mutex::new(file.try_clone()?));
-    log::line(paths, &format!("starting {} ({display:?})", game.slug));
+    say_launcher(paths, &format!("starting {} ({display:?})", game.slug));
     let outcome = match p.plan.picture {
-        Some(picture) => run_in_gamescope(
-            paths, game, p, picture, display, libraries, feed, stop, &log,
-        )?,
-        None => run_direct(p, &file, feed, stop, &log)?,
+        Some(picture) => {
+            let session = Session {
+                game,
+                p,
+                display,
+                libraries,
+            };
+            run_in_gamescope(paths, &session, picture, feed, options(stop, &log, sink))?
+        }
+        None => run_direct(p, &file, feed, options(stop, &log, sink), &log)?,
     };
-    log::line(paths, &format!("{} ended: {}", game.slug, outcome.status));
+    say_launcher(paths, &format!("{} ended: {}", game.slug, outcome.status));
     if let Some(why) = didnt_start(&outcome, &fs::read_to_string(&log_path).unwrap_or_default()) {
         bail!("{why}");
     }
@@ -490,29 +549,38 @@ fn didnt_start(o: &Outcome, log: &str) -> Option<String> {
         .flatten()
 }
 
-fn options<'a>(stop: &'a AtomicBool, log: &Log) -> Options<'a> {
+fn options<'a>(stop: &'a AtomicBool, log: &Log, sink: Option<Sink>) -> Options<'a> {
     Options {
         stop,
         log: log.clone(),
         grace: GRACE,
-        sink: None,
+        sink,
     }
+}
+
+/// What a Linux run starts.
+struct Session<'a> {
+    game: &'a Game,
+    p: &'a Prepared,
+    display: Display,
+    libraries: &'a [PathBuf],
 }
 
 /// Linux: gamescope runs the session script; everything it starts carries
 /// the session's tag.
-#[allow(clippy::too_many_arguments)]
 fn run_in_gamescope(
-    paths: &Paths,
-    game: &Game,
-    p: &Prepared,
+    paths: &HubPaths,
+    s: &Session,
     picture: Picture,
-    display: Display,
-    libraries: &[PathBuf],
     feed: &mut dyn Feed,
-    stop: &AtomicBool,
-    log: &Log,
+    opts: Options,
 ) -> Result<Outcome> {
+    let Session {
+        game,
+        p,
+        display,
+        libraries,
+    } = *s;
     let mut wine = None;
     if let Some(prefix) = &p.plan.wine_prefix {
         let env = match host(paths) {
@@ -549,12 +617,7 @@ fn run_in_gamescope(
     let group = Group::spawn(&mut cmd, &Tag::new(TAG, p.runtime.to_string_lossy()))
         .context("starting gamescope")?;
     let mut ending = Ending::new(&p.block, wine);
-    Ok(supervise::run(
-        group,
-        feed,
-        &mut ending,
-        options(stop, log),
-    )?)
+    Ok(supervise::run(group, feed, &mut ending, opts)?)
 }
 
 /// The command gamescope starts: bubblewrap with `read_only` bound
@@ -602,7 +665,7 @@ fn run_direct(
     p: &Prepared,
     file: &fs::File,
     feed: &mut dyn Feed,
-    stop: &AtomicBool,
+    opts: Options,
     log: &Log,
 ) -> Result<Outcome> {
     let tag = Tag::new(TAG, p.runtime.to_string_lossy());
@@ -618,7 +681,7 @@ fn run_direct(
     let group =
         Group::spawn(&mut c, &tag).with_context(|| format!("starting {}", p.plan.game.program))?;
     let mut ending = Ending::new(&p.block, None);
-    let outcome = supervise::run(group, feed, &mut ending, options(stop, log))?;
+    let outcome = supervise::run(group, feed, &mut ending, opts)?;
     ending.end();
     end_helpers(helpers, &p.runtime, log);
     Ok(outcome)

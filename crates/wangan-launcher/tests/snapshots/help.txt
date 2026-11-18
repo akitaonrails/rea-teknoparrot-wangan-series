@@ -1,19 +1,28 @@
 wangan-launcher — Wangan Midnight arcade series
 
-  wangan-launcher                      open the launcher window
-  wangan-launcher --library <folder>   remember where your games are
-  wangan-launcher --list               list the games found and their state
-  wangan-launcher --add-files <path>   look in a folder or zip for the board files
-                                       Wangan Midnight R and Maximum Tune need
-  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
-  wangan-launcher --game <game> <options>   save options for a game without starting it
-  Options (saved in that game's settings, same as the window):
-      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
-      --upscaler <fsr|nis|linear|nearest>   (Linux)
-      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
-      --fullscreen <on|off>            (Linux)
-      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
-      --deadzone <0-0.3>               controller stick dead zone
-      --headless                       run it in an invisible display (tests; Linux)
-      --no-input                       leave the input block to another program (tests)
-  wangan-launcher --help               this text
+  wangan-launcher                          open the window (games, settings, controls)
+  wangan-launcher --library <folder>       add a folder with your games (repeatable)
+  wangan-launcher --list                   list the games found and their state
+  wangan-launcher --check [<game>]         check a game (or all) can start, without starting
+  wangan-launcher --play <game> [options]  start a game (wangan-r, mt1, mt3, mt3dxp, mt5, mt5dxp, mt6, mt6r, mt6rr)
+  wangan-launcher --set <game> <options>   save options for a game without starting it (also --game)
+
+Options (saved in that game's settings):
+  --look original|recommended|steam_deck  Look
+  --output <WxH>                          Output size (Linux helper)
+  --upscaler fsr|nis|linear|nearest       Upscaler (Linux helper)
+  --sharpness <0-20>                      Sharpness (Linux helper)
+  --fullscreen on|off                     Fullscreen (Linux helper)
+  --render <WxH|native>                   Game render size
+  --deadzone <0.00-0.30>                  Dead zone
+
+Test options for --play:
+  --headless               run in an invisible display
+  --no-input               no controller input
+  --input-script <file>    timed inputs
+  --seconds <n>            stop the game after n seconds
+
+  wangan-launcher --help                   this text
+
+Board files:
+  wangan-launcher --add-files <path>  look in a folder or zip for the files Wangan Midnight R and Maximum Tune need

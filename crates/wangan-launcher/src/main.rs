@@ -1,379 +1,600 @@
 //! wangan-launcher: one launcher for the Wangan Midnight arcade series.
+//! This file wires the command line (`rea_launcher::hub::cli`, plus
+//! `--add-files`) to the window, the sessions and the messages; the
+//! decisions live in `wangan-core`.
+
+// a GUI program on Windows: no console window on a double click; commands
+// reach the terminal that started them (console::attach_parent)
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 mod input;
-mod log;
 mod paths;
 mod session;
 mod ui;
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
-use rea_launcher_native::supervise::Hold;
-
-use rea_launcher::library::{Found, HashCache};
-use wangan_core::catalog::{self, Game, Host, Support};
+use rea_launcher::cfg::Value;
+use rea_launcher::hub::cli::{self, BAD_COMMAND_LINE, CliSpec, Invocation, Mode, OK, REFUSED};
+use rea_launcher::hub::{HubConfig, HubPaths, PathKind, display_path, typed_path};
+use rea_launcher::library::{Found, HashCache, Scan};
+use rea_launcher::log::Log;
+use rea_launcher::wheel::Script;
+use rea_launcher_ui::report::{self, Link};
+use rea_launcher_win32::report::{Audience, Mode as Says, Run};
+use wangan_core::catalog::{self, GAMES, Game, Host, Support};
 use wangan_core::firmware::{self, FileState};
-use wangan_core::settings::Settings;
+use wangan_core::input::Button;
+use wangan_core::settings::{self, Look, Settings};
 
-use crate::paths::Paths;
-use crate::session::Display;
+use crate::session::{Display, Input};
 
-const USAGE: &str = "\
-wangan-launcher — Wangan Midnight arcade series
+/// The window's title; it differs from every game's (STANDARDS "One instance").
+pub const WINDOW_TITLE: &str = "Wangan Midnight";
+/// The single-instance lock's name.
+const INSTANCE: &str = "rea-wangan-launcher";
+const ISSUES: &str =
+    "https://github.com/akitaonrails/rea-teknoparrot-wangan-series/issues/new/choose";
 
-  wangan-launcher                      open the launcher window
-  wangan-launcher --library <folder>   remember where your games are
-  wangan-launcher --list               list the games found and their state
-  wangan-launcher --add-files <path>   look in a folder or zip for the board files
-                                       Wangan Midnight R and Maximum Tune need
-  wangan-launcher --play <game>        start a game (mt3, mt3dxp, mt5, mt5dxp, mt6r, …)
-  wangan-launcher --game <game> <options>   save options for a game without starting it
-  Options (saved in that game's settings, same as the window):
-      --output <WxH>                   screen size gamescope draws at, e.g. 3840x2160 (Linux)
-      --upscaler <fsr|nis|linear|nearest>   (Linux)
-      --sharpness <0-20>               FSR/NIS sharpness, 0 is sharpest (Linux)
-      --fullscreen <on|off>            (Linux)
-      --render <WxH|native>            the game's own size (MT3, MT3DX+ only)
-      --deadzone <0-0.3>               controller stick dead zone
-      --headless                       run it in an invisible display (tests; Linux)
-      --no-input                       leave the input block to another program (tests)
-  wangan-launcher --help               this text
-";
+/// The games' ids, as `--play` takes them.
+const SLUGS: [&str; GAMES.len()] = {
+    let mut v = [""; GAMES.len()];
+    let mut i = 0;
+    while i < v.len() {
+        v[i] = GAMES[i].slug;
+        i += 1;
+    }
+    v
+};
 
-struct Args {
-    library: Option<PathBuf>,
-    list: bool,
-    add_files: Option<PathBuf>,
-    play: Option<String>,
-    headless: bool,
-    no_input: bool,
-    game: Option<String>,
-    /// `(key, value)` for the game's settings file.
-    options: Vec<(String, String)>,
+/// Whether game `id` takes option `key` here (the rows its window can change).
+fn offers(id: &str, key: &str) -> bool {
+    catalog::by_slug(id).is_some_and(|g| ui::form::offers(g, key, Host::current()))
 }
 
-fn parse() -> Result<Option<Args>, String> {
-    parse_args(std::env::args().skip(1), Host::current())
+/// What the command line knows.
+const CLI: CliSpec = CliSpec {
+    program: "wangan-launcher",
+    about: "Wangan Midnight arcade series",
+    games: &SLUGS,
+    options: settings::OPTIONS,
+    style: settings::STYLE,
+    paths: paths::FIELDS,
+    offers: Some(offers),
+};
+
+/// `--add-files`, which the hub's command line doesn't have: a search, not
+/// a setting.
+const ADD_FILES: &str = "--add-files";
+
+/// `--help`: the hub's usage and `--add-files`.
+fn usage() -> String {
+    format!(
+        "{}\nBoard files:\n  wangan-launcher --add-files <path>  look in a folder or zip for the \
+         files Wangan Midnight R and Maximum Tune need\n",
+        cli::usage(&CLI)
+    )
 }
 
-/// The command line; options the window shows as off on this platform are
-/// refused here with the same reason (window and CLI in parity).
-fn parse_args(
-    mut it: impl Iterator<Item = String>,
-    platform: Host,
-) -> Result<Option<Args>, String> {
-    let mut a = Args {
-        library: None,
-        list: false,
-        add_files: None,
-        play: None,
-        headless: false,
-        no_input: false,
-        game: None,
-        options: vec![],
-    };
-    while let Some(x) = it.next() {
-        match x.as_str() {
-            "--help" | "-h" => return Ok(None),
-            "--library" => a.library = Some(it.next().ok_or("--library needs a folder")?.into()),
-            "--list" => a.list = true,
-            "--add-files" => {
-                a.add_files = Some(it.next().ok_or("--add-files needs a folder or zip")?.into())
+/// The path `--add-files` names, and the other arguments.
+fn split_add_files(args: &[String]) -> Result<(Option<String>, Vec<String>), String> {
+    let mut rest = Vec::new();
+    let mut add = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.strip_prefix(ADD_FILES) {
+            Some("") => {
+                add = Some(
+                    it.next()
+                        .ok_or("--add-files needs a folder or zip")?
+                        .clone(),
+                )
             }
-            "--play" => a.play = Some(it.next().ok_or("--play needs a game")?),
-            "--headless" if platform == Host::Windows => {
-                return Err(format!("--headless: {}", ui::form::NO_GAMESCOPE));
-            }
-            "--headless" => a.headless = true,
-            "--no-input" => a.no_input = true,
-            "--game" => a.game = Some(it.next().ok_or("--game needs a game")?),
-            "--output" | "--upscaler" | "--sharpness" | "--fullscreen" | "--render"
-            | "--deadzone" => {
-                let key = &x[2..];
-                if let Some(why) = ui::form::Row::from_key(key)
-                    .and_then(|row| ui::form::platform_off(row, platform))
-                {
-                    return Err(format!("{x}: {why}"));
-                }
-                let value = it.next().ok_or(format!("{x} needs a value"))?;
-                if Settings::default().set(key, &value).is_err() {
-                    return Err(format!("bad value for {x}: {value}"));
-                }
-                a.options.push((key.to_string(), value));
-            }
-            other => return Err(format!("unknown option {other}")),
+            Some(v) if v.starts_with('=') => add = Some(v[1..].to_string()),
+            _ => rest.push(a.clone()),
         }
     }
-    Ok(Some(a))
+    Ok((add, rest))
 }
 
-/// A game's settings; the lines its file couldn't read go to `launcher.log`.
-pub fn load_settings(paths: &Paths, game: &Game) -> Result<Settings, String> {
+/// A game's settings ([`Settings::load`]: the first time, the recommended
+/// look for `screen`); each line its file couldn't read goes to `warn`.
+fn load_settings(
+    paths: &HubPaths,
+    game: &Game,
+    screen: Option<(u32, u32)>,
+    warn: impl Fn(&str),
+) -> Result<Settings, String> {
     let file = paths.settings(game.slug);
-    let text = rea_launcher::cfg::read_file(&file)
-        .map_err(|e| format!("couldn't read {}: {e}", file.display()))?;
-    let (s, problems) = Settings::parse(&text.unwrap_or_default());
-    for p in problems {
-        log::line(paths, &format!("settings/{}.cfg: {p}", game.slug));
-    }
+    let (s, problems) = Settings::load(&file, game, screen)
+        .map_err(|e| format!("couldn't read {}: {e}", display_path(&file)))?;
+    problems.iter().for_each(|p| warn(p));
     Ok(s)
 }
 
+/// A warning of the command line, on stderr.
+fn warn(text: &str) {
+    eprintln!("warning: {text}");
+}
+
+/// The family's view of this run, for who sees its messages.
+fn run_of(inv: &Invocation) -> Run {
+    Run {
+        command: inv.is_command(),
+        no_window: inv.no_window(),
+        settings_only: false,
+        linux: inv.linux,
+    }
+}
+
 fn main() -> ExitCode {
-    let args = match parse() {
-        Ok(Some(a)) => a,
-        Ok(None) => {
-            print!("{USAGE}");
-            return ExitCode::SUCCESS;
+    #[cfg(windows)]
+    if std::env::args().len() > 1 {
+        rea_launcher_win32::console::attach_parent();
+    }
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let parsed = split_add_files(&args).and_then(|(add, rest)| {
+        let inv = cli::parse(&CLI, rest)?;
+        match (&add, &inv.mode) {
+            (Some(_), Mode::Window | Mode::Configure) => Ok((add, inv)),
+            (Some(_), _) => Err("--add-files goes alone (or with --library)".into()),
+            (None, _) => Ok((add, inv)),
         }
-        Err(e) => {
-            eprintln!("{e}\n\n{USAGE}");
-            return ExitCode::from(2);
-        }
-    };
-    let paths = Paths::discover();
-    if let Some(dir) = &args.library {
-        if !dir.is_dir() {
-            eprintln!("{} is not a folder", dir.display());
-            return ExitCode::from(2);
-        }
-        if let Err(e) = paths::write_library(&paths.config(), dir) {
-            eprintln!("could not save the library folder: {e}");
-            return ExitCode::FAILURE;
-        }
-    }
-    if let Some(src) = &args.add_files {
-        return add_files_cli(&paths, src);
-    }
-    let library = paths::read_library(&paths.config());
-    if args.list {
-        let Some(root) = library else {
-            eprintln!("no library yet: run with --library <folder>");
-            return ExitCode::FAILURE;
-        };
-        let scan = catalog::library(HashCache::default()).scan(&[root]);
-        for problem in &scan.problems {
-            eprintln!("warning: couldn't read {problem}");
-        }
-        for e in &scan.entries {
-            match &e.found {
-                Found::Known { game, edition } => {
-                    let missing: Vec<&str> = game
-                        .firmware
-                        .map(|set| {
-                            set.check(&set.dir(&paths.data))
-                                .into_iter()
-                                .filter(|(_, st)| *st != FileState::Present)
-                                .map(|(f, _)| f.name)
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    let state = match game.support_on(Host::current()) {
-                        _ if !missing.is_empty() => {
-                            format!("needs board files (--add-files): {}", missing.join(", "))
-                        }
-                        Support::Ready => "ready".to_string(),
-                        Support::Unverified(note) => format!("starts; {note}"),
-                        Support::Blocked(why) => format!("not yet: {why}"),
-                    };
-                    println!(
-                        "{:<8} {:<34} {:<20} {state}\n         {}",
-                        game.slug,
-                        game.title,
-                        edition.label,
-                        e.dir.display()
-                    );
-                }
-                Found::Unknown { file, digest } => println!(
-                    "unknown  {file} sha256 {digest}\n         {}",
-                    e.dir.display()
-                ),
-            }
-        }
-        return ExitCode::SUCCESS;
-    }
-    if !args.options.is_empty() {
-        let Some(slug) = args.play.as_ref().or(args.game.as_ref()) else {
-            eprintln!("options need --play <game> or --game <game>\n\n{USAGE}");
-            return ExitCode::from(2);
-        };
-        let Some(game) = catalog::by_slug(slug) else {
-            eprintln!("unknown game {slug}");
-            return ExitCode::from(2);
-        };
-        if let Err(e) = save_options(&paths, game, &args.options) {
-            eprintln!("could not save the options: {e}");
-            return ExitCode::FAILURE;
-        }
-    }
-    if let Some(slug) = &args.play {
-        return play_cli(&paths, library, slug, &args);
-    }
-    if args.library.is_some() || args.game.is_some() {
-        return ExitCode::SUCCESS;
-    }
-    match ui::run(paths) {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{e}");
-            ExitCode::FAILURE
-        }
-    }
-}
-
-/// Look in `src` for every board-file set and report each one.
-fn add_files_cli(paths: &Paths, src: &std::path::Path) -> ExitCode {
-    if !src.exists() {
-        eprintln!("{} is not a folder or file", src.display());
-        return ExitCode::from(2);
-    }
-    let mut ok = true;
-    for set in [&firmware::SYS246, &firmware::CHIHIRO] {
-        match firmware::import(set, src, &set.dir(&paths.data)) {
-            Ok(r) => {
-                println!("{} ({} looked at)", set.title, r.looked_at);
-                for f in set.files {
-                    let mark = if r.added.contains(&f.name) {
-                        "added"
-                    } else if r.missing.contains(&f.name) {
-                        "missing"
-                    } else {
-                        "already in"
-                    };
-                    println!("  {mark:<10} {}", f.name);
-                }
-            }
-            Err(e) => {
-                eprintln!("{}: {e}", set.title);
-                ok = false;
-            }
-        }
-    }
-    if ok {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    }
-}
-
-/// Apply `(key, value)` options to a game's settings file, keeping the rest.
-pub fn save_options(
-    paths: &Paths,
-    game: &Game,
-    options: &[(String, String)],
-) -> Result<(), String> {
-    let mut s = load_settings(paths, game)?;
-    for (k, v) in options {
-        s.set(k, v)
-            .map_err(|_| format!("bad value for --{k}: {v}"))?;
-    }
-    let keys: Vec<&str> = options.iter().map(|(k, _)| k.as_str()).collect();
-    s.write(&paths.settings(game.slug), &keys)
-        .map_err(|e| e.to_string())
-}
-
-fn play_cli(paths: &Paths, library: Option<PathBuf>, slug: &str, args: &Args) -> ExitCode {
-    let Some(game) = catalog::by_slug(slug) else {
-        eprintln!("unknown game {slug}");
-        return ExitCode::from(2);
-    };
-    if let Support::Blocked(why) = game.support_on(Host::current()) {
-        eprintln!("{} can't start: {why}", game.title);
-        return ExitCode::FAILURE;
-    }
-    let Some(root) = library else {
-        eprintln!("no library yet: run with --library <folder>");
-        return ExitCode::FAILURE;
-    };
-    let found = catalog::library(HashCache::default()).scan(std::slice::from_ref(&root));
-    let Some(entry) = found.by_game().get(&game.id).map(|e| (*e).clone()) else {
-        eprintln!("{} is not in {}", game.title, root.display());
-        return ExitCode::FAILURE;
-    };
-    let settings = match load_settings(paths, game) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("{e}");
-            return ExitCode::FAILURE;
-        }
-    };
-    let prepared = match session::prepare(paths, game, &entry, &settings) {
+    });
+    let (add_files, inv) = match parsed {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("{e:#}");
-            return ExitCode::FAILURE;
+            eprintln!("{e}\n\n{}", usage());
+            return ExitCode::from(BAD_COMMAND_LINE);
         }
     };
-    let input = (!args.no_input).then(input::InputService::start);
-    if let Some(i) = &input {
-        i.send(input::Command::Attach {
-            block: prepared.block.clone(),
-            cabinet: game.cabinet,
-            deadzone: settings.deadzone,
-        });
+    if inv.mode == Mode::Help {
+        print!("{}", usage());
+        return ExitCode::from(OK);
     }
-    let display = if args.headless {
+    let paths = HubPaths::discover(&paths::dirs());
+    let log = Log::new(paths.log());
+    // a search for board files is a command without the window: its output
+    // is its result
+    let run = Run {
+        command: run_of(&inv).command || add_files.is_some(),
+        no_window: run_of(&inv).no_window || add_files.is_some(),
+        ..run_of(&inv)
+    };
+    let says = match Audience::of(run, false).mode() {
+        Says::Command { interactive } => report::Mode::Command { interactive },
+        Says::Play { interactive } => report::Mode::Play { interactive },
+    };
+    let fail = |text: &str| {
+        let link = Link {
+            label: "Report a problem",
+            url: ISSUES,
+        };
+        rea_launcher_ui::hub::fatal(&ui::THEME, &log, text, Some(link), says);
+    };
+    // --list only reads: it works while the window is open
+    let _instance = if inv.mode == Mode::List {
+        None
+    } else {
+        match rea_launcher::instance::single(INSTANCE) {
+            Ok(guard) => Some(guard),
+            Err(running) if inv.is_action() || add_files.is_some() => {
+                fail(
+                    "The Wangan Midnight launcher is already open. Close it first, then try again.",
+                );
+                return ExitCode::from(running.exit_code() as u8);
+            }
+            Err(_) => {
+                eprintln!("The Wangan Midnight launcher is already open.");
+                return ExitCode::from(OK);
+            }
+        }
+    };
+    match run_mode(&paths, &inv, add_files.as_deref()) {
+        Ok(code) => ExitCode::from(code),
+        Err(e) => {
+            fail(&e);
+            ExitCode::from(REFUSED)
+        }
+    }
+}
+
+fn run_mode(paths: &HubPaths, inv: &Invocation, add_files: Option<&str>) -> Result<u8, String> {
+    let mut config = paths::config(paths)
+        .map_err(|e| format!("couldn't read {}: {e}", display_path(&paths.config_file())))?;
+    if !inv.libraries.is_empty() {
+        configure(paths, &mut config, inv)?;
+    }
+    if let Some(src) = add_files {
+        return add_board_files(paths, src);
+    }
+    match &inv.mode {
+        Mode::Window => ui::run(paths.clone()).map(|()| OK),
+        Mode::Help | Mode::Configure => Ok(OK),
+        Mode::List => list(paths, &config),
+        Mode::Check(game) => check(paths, &config, game.as_deref()),
+        Mode::Set(slug) => {
+            set(paths, game_of(slug), inv)?;
+            Ok(OK)
+        }
+        Mode::Play(slug) => {
+            let game = game_of(slug);
+            set(paths, game, inv)?;
+            play(paths, &config, game, inv)
+        }
+    }
+}
+
+/// A game the parser checked.
+fn game_of(slug: &str) -> &'static Game {
+    catalog::by_slug(slug).expect("checked by the parser")
+}
+
+/// The library folders of the command line saved in `launcher.cfg`.
+fn configure(paths: &HubPaths, config: &mut HubConfig, inv: &Invocation) -> Result<(), String> {
+    for dir in &inv.libraries {
+        config.add_library(&typed_path(&dir.to_string_lossy(), PathKind::Folder, "")?);
+    }
+    config
+        .save(&paths.config_file(), paths::FIELDS)
+        .map_err(|e| format!("Could not save the settings: {e}"))
+}
+
+/// The options of the command line over `s`: a look first, so the flags
+/// after it win.
+fn apply_options(inv: &Invocation, s: &mut Settings, game: &Game) {
+    inv.apply_options(settings::OPTIONS, &["look"], |spec, v| match v {
+        Value::Choice(key) if spec.key == "look" => {
+            if let Some(look) = Look::from_key(key) {
+                look.apply(s, game, None);
+            }
+        }
+        v => {
+            let _ = s.apply(spec.key, v);
+        }
+    });
+}
+
+/// The options of the command line saved into the game's settings (the
+/// keys given, and those a look sets).
+fn set(paths: &HubPaths, game: &Game, inv: &Invocation) -> Result<(), String> {
+    if inv.options.is_empty() {
+        return Ok(());
+    }
+    let mut s = load_settings(paths, game, None, warn)?;
+    apply_options(inv, &mut s, game);
+    let mut keys: Vec<&str> = inv.options.iter().map(|(k, _)| *k).collect();
+    if keys.contains(&"look") {
+        keys.extend(settings::LOOK_KEYS);
+    }
+    s.write(&paths.settings(game.slug), &keys)
+        .map_err(|e| format!("Could not save the options: {e}"))
+}
+
+/// Looks in `src` for every board-file set and says what it found.
+fn add_board_files(paths: &HubPaths, src: &str) -> Result<u8, String> {
+    let src = rea_launcher::hub::expand_home(src);
+    if !src.exists() {
+        return Err(format!("{} is not a folder or file", display_path(&src)));
+    }
+    for set in [&firmware::SYS246, &firmware::CHIHIRO] {
+        let r = firmware::import(set, &src, &set.dir(&paths.data))
+            .map_err(|e| format!("{}: {e}", set.title))?;
+        println!("{} ({} looked at)", set.title, r.looked_at);
+        for f in set.files {
+            let mark = if r.added.contains(&f.name) {
+                "added"
+            } else if r.missing.contains(&f.name) {
+                "missing"
+            } else {
+                "already in"
+            };
+            println!("  {mark:<10} {}", f.name);
+        }
+    }
+    Ok(OK)
+}
+
+/// The board files `game` still needs, by name.
+fn missing_files(paths: &HubPaths, game: &Game) -> Vec<&'static str> {
+    game.firmware
+        .map(|set| {
+            set.check(&set.dir(&paths.data))
+                .into_iter()
+                .filter(|(_, st)| *st != FileState::Present)
+                .map(|(f, _)| f.name)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What keeps `game` from starting here, its board files first.
+fn state(paths: &HubPaths, game: &Game) -> Result<String, String> {
+    let missing = missing_files(paths, game);
+    if !missing.is_empty() {
+        return Err(format!(
+            "needs board files (--add-files): {}",
+            missing.join(", ")
+        ));
+    }
+    match game.support_on(Host::current()) {
+        Support::Ready => Ok("ready".to_string()),
+        Support::Unverified(note) => Ok(format!("starts; {note}")),
+        Support::Blocked(why) => Err(format!("not yet: {why}")),
+    }
+}
+
+/// The games in the library folders; what couldn't be read is said on stderr.
+fn scan(config: &HubConfig) -> Result<Scan<Game>, String> {
+    if config.libraries.is_empty() {
+        return Err("No game folder yet: run with --library <folder>.".into());
+    }
+    let scan = catalog::library(HashCache::default()).scan(&config.libraries);
+    for problem in &scan.problems {
+        warn(&format!("couldn't read {problem}"));
+    }
+    Ok(scan)
+}
+
+fn list(paths: &HubPaths, config: &HubConfig) -> Result<u8, String> {
+    for e in scan(config)?.entries {
+        let dir = display_path(&e.dir);
+        match &e.found {
+            Found::Known { game, edition } => {
+                let state = state(paths, game).unwrap_or_else(|e| e);
+                println!(
+                    "{:<8} {:<34} {:<20} {state}\n         {dir}",
+                    game.slug, game.title, edition.label,
+                );
+            }
+            Found::Unknown { file, digest } => {
+                println!("unknown  {file} sha256 {digest}: report it at {ISSUES}\n         {dir}")
+            }
+        }
+    }
+    Ok(OK)
+}
+
+/// Whether each game (or the one named) could start now: found in the
+/// library, a known edition, its board files in, supported here, its
+/// components in place. The unknown builds reported are the named game's
+/// only.
+fn check(paths: &HubPaths, config: &HubConfig, only: Option<&str>) -> Result<u8, String> {
+    let found = scan(config)?;
+    let by_game = found.by_game();
+    let asked = |g: &Game| only.is_none_or(|s| s == g.slug);
+    let mut problems = 0;
+    for game in GAMES.iter().filter(|g| asked(g)) {
+        let verdict = match by_game.get(&game.id) {
+            None => Err("not in your game folders".to_string()),
+            Some(_) => state(paths, game).and_then(|s| {
+                session::check_components(game, paths)
+                    .map(|()| s)
+                    .map_err(|e| format!("{e:#}"))
+            }),
+        };
+        match verdict {
+            Ok(s) => println!("{:<8} ok: {s}", game.slug),
+            Err(e) => {
+                problems += 1;
+                println!("{:<8} {e}", game.slug);
+            }
+        }
+    }
+    for e in &found.entries {
+        if let Found::Unknown { file, digest } = &e.found
+            && GAMES.iter().any(|g| asked(g) && g.main_file == file)
+        {
+            problems += 1;
+            println!(
+                "unknown  {file} sha256 {digest} in {}: report it at {ISSUES}",
+                display_path(&e.dir)
+            );
+        }
+    }
+    Ok(if problems == 0 { OK } else { REFUSED })
+}
+
+fn play(
+    paths: &HubPaths,
+    config: &HubConfig,
+    game: &'static Game,
+    inv: &Invocation,
+) -> Result<u8, String> {
+    if let Err(why) = state(paths, game) {
+        return Err(format!("{} can't start: {why}", game.title));
+    }
+    let found = scan(config)?;
+    let entry = found
+        .by_game()
+        .get(&game.id)
+        .map(|e| (*e).clone())
+        .ok_or_else(|| format!("{} is not in your game folders.", game.title))?;
+    let settings = load_settings(paths, game, None, warn)?;
+    let display = if inv.test.headless {
         Display::Headless
     } else {
         Display::Screen
     };
+    let prepared =
+        session::prepare(paths, game, &entry, &settings).map_err(|e| format!("{e:#}"))?;
     // Ctrl+C or a TERM ends the game the way the window's Stop does
     let stop = Arc::new(AtomicBool::new(false));
     for sig in [signal_hook::consts::SIGINT, signal_hook::consts::SIGTERM] {
         let _ = signal_hook::flag::register(sig, Arc::clone(&stop));
     }
-    let r = session::run(
+    if let Some(secs) = inv.test.seconds {
+        let stop = Arc::clone(&stop);
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs(secs));
+            stop.store(true, Ordering::SeqCst);
+        });
+    }
+    let devices = (!inv.test.no_input && inv.test.script.is_none()).then(input::service);
+    let feed = if let Some(f) = &inv.test.script {
+        Input::Script(read_script(f)?)
+    } else if let Some(i) = &devices {
+        Input::Devices {
+            tx: i.sender(),
+            deadzone: settings.deadzone,
+        }
+    } else {
+        Input::None
+    };
+    let status = session::run(
         paths,
         game,
         &prepared,
         display,
-        &[root],
-        &mut Hold::default(),
+        &config.libraries,
+        &feed,
         &stop,
+    )
+    .map_err(|e| format!("{e:#}"))?;
+    eprintln!(
+        "{} ended ({status}); log: {}",
+        game.title,
+        display_path(&session::session_log(paths, game))
     );
-    if let Some(i) = &input {
-        i.send(input::Command::Detach);
-    }
-    match r {
-        Ok(_) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("{e:#}");
-            ExitCode::FAILURE
-        }
-    }
+    Ok(OK)
+}
+
+/// A timed input script (`--input-script`).
+fn read_script(file: &Path) -> Result<Script, String> {
+    let text = std::fs::read_to_string(file).map_err(|e| format!("{}: {e}", file.display()))?;
+    Script::parse::<Button>(&text).map_err(|e| format!("{}: {e}", file.display()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rea_launcher::gamescope::{Size, Upscaler};
 
-    fn args(s: &str) -> impl Iterator<Item = String> {
-        s.split_whitespace()
-            .map(String::from)
-            .collect::<Vec<_>>()
-            .into_iter()
+    fn args(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn parse_v(v: &[&str]) -> Invocation {
+        cli::parse(&CLI, args(v)).unwrap()
+    }
+
+    fn paths_in(t: &Path) -> HubPaths {
+        HubPaths {
+            data: t.into(),
+            components: t.join("c"),
+            dev_assets: None,
+        }
     }
 
     #[test]
-    fn gamescope_options_are_refused_on_windows_with_the_windows_reason() {
-        for opt in [
-            "--output 1920x1080",
-            "--upscaler fsr",
-            "--sharpness 3",
-            "--fullscreen on",
-            "--headless",
-        ] {
-            let line = format!("--play mt5 {opt}");
-            let e = parse_args(args(&line), Host::Windows).err().expect(opt);
-            assert!(e.ends_with(ui::form::NO_GAMESCOPE), "{e}");
-            assert!(parse_args(args(&line), Host::Linux).is_ok(), "{opt}");
+    fn every_option_flag_reaches_its_settings_key() {
+        let inv = parse_v(&[
+            "--set",
+            "mt3",
+            "--render",
+            "1920x1080",
+            "--deadzone",
+            "0.12",
+        ]);
+        let mut s = Settings::default();
+        apply_options(&inv, &mut s, game_of("mt3"));
+        assert_eq!(s.render, Some(Size::new(1920, 1080)));
+        assert!((s.deadzone - 0.12).abs() < 1e-6);
+        // the look and gamescope's options are Linux's
+        if Host::current() == Host::Linux {
+            let inv = parse_v(&[
+                "--set",
+                "mt3",
+                "--render",
+                "2560x1440",
+                "--look",
+                "original",
+                "--output",
+                "2560x1440",
+                "--upscaler",
+                "nis",
+                "--sharpness",
+                "3",
+                "--fullscreen",
+                "off",
+            ]);
+            apply_options(&inv, &mut s, game_of("mt3"));
+            assert_eq!(s.look, Some(Look::Original));
+            assert_eq!(
+                s.render,
+                Some(Size::new(2560, 1440)),
+                "the flag wins over the look"
+            );
+            assert_eq!(s.output, Size::new(2560, 1440));
+            assert_eq!(s.upscaler, Upscaler::Nis);
+            assert_eq!(s.sharpness, 3);
+            assert!(!s.fullscreen);
         }
-        let a = parse_args(args("--game mt5 --deadzone 0.1"), Host::Windows)
-            .unwrap()
-            .unwrap();
-        assert_eq!(a.options, [("deadzone".to_string(), "0.1".to_string())]);
+    }
+
+    #[test]
+    fn options_a_game_ignores_are_refused() {
+        let e = cli::parse(&CLI, args(&["--set", "mt5", "--render", "1920x1080"])).unwrap_err();
+        assert!(e.contains("mt5 doesn't take --render"), "{e}");
+        assert!(cli::parse(&CLI, args(&["--set", "mt3", "--render", "1920x1080"])).is_ok());
+        let gamescope = cli::parse(&CLI, args(&["--play", "mt5", "--output", "1920x1080"]));
+        assert_eq!(gamescope.is_err(), cfg!(windows), "{gamescope:?}");
+        let look = cli::parse(&CLI, args(&["--set", "mt5", "--look", "original"]));
+        assert_eq!(look.is_err(), cfg!(windows), "{look:?}");
+    }
+
+    #[test]
+    fn set_saves_the_flags_and_keeps_the_players_lines() {
+        let t = tempfile::tempdir().unwrap();
+        let p = paths_in(t.path());
+        std::fs::create_dir_all(t.path().join("settings")).unwrap();
+        std::fs::write(p.settings("mt3"), "# mine\nsharpness = 7\n").unwrap();
+        let inv = parse_v(&["--set", "mt3", "--deadzone", "0.1"]);
+        set(&p, game_of("mt3"), &inv).unwrap();
+        let text = std::fs::read_to_string(p.settings("mt3")).unwrap();
+        assert_eq!(text, "# mine\nsharpness = 7\ndeadzone = 0.10\n");
+    }
+
+    #[test]
+    fn add_files_is_taken_out_before_the_hub_parses_the_rest() {
+        let (add, rest) =
+            split_add_files(&args(&["--library", "/g", "--add-files", "/b"])).unwrap();
+        assert_eq!(add.as_deref(), Some("/b"));
+        assert_eq!(rest, ["--library", "/g"]);
+        let (add, _) = split_add_files(&args(&["--add-files=/b"])).unwrap();
+        assert_eq!(add.as_deref(), Some("/b"));
+        assert!(split_add_files(&args(&["--add-files"])).is_err());
+    }
+
+    #[test]
+    fn the_usage_lists_every_game_every_option_and_add_files() {
+        let u = usage();
+        for g in GAMES {
+            assert!(u.contains(g.slug));
+        }
+        for spec in settings::OPTIONS {
+            assert!(u.contains(&spec.flag_name(settings::STYLE)), "{}", spec.key);
+        }
+        assert!(u.contains("--add-files <path>"));
+    }
+
+    #[test]
+    fn the_settings_heading_names_commands_the_usage_has() {
+        let u = usage();
+        for flag in ["--set <game>", "--play <game>"] {
+            assert!(settings::HEADING.contains(flag), "{flag}");
+            assert!(u.contains(flag), "{flag}");
+        }
+    }
+
+    #[test]
+    fn the_window_title_is_no_games_title() {
+        for g in GAMES {
+            assert_ne!(g.title, WINDOW_TITLE);
+        }
     }
 }

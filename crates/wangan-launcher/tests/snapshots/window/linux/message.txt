@@ -1,128 +1,48 @@
 == 1280x720
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [button play] @ 56,454 226,504
-        Unknown [button game-settings] @ 242,454 412,504
-        Unknown [tile wangan-r] @ 56,548 175,615
-        Unknown [tile mt1] @ 187,548 306,615
-        Unknown [tile mt3] @ 318,548 437,615
-        Unknown [tile mt3dxp] @ 449,548 568,615
-        Unknown [tile mt5] @ 580,548 700,615
-        Unknown [tile mt5dxp] @ 712,548 831,615
-        Unknown [tile mt6] @ 843,548 962,615
-        Unknown [tile mt6r] @ 974,548 1093,615
-        Unknown [tile mt6rr] @ 1105,548 1224,615
-        Unknown [tab Games] @ 326,17 404,55
-        Unknown [tab Controls] @ 412,17 504,55
-        Unknown [tab Settings] @ 512,17 602,55
-        Unknown [button dismiss] @ 354,401 494,451
--- painted text
-56,271 "Wangan Midnight R"
-58,344 "Namco System 246 · 2002"
-68,386 "Not in your library"
-56,418 "Put its folder in your games folder, then choose Rescan in Settings."
-121,467 "Play"
-287,467 "Settings"
-56,519 "Your games · 1 of 9 found"
-70,587 "R"
-113,557 "Not found"
-200,587 "MT"
-244,557 "Not found"
-331,587 "MT3"
-375,557 "Not found"
-462,587 "MT3DX+"
-506,557 "Not found"
-593,587 "MT5"
-725,587 "MT5DX+"
-768,557 "Not found"
-856,587 "MT6"
-899,557 "Not found"
-987,587 "MT6R"
-1030,557 "Not found"
-1118,587 "MT6RR"
-1162,557 "Not found"
-64,28 "B"
-93,22 "Wangan Midnight"
-338,26 "Games"
-424,26 "Controls"
-524,26 "Settings"
-1135,28 "No controller"
-63,675 "A"
-86,674 "Play"
-145,675 "Y"
-167,674 "Settings"
-251,675 "B"
-275,674 "Back"
-337,675 "Start / Esc"
-410,674 "Quit"
-1149,675 "Version <version>"
-350,255 "Wangan Midnight Maximum Tune 5 couldn't start"
-354,309 "Reading /srv/games/Wangan/MT5: no such folder.\n\nCheck that the game folder is complete, then try again. Details are in /data/launcher.log."
-409,414 "OK"
+Label = "Wangan Midnight Maximum Tune 5"
+Label = "Namco ES3B · 2014 · 5.00 (Japan)"
+Label = "Ready"
+Label = "Folder: /srv/games/Wangan/Wangan Midnight Maximum Tune 5 [TP]"
+Button "Play" @56,454 170x50
+Button "Settings" @242,454 170x50
+Label = "Your games · 1 of 9 found"
+RadioButton "Wangan Midnight R" (2002, Namco System 246, Not in your library) [off] @56,548 121x68
+RadioButton "Wangan Midnight Maximum Tune" (2004, Sega Chihiro, Not in your library) [off] @187,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 3" (2007, Namco N2, Not in your library) [off] @318,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 3DX+" (2010, Namco N2, Not in your library) [off] @449,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 5" (2014, Namco ES3B, Ready) [on] @580,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 5DX+" (2017, Namco ES3B, Not in your library) [off] @710,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 6" (2018, Namco ES3B, Not in your library) [off] @841,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 6R" (2020, Namco ES3B, Not in your library) [off] @972,548 121x68
+RadioButton "Wangan Midnight Maximum Tune 6RR" (2022, Namco ES3B, Not in your library) [off] @1103,548 121x68
+Tab "Games" [on] @326,17 78x38
+Tab "Controls" [off] @412,17 91x38
+Tab "Settings" [off] @511,17 91x38
+Label = "Controller: No controller"
+Label = "Wangan Midnight Maximum Tune 5 couldn't start"
+Label = "Reading /srv/games/Wangan/MT5: no such folder.\n\nCheck that the game folder is complete, then try again. Details are in /data/launcher.log."
+Button "OK" @354,403 140x50
 == 1280x800
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [button play] @ 62,504 251,560
-        Unknown [button game-settings] @ 269,504 458,560
-        Unknown [tile wangan-r] @ 62,609 179,674
-        Unknown [tile mt1] @ 192,609 309,674
-        Unknown [tile mt3] @ 322,609 439,674
-        Unknown [tile mt3dxp] @ 452,609 568,674
-        Unknown [tile mt5] @ 582,609 698,674
-        Unknown [tile mt5dxp] @ 712,609 828,674
-        Unknown [tile mt6] @ 841,609 958,674
-        Unknown [tile mt6r] @ 971,609 1088,674
-        Unknown [tile mt6rr] @ 1101,609 1218,674
-        Unknown [tab Games] @ 362,19 449,61
-        Unknown [tab Controls] @ 458,19 560,61
-        Unknown [tab Settings] @ 569,19 669,61
-        Unknown [button dismiss] @ 322,446 478,501
--- painted text
-56,205 "Wangan Midnight R"
-58,344 "Namco System 246 · 2002"
-68,385 "Not in your library"
-56,418 "Put its folder in your games folder, then choose Rescan in Settings."
-121,466 "Play"
-287,466 "Settings"
-56,519 "Your games · 1 of 9 found"
-70,579 "R"
-98,557 "Not found"
-186,579 "MT"
-215,557 "Not found"
-303,579 "MT3"
-332,557 "Not found"
-420,579 "MT3DX+"
-449,557 "Not found"
-537,579 "MT5"
-653,579 "MT5DX+"
-683,557 "Not found"
-770,579 "MT6"
-800,557 "Not found"
-887,579 "MT6R"
-917,557 "Not found"
-1004,579 "MT6RR"
-1034,557 "Not found"
-64,28 "B"
-93,22 "Wangan Midnight"
-338,26 "Games"
-424,26 "Controls"
-524,26 "Settings"
-1007,27 "No controller"
-63,674 "A"
-86,674 "Play"
-145,674 "Y"
-167,674 "Settings"
-251,674 "B"
-275,674 "Back"
-337,674 "Start / Esc"
-410,674 "Quit"
-1021,674 "Version <version>"
-286,255 "Wangan Midnight Maximum Tune 5 couldn't start"
-290,309 "Reading /srv/games/Wangan/MT5: no such folder.\n\nCheck that the game folder is complete, then try again. Details are in /data/launcher.log."
-345,414 "OK"
+Label = "Wangan Midnight Maximum Tune 5"
+Label = "Namco ES3B · 2014 · 5.00 (Japan)"
+Label = "Ready"
+Label = "Folder: /srv/games/Wangan/Wangan Midnight Maximum Tune 5 [TP]"
+Button "Play" @62,504 189x56
+Button "Settings" @269,504 189x56
+Label = "Your games · 1 of 9 found"
+RadioButton "Wangan Midnight R" (2002, Namco System 246, Not in your library) [off] @62,609 119x67
+RadioButton "Wangan Midnight Maximum Tune" (2004, Sega Chihiro, Not in your library) [off] @192,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 3" (2007, Namco N2, Not in your library) [off] @321,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 3DX+" (2010, Namco N2, Not in your library) [off] @451,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 5" (2014, Namco ES3B, Ready) [on] @581,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 5DX+" (2017, Namco ES3B, Not in your library) [off] @710,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 6" (2018, Namco ES3B, Not in your library) [off] @840,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 6R" (2020, Namco ES3B, Not in your library) [off] @970,609 119x67
+RadioButton "Wangan Midnight Maximum Tune 6RR" (2022, Namco ES3B, Not in your library) [off] @1099,609 119x67
+Tab "Games" [on] @362,19 86x42
+Tab "Controls" [off] @457,19 101x42
+Tab "Settings" [off] @568,19 101x42
+Label = "Controller: No controller"
+Label = "Wangan Midnight Maximum Tune 5 couldn't start"
+Label = "Reading /srv/games/Wangan/MT5: no such folder.\n\nCheck that the game folder is complete, then try again. Details are in /data/launcher.log."
+Button "OK" @322,448 156x56

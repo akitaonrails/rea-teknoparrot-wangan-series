@@ -1,140 +1,66 @@
 == 1280x720
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [row 0] @ 60,214 856,272
-        Unknown [left 0] @ 572,223 600,263
-        Unknown [right 0] @ 818,223 846,263
-        Unknown [row 1] @ 60,272 856,330
-        Unknown [left 1] @ 572,281 600,321
-        Unknown [right 1] @ 818,281 846,321
-        Unknown [row 2] @ 60,330 856,388
-        Unknown [left 2] @ 572,339 600,379
-        Unknown [right 2] @ 818,339 846,379
-        Unknown [row 3] @ 60,388 856,446
-        Unknown [left 3] @ 572,397 600,437
-        Unknown [right 3] @ 818,397 846,437
-        Unknown [row 4] @ 60,446 856,504
-        Unknown [left 4] @ 572,455 600,495
-        Unknown [right 4] @ 818,455 846,495
-        Unknown [row 5] @ 60,504 856,562
-        Unknown [left 5] @ 572,513 600,553
-        Unknown [right 5] @ 818,513 846,553
-        Unknown [button rescan] @ 904,320 1204,366
-        Unknown [button folder] @ 904,380 1204,426
-        Unknown [tab Games] @ 326,17 404,55
-        Unknown [tab Controls] @ 412,17 504,55
-        Unknown [tab Settings] @ 512,17 602,55
--- painted text
-56,86 "Wangan Midnight Maximum Tune 3 settings"
-56,130 "Changes are saved as you make them and used the next time you press Play."
-76,180 "Picture and controls"
-78,223 "Output size"
-78,246 "The size of the picture on your screen. Pick your screen's size."
-645,233 "3840 × 2160 (4K)"
-78,281 "Upscaler"
-78,304 "How the game's picture is stretched to the output size."
-630,291 "FSR 1 (sharp upscale)"
-78,339 "Sharpness"
-78,362 "How crisp the upscaler makes edges. 0 is the sharpest."
-704,349 "5"
-78,397 "Fullscreen"
-78,420 "Fill the whole screen, or play in a window."
-698,407 "On"
-78,455 "Game render size"
-78,478 "The size the game draws at. Bigger is sharper and needs a stronger GPU."
-582,465 "Same as output, 3840 × 2160 (4K)"
-78,513 "Dead zone"
-78,536 "How far a controller stick moves before the car starts to steer."
-697,523 "5%"
-904,180 "Your games folder"
-904,226 "/srv/games/Wangan"
-904,251 "1 of 9 games found. 1 folder holds a build this launcher doesn't know; launcher.log has its digest."
-1020,331 "Rescan"
-944,391 "Choose another folder"
-64,28 "B"
-93,22 "Wangan Midnight"
-338,26 "Games"
-424,26 "Controls"
-524,26 "Settings"
-1135,28 "No controller"
-108,674 "Change"
-188,675 "A"
-212,674 "Next choice"
-318,675 "B / Esc"
-370,674 "Back"
-433,675 "LB RB"
-482,674 "Switch page"
-1149,675 "Version <version>"
+Label = "Wangan Midnight Maximum Tune 3 settings"
+Label = "Changes are saved as you make them and used the next time you press Play."
+Button "Look" = "Recommended" (Sets the picture at once: the game's own, sharper for your screen, or for the Steam Deck. Options set after it win.) @60,214 796x58
+Button "Look: previous" @572,223 28x40
+Button "Look: next" @818,223 28x40
+Button "Output size" = "1920 × 1080 (1080p)" (The size of the picture on your screen. Pick your screen's size.) @60,272 796x58
+Button "Output size: previous" @572,281 28x40
+Button "Output size: next" @818,281 28x40
+Button "Upscaler" = "FSR 1 (sharp upscale)" (How the game's picture is stretched to the output size.) @60,330 796x58
+Button "Upscaler: previous" @572,339 28x40
+Button "Upscaler: next" @818,339 28x40
+Button "Sharpness" = "5" (How crisp the upscaler makes edges. 0 is the sharpest.) @60,388 796x58
+Button "Sharpness: previous" @572,397 28x40
+Button "Sharpness: next" @818,397 28x40
+Button "Fullscreen" = "On" (Fill the whole screen, or play in a window.) @60,446 796x58
+Button "Fullscreen: previous" @572,455 28x40
+Button "Fullscreen: next" @818,455 28x40
+Button "Game render size" = "1920 × 1080 (1080p)" (The size the game draws at. Bigger is sharper and needs a stronger GPU.) @60,504 796x58
+Button "Game render size: previous" @572,513 28x40
+Button "Game render size: next" @818,513 28x40
+Button "Dead zone" = "5%" (How far a controller stick moves before the car starts to steer.) @60,562 796x58
+Button "Dead zone: previous" @572,571 28x40
+Button "Dead zone: next" @818,571 28x40
+Label = "/srv/games/Wangan"
+Label = "1 of 9 games found. 1 folder holds a build this launcher doesn't know; launcher.log has its digest."
+Button "Rescan" @904,330 300x46
+Button "Game folders" @904,390 300x46
+Label = "Sets the picture at once: the game's own, sharper for your screen, or for the Steam Deck. Options set after it win."
+Tab "Games" [off] @326,17 78x38
+Tab "Controls" [off] @412,17 91x38
+Tab "Settings" [on] @511,17 91x38
+Label = "Controller: No controller"
 == 1280x800
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [row 0] @ 67,238 809,302
-        Unknown [left 0] @ 493,248 524,292
-        Unknown [right 0] @ 767,248 798,292
-        Unknown [row 1] @ 67,302 809,367
-        Unknown [left 1] @ 493,312 524,357
-        Unknown [right 1] @ 767,312 798,357
-        Unknown [row 2] @ 67,367 809,431
-        Unknown [left 2] @ 493,377 524,421
-        Unknown [right 2] @ 767,377 798,421
-        Unknown [row 3] @ 67,431 809,496
-        Unknown [left 3] @ 493,441 524,486
-        Unknown [right 3] @ 767,441 798,486
-        Unknown [row 4] @ 67,496 809,560
-        Unknown [left 4] @ 493,506 524,550
-        Unknown [right 4] @ 767,506 798,550
-        Unknown [row 5] @ 67,560 809,624
-        Unknown [left 5] @ 493,570 524,614
-        Unknown [right 5] @ 767,570 798,614
-        Unknown [button rescan] @ 862,356 1196,407
-        Unknown [button folder] @ 862,423 1196,474
-        Unknown [tab Games] @ 362,19 449,61
-        Unknown [tab Controls] @ 458,19 560,61
-        Unknown [tab Settings] @ 569,19 669,61
--- painted text
-56,86 "Wangan Midnight Maximum Tune 3 settings"
-56,130 "Changes are saved as you make them and used the next time you press Play."
-76,180 "Picture and controls"
-78,223 "Output size"
-78,246 "The size of the picture on your screen. Pick your screen's size."
-517,233 "3840 × 2160 (4K)"
-78,281 "Upscaler"
-78,304 "How the game's picture is stretched to the output size."
-502,291 "FSR 1 (sharp upscale)"
-78,339 "Sharpness"
-78,362 "How crisp the upscaler makes edges. 0 is the sharpest."
-576,349 "5"
-78,397 "Fullscreen"
-78,420 "Fill the whole screen, or play in a window."
-570,407 "On"
-78,455 "Game render size"
-78,478 "The size the game draws at. Bigger is sharper and needs a st…"
-454,465 "Same as output, 3840 × 2160 (4K)"
-78,513 "Dead zone"
-78,536 "How far a controller stick moves before the car starts to steer."
-569,523 "5%"
-776,180 "Your games folder"
-776,226 "/srv/games/Wangan"
-776,251 "1 of 9 games found. 1 folder holds a build this launcher doesn't know; launcher.log has its digest."
-892,331 "Rescan"
-816,391 "Choose another folder"
-64,28 "B"
-93,22 "Wangan Midnight"
-338,26 "Games"
-424,26 "Controls"
-524,26 "Settings"
-1007,27 "No controller"
-108,674 "Change"
-188,674 "A"
-212,674 "Next choice"
-318,674 "B / Esc"
-370,674 "Back"
-433,674 "LB RB"
-482,674 "Switch page"
-1021,674 "Version <version>"
+Label = "Wangan Midnight Maximum Tune 3 settings"
+Label = "Changes are saved as you make them and used the next time you press Play."
+Button "Look" = "Recommended" (Sets the picture at once: the game's own, sharper for your screen, or for the Steam Deck. Options set after it win.) @67,238 742x64
+Button "Look: previous" @493,248 31x44
+Button "Look: next" @767,248 31x44
+Button "Output size" = "1920 × 1080 (1080p)" (The size of the picture on your screen. Pick your screen's size.) @67,302 742x64
+Button "Output size: previous" @493,312 31x44
+Button "Output size: next" @767,312 31x44
+Button "Upscaler" = "FSR 1 (sharp upscale)" (How the game's picture is stretched to the output size.) @67,367 742x64
+Button "Upscaler: previous" @493,377 31x44
+Button "Upscaler: next" @767,377 31x44
+Button "Sharpness" = "5" (How crisp the upscaler makes edges. 0 is the sharpest.) @67,431 742x64
+Button "Sharpness: previous" @493,441 31x44
+Button "Sharpness: next" @767,441 31x44
+Button "Fullscreen" = "On" (Fill the whole screen, or play in a window.) @67,496 742x64
+Button "Fullscreen: previous" @493,506 31x44
+Button "Fullscreen: next" @767,506 31x44
+Button "Game render size" = "1920 × 1080 (1080p)" (The size the game draws at. Bigger is sharper and needs a stronger GPU.) @67,560 742x64
+Button "Game render size: previous" @493,570 31x44
+Button "Game render size: next" @767,570 31x44
+Button "Dead zone" = "5%" (How far a controller stick moves before the car starts to steer.) @67,624 742x64
+Button "Dead zone: previous" @493,634 31x44
+Button "Dead zone: next" @767,634 31x44
+Label = "/srv/games/Wangan"
+Label = "1 of 9 games found. 1 folder holds a build this launcher doesn't know; launcher.log has its digest."
+Button "Rescan" @862,367 333x51
+Button "Game folders" @862,433 333x51
+Label = "Sets the picture at once: the game's own, sharper for your screen, or for the Steam Deck. Options set after it win."
+Tab "Games" [off] @362,19 86x42
+Tab "Controls" [off] @457,19 101x42
+Tab "Settings" [on] @568,19 101x42
+Label = "Controller: No controller"

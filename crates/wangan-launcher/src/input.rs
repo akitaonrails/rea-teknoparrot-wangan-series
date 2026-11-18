@@ -1,240 +1,112 @@
-//! The input thread: it owns SDL, reads wheels and pads, turns them into
-//! the cabinet's controls and, while a game runs, writes them into the
-//! game's input block (the I/O board under Wine, or the N2 loader, reads
-//! it). Between games it sends menu navigation to the window.
+//! What this launcher hands the SDK's input thread
+//! (`rea_launcher_native::feeder`): the cabinet's controls as the game's
+//! input block ([`Block`], a [`Wire`]) and the block file itself
+//! ([`BlockSink`], the feed's sink).
+//!
+//! The block is a 64-byte file both sides map (`wangan_jvs::shared`): the
+//! I/O board under Wine and the N2 loader read it, the launcher writes it
+//! in place. The feeder's wire is text, so each frame travels as one line
+//! of hex that the sink turns back into bytes at the block's start. The
+//! sequence number changes every frame, so the feeder writes every tick
+//! (4 ms), and the board sees a live block.
 
-use std::fs::OpenOptions;
-use std::path::PathBuf;
-use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
-use std::sync::{Arc, Mutex};
-use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
+use std::fs::{File, OpenOptions};
+use std::io::{self, Write};
+use std::path::Path;
 
-use rea_launcher::pad::{Nav, PadNav};
-use rea_launcher::wheel::{
-    Controls as Read, DeviceId, Kind, PadSettings, WheelProfile, WheelSettings, read_pad,
-};
-use rea_launcher_native::policy::HapticPolicy;
-use rea_launcher_native::sdl::{Devices, Sdl};
+use rea_launcher_native::feeder::{Frame, InputService, Wire};
 use wangan_core::input::{Button, Translator, default_pad_map};
-use wangan_jvs::controls::{Cabinet, Controls};
+use wangan_jvs::controls::Cabinet;
+use wangan_jvs::shared::QUIT;
 
-const TICK: Duration = Duration::from_millis(4);
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct DeviceInfo {
-    pub name: String,
-    pub kind: Kind,
-    pub haptic: bool,
+/// The input thread with the cabinet's pad layout; a wheel's paddles shift.
+pub fn service() -> InputService {
+    InputService::start(default_pad_map(), Some((Button::GearUp, Button::GearDown)))
 }
 
-/// What the window shows.
-#[derive(Debug, Clone, Default)]
-pub struct Snapshot {
-    pub devices: Vec<DeviceInfo>,
-    /// The device driving the car, by index into `devices`.
-    pub driver: Option<usize>,
-    pub controls: Controls,
-    pub writing: bool,
-    pub error: Option<String>,
-}
-
-pub enum Command {
-    /// Start writing the block; `deadzone` is the pad stick dead zone, 0–0.3.
-    Attach {
-        block: PathBuf,
-        cabinet: Cabinet,
-        deadzone: f32,
-    },
-    Detach,
-}
-
-pub struct InputService {
-    tx: Sender<Command>,
-    pub nav: Receiver<Nav>,
-    snapshot: Arc<Mutex<Snapshot>>,
-    thread: Option<JoinHandle<()>>,
-}
-
-impl InputService {
-    pub fn start() -> Self {
-        let (tx, rx) = mpsc::channel();
-        let (nav_tx, nav) = mpsc::channel();
-        let snapshot = Arc::new(Mutex::new(Snapshot::default()));
-        let shared = Arc::clone(&snapshot);
-        let thread = std::thread::Builder::new()
-            .name("input".into())
-            .spawn(move || run(rx, nav_tx, shared))
-            .expect("spawn input thread");
-        Self {
-            tx,
-            nav,
-            snapshot,
-            thread: Some(thread),
-        }
-    }
-
-    pub fn send(&self, c: Command) {
-        let _ = self.tx.send(c);
-    }
-
-    pub fn snapshot(&self) -> Snapshot {
-        self.snapshot.lock().map(|s| s.clone()).unwrap_or_default()
-    }
-}
-
-#[cfg(test)]
-impl InputService {
-    /// No SDL and no thread: the test sends the pad's menu moves and sets
-    /// what the window shows.
-    pub fn fake() -> (Self, Sender<Nav>, Arc<Mutex<Snapshot>>) {
-        let (tx, _) = mpsc::channel();
-        let (nav_tx, nav) = mpsc::channel();
-        let snapshot = Arc::new(Mutex::new(Snapshot::default()));
-        let service = Self {
-            tx,
-            nav,
-            snapshot: Arc::clone(&snapshot),
-            thread: None,
-        };
-        (service, nav_tx, snapshot)
-    }
-}
-
-impl Drop for InputService {
-    fn drop(&mut self) {
-        let (tx, _) = mpsc::channel();
-        drop(std::mem::replace(&mut self.tx, tx));
-        if let Some(t) = self.thread.take() {
-            let _ = t.join();
-        }
-    }
-}
-
-struct Writer {
-    file: std::fs::File,
+/// A game's input block: the cabinet's controls (the gear kept between
+/// frames, coins counted), all but the quit byte, which is the session's.
+pub struct Block {
     cabinet: Cabinet,
-    seq: u32,
+    translator: Translator,
+    sequence: u32,
 }
 
-fn run(rx: Receiver<Command>, nav_tx: Sender<Nav>, shared: Arc<Mutex<Snapshot>>) {
-    let sdl = match Sdl::init(&[]) {
-        Ok(s) => s,
-        Err(e) => {
-            if let Ok(mut s) = shared.lock() {
-                s.error = Some(format!("controllers unavailable: {e}"));
-            }
-            while rx.recv().is_ok() {}
-            return;
-        }
-    };
-    let mut devices = Devices::new(&sdl, HapticPolicy::default());
-    let mut pad_settings = PadSettings::new(default_pad_map());
-    let wheel_settings = WheelSettings::default();
-    let mut profile: Option<(DeviceId, WheelProfile<Button>)> = None;
-    let mut translator = Translator::default();
-    let mut writer: Option<Writer> = None;
-    let mut nav = PadNav::with_repeat(Duration::from_millis(400), Duration::from_millis(120));
-    loop {
-        loop {
-            match rx.try_recv() {
-                Ok(Command::Attach {
-                    block,
-                    cabinet,
-                    deadzone,
-                }) => {
-                    translator = Translator::default();
-                    pad_settings.stick_deadzone = stick_deadzone(deadzone);
-                    writer = OpenOptions::new()
-                        .write(true)
-                        .open(&block)
-                        .ok()
-                        .map(|file| Writer {
-                            file,
-                            cabinet,
-                            seq: 0,
-                        });
-                }
-                Ok(Command::Detach) => writer = None,
-                Err(TryRecvError::Empty) => break,
-                Err(TryRecvError::Disconnected) => return,
-            }
-        }
-        devices.pump();
-        let list = devices.list();
-        let wheel = list.iter().position(|d| d.kind == Kind::Wheel);
-        let mut read = Read::default();
-        if let Some(w) = wheel {
-            let d = &list[w];
-            let fresh = profile
-                .as_ref()
-                .is_none_or(|(id, _)| id.vid != d.id.vid || id.pid != d.id.pid);
-            if fresh {
-                profile = Some((
-                    d.id.clone(),
-                    WheelProfile::guess(
-                        d.id.clone(),
-                        &d.initial,
-                        Some((Button::GearUp, Button::GearDown)),
-                    ),
-                ));
-            }
-            if let Some((_, p)) = &profile {
-                read = p.read(&wheel_settings, &d.state, None);
-            }
-        }
-        let mut pad_driver = None;
-        for (i, d) in list.iter().enumerate() {
-            if let Some(pad) = d.pad {
-                read = read.merge(read_pad(&pad_settings, &pad, None));
-                pad_driver.get_or_insert(i);
-            }
-        }
-        let controls = translator.step(&read);
-        if let Some(w) = writer.as_mut() {
-            w.seq = w.seq.wrapping_add(1);
-            let bytes = controls
-                .to_snapshot(w.cabinet, [translator.coins(), 0, 0, 0], w.seq)
-                .encode();
-            // byte 57 (quit) is the session's; write the rest
-            let _ = write_front(&w.file, &bytes[..wangan_jvs::shared::QUIT]);
-        } else {
-            let bits = list
-                .iter()
-                .filter_map(|d| d.pad.map(|p| p.nav_bits()))
-                .fold(0u16, |a, b| a | b);
-            for n in nav.update_at(bits, Instant::now()) {
-                let _ = nav_tx.send(n);
-            }
-        }
-        if let Ok(mut s) = shared.lock() {
-            *s = Snapshot {
-                devices: list
-                    .iter()
-                    .map(|d| DeviceInfo {
-                        name: d.id.name.clone(),
-                        kind: d.kind,
-                        haptic: d.haptic,
-                    })
-                    .collect(),
-                driver: wheel.or(pad_driver),
-                controls,
-                writing: writer.is_some(),
-                error: None,
-            };
-        }
-        std::thread::sleep(TICK);
+impl Block {
+    pub fn boxed(cabinet: Cabinet) -> Box<dyn Wire> {
+        Box::new(Block {
+            cabinet,
+            translator: Translator::default(),
+            sequence: 0,
+        })
     }
 }
 
-/// The settings' dead zone (0–0.3 of the stick's travel) in raw stick units.
-pub fn stick_deadzone(fraction: f32) -> u16 {
-    (fraction.clamp(0.0, 0.3) * 32767.0).round() as u16
+impl Wire for Block {
+    fn encode(&mut self, frame: &Frame) -> String {
+        let controls = self.translator.step(&frame.controls);
+        self.sequence = self.sequence.wrapping_add(1);
+        let coins = [self.translator.coins(), 0, 0, 0];
+        let bytes = controls
+            .to_snapshot(self.cabinet, coins, self.sequence)
+            .encode();
+        let mut line: String = bytes[..QUIT].iter().map(|b| format!("{b:02x}")).collect();
+        line.push('\n');
+        line
+    }
 }
 
-/// Write `b` at the start of the block, in place (the board or the loader
-/// maps the same file).
-fn write_front(f: &std::fs::File, b: &[u8]) -> std::io::Result<()> {
+/// The block file as the feed's sink: each line [`Block`] writes, put in
+/// place at the start of the file (the board or the loader maps it).
+pub struct BlockSink {
+    file: File,
+    line: Vec<u8>,
+}
+
+impl BlockSink {
+    pub fn open(block: &Path) -> io::Result<BlockSink> {
+        Ok(BlockSink {
+            file: OpenOptions::new().write(true).open(block)?,
+            line: Vec::new(),
+        })
+    }
+
+    fn put(&self, hex: &[u8]) -> io::Result<()> {
+        let bytes = decode(hex).ok_or_else(|| io::Error::from(io::ErrorKind::InvalidData))?;
+        write_front(&self.file, &bytes)
+    }
+}
+
+impl Write for BlockSink {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        for &b in buf {
+            if b == b'\n' {
+                let line = std::mem::take(&mut self.line);
+                self.put(&line)?;
+            } else {
+                self.line.push(b);
+            }
+        }
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// The bytes of a hex line; `None` when it isn't one.
+fn decode(hex: &[u8]) -> Option<Vec<u8>> {
+    if !hex.len().is_multiple_of(2) {
+        return None;
+    }
+    hex.chunks(2)
+        .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).ok()?, 16).ok())
+        .collect()
+}
+
+/// Writes `b` at the start of the block, in place.
+fn write_front(f: &File, b: &[u8]) -> io::Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::FileExt;
@@ -246,7 +118,7 @@ fn write_front(f: &std::fs::File, b: &[u8]) -> std::io::Result<()> {
         let mut done = 0;
         while done < b.len() {
             match f.seek_write(&b[done..], done as u64)? {
-                0 => return Err(std::io::ErrorKind::WriteZero.into()),
+                0 => return Err(io::ErrorKind::WriteZero.into()),
                 n => done += n,
             }
         }
@@ -257,11 +129,63 @@ fn write_front(f: &std::fs::File, b: &[u8]) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rea_launcher::wheel::{Control, Controls};
+    use wangan_jvs::shared::Snapshot;
+
+    fn frame(buttons: u32, steer: f32) -> Frame {
+        Frame {
+            controls: Controls {
+                steer,
+                buttons,
+                ..Controls::default()
+            },
+            ..Frame::default()
+        }
+    }
 
     #[test]
-    fn dead_zone_converts_to_raw_units() {
-        assert_eq!(stick_deadzone(0.0), 0);
-        assert_eq!(stick_deadzone(0.05), 1638);
-        assert_eq!(stick_deadzone(0.9), 9830);
+    fn the_block_is_written_in_place_and_the_quit_byte_left_alone() {
+        let t = tempfile::tempdir().unwrap();
+        let path = t.path().join("input.block");
+        let fresh = Snapshot {
+            quit: true,
+            ..Snapshot::default()
+        };
+        std::fs::write(&path, fresh.encode()).unwrap();
+        let mut wire = Block::boxed(Cabinet::Wmmt5);
+        let mut sink = BlockSink::open(&path).unwrap();
+        // a line may reach the sink in pieces
+        let line = wire.encode(&frame(Button::GearUp.bit(), -1.0));
+        let (a, b) = line.as_bytes().split_at(7);
+        sink.write_all(a).unwrap();
+        sink.write_all(b).unwrap();
+        let read = Snapshot::decode(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(read.sequence, 1);
+        assert!(read.quit, "the quit byte is the session's");
+        let line = wire.encode(&frame(Button::Coin.bit(), 0.0));
+        sink.write_all(line.as_bytes()).unwrap();
+        let read = Snapshot::decode(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!((read.sequence, read.coins[0]), (2, 1));
+        assert_eq!(
+            std::fs::read(&path).unwrap().len(),
+            wangan_jvs::shared::SIZE
+        );
+    }
+
+    #[test]
+    fn every_frame_is_a_new_line_so_the_board_sees_it_live() {
+        let mut wire = Block::boxed(Cabinet::Wmmt6RR);
+        let still = frame(0, 0.0);
+        assert_ne!(wire.encode(&still), wire.encode(&still));
+    }
+
+    #[test]
+    fn a_line_that_is_no_block_is_an_error() {
+        let t = tempfile::tempdir().unwrap();
+        let path = t.path().join("input.block");
+        std::fs::write(&path, [0u8; 64]).unwrap();
+        let mut sink = BlockSink::open(&path).unwrap();
+        assert!(sink.write_all(b"zz\n").is_err());
+        assert!(sink.write_all(b"abc\n").is_err());
     }
 }

@@ -1,42 +1,14 @@
 == 1280x720
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [folder-field] @ 96,308 816,356
-        Unknown [button use-folder] @ 96,410 316,460
--- painted text
-96,178 "Choose your games folder"
-96,244 "Type the path of the folder that holds your Wangan Midnight game folders. The launcher looks inside it for each game and never changes what's there."
-112,322 "/path/to/your/games"
-96,368 "For example /mnt/games/TeknoParrot. Press Enter to use it."
-135,423 "Use this folder"
-64,28 "B"
-93,22 "Wangan Midnight"
-63,675 "Enter"
-110,674 "Use this folder"
-233,675 "Esc"
-267,674 "Quit"
-1149,675 "Version <version>"
+Label = "Choose your game folders"
+Label = "Type the path of a folder that holds your Wangan Midnight game folders and add it. The launcher looks inside for each game and never changes what's there."
+Label = "No folder yet."
+TextInput "Game folder" = "" @96,232 704x46
+Button "Add folder" @816,230 180x50
+Button "Done" (Add a game folder first.) [disabled] @96,298 180x50
 == 1280x800
--- accesskit
-Window
-  GenericContainer
-    GenericContainer
-      GenericContainer
-        Unknown [folder-field] @ 107,342 907,395
-        Unknown [button use-folder] @ 107,455 351,511
--- painted text
-96,178 "Choose your games folder"
-96,244 "Type the path of the folder that holds your Wangan Midnight game folders. The launcher looks inside it for each game and never changes what's there."
-112,322 "/path/to/your/games"
-96,368 "For example /mnt/games/TeknoParrot. Press Enter to use it."
-135,422 "Use this folder"
-64,28 "B"
-93,22 "Wangan Midnight"
-63,674 "Enter"
-110,674 "Use this folder"
-233,674 "Esc"
-267,674 "Quit"
-1021,674 "Version <version>"
+Label = "Choose your game folders"
+Label = "Type the path of a folder that holds your Wangan Midnight game folders and add it. The launcher looks inside for each game and never changes what's there."
+Label = "No folder yet."
+TextInput "Game folder" = "" @107,259 782x51
+Button "Add folder" @907,257 200x56
+Button "Done" (Add a game folder first.) [disabled] @107,333 200x56

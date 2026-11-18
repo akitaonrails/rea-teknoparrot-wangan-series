@@ -14,6 +14,7 @@ repository = "https://github.com/akitaonrails/rea-teknoparrot-wangan-series"
 rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.9.0" }
 rea-launcher-native = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.9.0", default-features = false, features = ["child", "sdl"] }
 rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.9.0" }
+rea-launcher-win32 = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.9.0" }
 
 [profile.release]
 opt-level = "s"
@@ -27,3 +28,4 @@ panic = "abort"
 rea-launcher = { path = "/mnt/data/Projects/rea-launcher-sdk-hub/crates/rea-launcher" }
 rea-launcher-native = { path = "/mnt/data/Projects/rea-launcher-sdk-hub/crates/rea-launcher-native" }
 rea-launcher-ui = { path = "/mnt/data/Projects/rea-launcher-sdk-hub/crates/rea-launcher-ui" }
+rea-launcher-win32 = { path = "/mnt/data/Projects/rea-launcher-sdk-hub/crates/rea-launcher-win32" }

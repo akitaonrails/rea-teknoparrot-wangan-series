@@ -75,12 +75,20 @@ impl Fixture {
         self.root().join("data")
     }
 
+    /// Runs the launcher with `args`, with no display and a lock folder of
+    /// its own. `--list` and `--check` get `--linux` (not shown: their
+    /// output is read, so a refusal is never a message window, which would
+    /// wait forever under Wine); a run without the window never shows one.
     fn run(&self, args: &[&str]) -> String {
+        let run_dir = self.root().join("run");
+        std::fs::create_dir_all(&run_dir).unwrap();
+        let command = args.iter().any(|a| matches!(*a, "--list" | "--check"));
         let out = Command::new(env!("CARGO_BIN_EXE_wangan-launcher"))
+            .args(command.then_some("--linux"))
             .args(args)
             .env("WANGAN_DATA", self.data())
             .env("WANGAN_COMPONENTS", self.root().join("none"))
-            .env_remove("WANGAN_LIBRARY")
+            .env("XDG_RUNTIME_DIR", run_dir)
             .env_remove("WANGAN_WINE")
             .env_remove("DISPLAY")
             .env_remove("WAYLAND_DISPLAY")
@@ -143,7 +151,10 @@ fn every_command_line_mode() {
         vec!["--game"],
         vec!["--add-files"],
         vec!["--game", "mt5", "--output"],
+        vec!["--set", "mt5"],
+        vec!["--list", "--check"],
         vec!["--list"],
+        vec!["--check"],
         vec!["--play", "mt5"],
         vec!["--library", "/no/such/folder"],
     ] {
@@ -159,7 +170,11 @@ fn every_command_line_mode() {
     out += &f.run(&["--library", &games]);
     out += &f.file("launcher.cfg");
     out += &f.run(&["--list"]);
+    out += &f.run(&["--check"]);
+    out += &f.run(&["--check", "mt6"]);
+    out += &f.run(&["--check", "mt5"]);
     out += &f.run(&["--library", &games, "--list"]);
+    out += &f.file("launcher.cfg");
     for args in [
         vec!["--add-files", "/no/such/folder"],
         vec!["--add-files", &bios],
@@ -209,9 +224,11 @@ fn every_command_line_mode() {
     out += &f.file("settings/mt3.cfg");
     out += &f.run(&["--game", "mt6rr", "--render", "native", "--deadzone", "0"]);
     out += &f.file("settings/mt6rr.cfg");
-    // the window shows the render size off for this game; the command line takes it
+    // the window shows the render size off for this game: so does the command line
     out += &f.run(&["--game", "mt5", "--render", "1920x1080"]);
     out += &f.file("settings/mt5.cfg");
+    out += &f.run(&["--set", "mt3", "--look", "steam_deck", "--deadzone=0.2"]);
+    out += &f.file("settings/mt3.cfg");
     rea_launcher::snapshot!(&format!("cli-{}.txt", host_name()), out);
 }
 
