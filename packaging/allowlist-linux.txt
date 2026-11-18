@@ -1,0 +1,25 @@
+# Every file of the Linux package (sdk/packaging/smoke-package.sh): anything
+# else fails the check, so no game file or stray build output can ship.
+wangan-launcher x
+lib/*.so* optional
+README.txt
+licenses/*
+components/art/*.jpg
+components/io/wangan-io.exe
+components/openparrot/OpenParrot64.dll
+components/openparrot/OpenParrotLoader64.exe
+components/openparrot/iDmacDrv64.dll
+components/openparrot/bngrw.dll
+components/openparrot-6rr/OpenParrot64.dll
+components/openparrot-6rr/OpenParrotLoader64.exe
+components/openparrot-6rr/iDmacDrv64.dll
+components/openparrot-6rr/bngrw.dll
+components/dxvk/d3d11.dll
+components/dxvk/dxgi.dll
+components/wal/libwal_3dxp.so
+components/wal/libopenal.so
+components/wal/gamecontrollerdb.txt
+components/wal/tmp/* empty
+components/pcsx2x6/NM00005/boot.elf
+components/pcsx2x6/app/* empty
+components/wine/* empty

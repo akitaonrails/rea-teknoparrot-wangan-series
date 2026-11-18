@@ -1,0 +1,79 @@
+name: Bug report
+description: "A game does not run as it should in the Wangan Midnight launcher."
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Never attach game files, saves or board files. Remove usernames
+        and personal paths from settings and logs.
+  - type: dropdown
+    id: game
+    attributes:
+      label: Which game?
+      options:
+        - Wangan Midnight R
+        - Wangan Midnight Maximum Tune
+        - Wangan Midnight Maximum Tune 3
+        - Wangan Midnight Maximum Tune 3DX+
+        - Wangan Midnight Maximum Tune 5
+        - Wangan Midnight Maximum Tune 5DX+
+        - Wangan Midnight Maximum Tune 6
+        - Wangan Midnight Maximum Tune 6R
+        - Wangan Midnight Maximum Tune 6RR
+        - The launcher itself
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: Where did you play?
+      options:
+        - Linux (the release package)
+        - Steam Deck (Game Mode)
+        - Steam Deck (Desktop Mode)
+        - Windows 11
+        - Windows 10
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Launcher version
+      description: The release you downloaded.
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: CPU, graphics card, controller or wheel, and screen
+      description: e.g. "Ryzen 7 7800X3D, RTX 3060, Logitech G29, 2560x1440".
+  - type: checkboxes
+    id: worked
+    attributes:
+      label: What worked?
+      description: Tick everything that worked, so we know how far the game got.
+      options:
+        - label: The launcher window opened and found the game
+        - label: The game started (attract mode showed)
+        - label: A full race could be played
+        - label: Wheel or pad (steering, pedals, buttons)
+        - label: Force feedback
+        - label: Sound and music
+        - label: Stop in the launcher (or closing the game) closed everything
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: The game's log
+      description: |
+        `~/.local/share/rea-wangan/<game>.log` on Linux, `%LOCALAPPDATA%\rea-wangan\<game>.log`
+        on Windows (and `launcher.log` beside it). Remove personal paths.
+      render: text

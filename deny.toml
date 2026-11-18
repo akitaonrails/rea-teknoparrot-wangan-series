@@ -1,0 +1,35 @@
+# cargo-deny for a rea launcher (copy to the launcher's root as deny.toml).
+# launcher-ci.yml runs `cargo deny check` against it when `audit` is on.
+
+[advisories]
+
+[licenses]
+# rea-launcher-native's `sdl` feature brings the sdl2 and sdl2-sys crates
+# (MIT). They link the SDL2 C library (zlib licence), which is not a crate:
+# a launcher that ships SDL2.dll or libSDL2 lists it in THIRD_PARTY.md.
+allow = [
+    "Apache-2.0",
+    "GPL-3.0",
+    "GPL-3.0-or-later",
+    "Apache-2.0 WITH LLVM-exception",
+    "0BSD",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    # egui's built-in fonts (epaint_default_fonts)
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+    "Unlicense",
+    "Unicode-3.0",
+    "Zlib",
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The SDK crates come from this repository, pinned to a tag in Cargo.toml.
+allow-git = ["https://github.com/akitaonrails/rea-launcher-sdk"]

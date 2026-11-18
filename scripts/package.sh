@@ -17,9 +17,11 @@
 #            dist/windows/SDL2-LICENSE.txt [WINDOWS_DIR]
 #
 # Layout: the launcher beside components/ (crates/wangan-launcher/src/paths.rs):
-# openparrot/, openparrot-6rr/, io/, art/, fonts/, and on Linux dxvk/, wal/,
-# pcsx2x6/ and wine/ (portable Wine with the FFmpeg libraries in wine/lib/ffmpeg).
-# No game file is ever packaged.
+# openparrot/, openparrot-6rr/, io/, art/, and on Linux dxvk/, wal/, pcsx2x6/
+# and wine/ (portable Wine with the FFmpeg libraries in wine/lib/ffmpeg). The
+# Barlow typefaces are in the program (rea-launcher-ui). No game file is
+# ever packaged: sdk/packaging/smoke-package.sh checks each package against
+# packaging/allowlist-<os>.txt.
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -55,7 +57,7 @@ for f in $need; do [ -f "$f" ] || die "missing $f - build it first"; done
 out=$root/dist/pkg/$name
 rm -rf "$out"
 c=$out/components
-mkdir -p "$c/openparrot" "$c/openparrot-6rr" "$c/io" "$c/art" "$c/fonts" "$out/licenses"
+mkdir -p "$c/openparrot" "$c/openparrot-6rr" "$c/io" "$c/art" "$out/licenses"
 
 # OpenParrot: our MSVC builds + iDmacDrv64.dll and bngrw.dll (OpenBanapass) from the pinned release
 opzip=$(fetch openparrot-x64)
@@ -67,7 +69,6 @@ for d in openparrot:upstream openparrot-6rr:wmmt; do
 done
 cp "$io" "$c/io/wangan-io.exe"
 cp "$root"/assets/art/*.jpg "$c/art/"
-cp "$root"/assets/fonts/* "$c/fonts/"
 
 cp "$root/packaging/README-player.txt" "$out/README.txt"
 cp "$root/LICENSE" "$out/licenses/LICENSE-GPL-3.0.txt"

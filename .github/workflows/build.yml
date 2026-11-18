@@ -1,27 +1,86 @@
-# Builds the full release packages for Linux and Windows from pinned
-# sources and pinned downloads (packaging/components.pins,
-# packaging/sources.sh). A manual run
-# uploads them as workflow artifacts;
-# pushing a tag vX.Y.Z (matching the workspace version) also publishes a
-# GitHub release with the packages, the source archive and SHA256SUMS.
-name: Release
+name: build
 
+# Checks every push (the SDK's launcher-ci: fmt, tests, clippy, deny, the
+# family rules; the Windows-target tests under Wine), and builds the full
+# packages for Linux and Windows from pinned sources and pinned downloads
+# (packaging/components.pins, packaging/sources.sh) on pushes to the release
+# branch, on tags and on a manual run. A tag vX.Y.Z (matching the workspace
+# version) publishes them with the source archive, once the checks and the
+# Wine tests passed (the SDK's launcher-release: SHA256SUMS, provenance,
+# the tag's CHANGELOG section as notes).
 on:
   push:
+    branches: [main, release]
     tags: ["v*"]
+  pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:
   contents: read
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  ci:
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-ci.yml@v0.10.0
+    with:
+      concurrency-key: linux
+      rust-target: ""
+      apt-packages: libsdl2-dev
+      shell-syntax: scripts/*.sh sdk/packaging/*.sh
+      shell-tests: ""
+      imports-check: false
+
+  # The Windows code (the direct game session, the runtime junctions) is
+  # linted for its target and its tests run under Wine, headless
+  # (STANDARDS: Windows code is run, not only linted), with the pinned SDL2
+  # MinGW package linked in. The Wine the Linux package ships (11.21):
+  # Ubuntu's Wine 9 does not follow directory junctions.
+  windows-tests:
+    # ubuntu-24.04: 26.04's wine package keeps wineserver off PATH
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: System packages
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64 lld wine wine64 wine32:i386 curl
+      - name: Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+          rustup target add x86_64-pc-windows-gnu
+      - name: Windows target links with lld
+        run: sh sdk/packaging/check-lld.sh x86_64-pc-windows-gnu
+      - name: SDL2 (pinned MinGW package)
+        run: |
+          scripts/build-launcher.sh sdl2
+          echo "SDL2_LIB=$(ls -d "$PWD"/dist/sdl2/SDL2-*/x86_64-w64-mingw32)/lib" >> "$GITHUB_ENV"
+      - name: Clippy (x86_64-pc-windows-gnu)
+        run: |
+          export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-fuse-ld=lld -L $SDL2_LIB"
+          cargo clippy --workspace --all-targets --locked --target x86_64-pc-windows-gnu -- -D warnings
+      - name: Wine 11.21 (pinned)
+        run: |
+          . sdk/packaging/pins.sh
+          PIN_FILE=packaging/components.pins
+          mkdir -p "$RUNNER_TEMP/wine"
+          tar -xJf "$(pin_fetch wine "$RUNNER_TEMP/dl")" -C "$RUNNER_TEMP/wine" --strip-components=1
+          echo "$RUNNER_TEMP/wine/bin" >> "$GITHUB_PATH"
+      - name: Tests under Wine
+        run: |
+          wine --version
+          export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-fuse-ld=lld -L $SDL2_LIB"
+          export WINEPATH="Z:$(printf '%s' "$PWD/dist/sdl2" | tr / '\\')"
+          sdk/scripts/wine-test --target x86_64-pc-windows-gnu --locked --workspace
+
   # OpenParrot64.dll + OpenParrotLoader64.exe with MSVC, as upstream's
   # appveyor.yml builds them (the repository's premake5 alpha14 writes
   # VS2017 projects; msbuild builds them Release x64 with the runner's
@@ -29,6 +88,7 @@ jobs:
   # OpenParrot (MT5-6R) and valkyrieasyraf OpenParrot_WMMT (6RR), each
   # with our patches.
   openparrot:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-2025
     timeout-minutes: 60
     steps:
@@ -74,6 +134,7 @@ jobs:
   # The Windows launcher and the I/O board: MinGW-w64 + LLD on Arch, like
   # the local `gaming` distrobox.
   windows-programs:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
     timeout-minutes: 60
@@ -91,9 +152,8 @@ jobs:
         run: |
           mkdir -p dist/windows
           cp target/x86_64-pc-windows-gnu/release/wangan-launcher.exe target/x86_64-pc-windows-gnu/release/wangan-io.exe dist/windows/
-          sdl=$(sed -n 's/^dir=//p' packaging/sdl2.pin)
           cp dist/sdl2/SDL2.dll dist/windows/
-          cp "dist/sdl2/${sdl%/*}/LICENSE.txt" dist/windows/SDL2-LICENSE.txt
+          cp dist/sdl2/SDL2-*/LICENSE.txt dist/windows/SDL2-LICENSE.txt
       - uses: actions/upload-artifact@v4
         with:
           name: windows-programs
@@ -104,6 +164,7 @@ jobs:
   # bundled Wine, on Debian bookworm (glibc 2.36) so they run on older
   # distributions too.
   linux-programs:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-24.04
     container: debian:bookworm
     timeout-minutes: 90
@@ -183,48 +244,27 @@ jobs:
           ls -l *.tar.gz *.zip
           tar -tzf WanganLauncher-*-linux-x86_64.tar.gz | grep -v "/components/wine/" | sort
           unzip -l WanganLauncher-*-windows-x86_64.zip
+          # every file is on the package's allowlist (no game file, no stray build output)
+          sh ../../sdk/packaging/smoke-package.sh WanganLauncher-*-linux-x86_64/ ../../packaging/allowlist-linux.txt
+          sh ../../sdk/packaging/smoke-package.sh WanganLauncher-*-windows-x86_64.zip ../../packaging/allowlist-windows.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: linux
-          path: dist/pkg/WanganLauncher-*-linux-x86_64.tar.gz
-          if-no-files-found: error
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows
-          path: dist/pkg/WanganLauncher-*-windows-x86_64.zip
-          if-no-files-found: error
-          compression-level: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: source
-          path: dist/pkg/WanganLauncher-*-source.tar.gz
+          name: WanganLauncher-packages
+          path: |
+            dist/pkg/WanganLauncher-*-linux-x86_64.tar.gz
+            dist/pkg/WanganLauncher-*-windows-x86_64.zip
+            dist/pkg/WanganLauncher-*-source.tar.gz
           if-no-files-found: error
           compression-level: 0
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [packages]
-    runs-on: ubuntu-24.04
+    needs: [ci, windows-tests, packages]
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v5
-      - name: Tag matches the workspace version
-        run: |
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
-          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: "{linux,windows,source}"
-          path: dist/pkg
-          merge-multiple: true
-      - name: Checksums
-        run: cd dist/pkg && sha256sum WanganLauncher-* > SHA256SUMS && cat SHA256SUMS
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" dist/pkg/WanganLauncher-* dist/pkg/SHA256SUMS \
-            --repo "$GITHUB_REPOSITORY" --title "Wangan Midnight launcher ${GITHUB_REF_NAME#v}" \
-            --notes-file packaging/RELEASE_NOTES.md
+      id-token: write
+      attestations: write
+    uses: akitaonrails/rea-launcher-sdk/.github/workflows/launcher-release.yml@v0.10.0
+    with:
+      package: wangan-launcher
+      artifact-pattern: WanganLauncher-*

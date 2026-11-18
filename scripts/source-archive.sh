@@ -30,7 +30,7 @@ cat > "$w/$name/README-SOURCE.txt" <<TXT
 Wangan Midnight launcher $version: corresponding source
 
 launcher/                  this repository at the release commit
-                           (build: launcher/README.md, launcher/.github/workflows/release.yml)
+                           (build: launcher/README.md, launcher/.github/workflows/build.yml)
 upstream/openparrot/       teknogods/OpenParrot $(sed -n 's/^OPENPARROT_COMMIT=//p' "$root/packaging/sources.sh")
                            + launcher/patches/openparrot/*.patch (applied)
 upstream/openparrot-wmmt/  valkyrieasyraf/OpenParrot_WMMT $(sed -n 's/^OPENPARROT_WMMT_COMMIT=//p' "$root/packaging/sources.sh")
