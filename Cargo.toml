@@ -11,10 +11,10 @@ repository = "https://github.com/akitaonrails/rea-teknoparrot-wangan-series"
 
 [workspace.dependencies]
 # The shared launcher SDK, pinned to a release tag (rea-launcher-sdk docs/playbooks/sdk-change.md).
-rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.10.0" }
-rea-launcher-native = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.10.0", default-features = false, features = ["child", "sdl"] }
-rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.10.0" }
-rea-launcher-win32 = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.10.0" }
+rea-launcher = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.11.1" }
+rea-launcher-native = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.11.1", default-features = false, features = ["child", "sdl"] }
+rea-launcher-ui = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.11.1" }
+rea-launcher-win32 = { git = "https://github.com/akitaonrails/rea-launcher-sdk", tag = "v0.11.1" }
 
 [profile.release]
 opt-level = "s"

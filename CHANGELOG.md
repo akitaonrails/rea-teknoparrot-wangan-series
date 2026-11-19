@@ -6,6 +6,11 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Changed
+
+- Updated rea-launcher-sdk to v0.11.1: PXN wheels (the VD6 and the older
+  Lite Star models) are wheels, and the Controls page can test the pad.
+
 ## 0.3.1 - 2026-11-18
 
 The first published release with everything in 0.3.0 below: 0.3.0 was
