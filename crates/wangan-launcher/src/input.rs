@@ -14,14 +14,34 @@ use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
 
+use rea_launcher::hub::HubPaths;
+use rea_launcher::hub::bindings::Bindings;
 use rea_launcher_native::feeder::{Frame, InputService, Wire};
 use wangan_core::input::{Button, Translator, default_pad_map};
 use wangan_jvs::controls::Cabinet;
 use wangan_jvs::shared::QUIT;
 
-/// The input thread with the cabinet's pad layout; a wheel's paddles shift.
-pub fn service() -> InputService {
-    InputService::start(default_pad_map(), Some((Button::GearUp, Button::GearDown)))
+/// The player's pad layout: the cabinet's, with the changes saved in the
+/// data folder's `controls.cfg`. A file that can't be read leaves the
+/// cabinet's layout, and `warn` hears why.
+pub fn bindings(paths: &HubPaths, warn: impl FnOnce(&str)) -> Bindings<Button> {
+    let file = paths.controls_file();
+    Bindings::load(&file, default_pad_map()).unwrap_or_else(|e| {
+        warn(&format!(
+            "{}: {e}; the default pad layout is used",
+            file.display()
+        ));
+        Bindings::new(default_pad_map())
+    })
+}
+
+/// The input thread with the player's pad layout `bindings`; a wheel's
+/// paddles shift.
+pub fn service(bindings: &Bindings<Button>) -> InputService {
+    InputService::start(
+        bindings.map().clone(),
+        Some((Button::GearUp, Button::GearDown)),
+    )
 }
 
 /// A game's input block: the cabinet's controls (the gear kept between

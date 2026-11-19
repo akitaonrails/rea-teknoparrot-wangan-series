@@ -531,10 +531,19 @@ fn a_pad_drives_every_page() {
     press(&mut h, pad::DPAD_RIGHT);
     press(&mut h, pad::A);
     assert_eq!(at(&h), (Page::Controls, Focus::Tab(Tab::Controls)));
+    // the Controls page keeps the pad's presses for its live check (#1)
+    press(&mut h, pad::RIGHT_SHOULDER);
+    assert_eq!(at(&h).0, Page::Controls);
+    // Back and Start together give it to the menu: the first binding row
+    press(&mut h, pad::BACK | pad::START);
+    assert_eq!(at(&h), (Page::Controls, Focus::Binding(0)));
     press(&mut h, pad::RIGHT_SHOULDER);
     assert_eq!(at(&h), (Page::Settings, Focus::Item(0)));
     press(&mut h, pad::LEFT_SHOULDER);
     assert_eq!(at(&h).0, Page::Controls);
+    press(&mut h, pad::B);
+    assert_eq!(at(&h).0, Page::Controls, "testing again");
+    press(&mut h, pad::BACK | pad::START);
     press(&mut h, pad::B);
     assert_eq!(at(&h), (Page::Hub, Focus::Tile));
     // Y (the View button) opens the selected game's settings
@@ -902,7 +911,8 @@ fn rescan_reads_the_folders_again() {
 
 #[test]
 fn the_controls_page_shows_the_pad_layout_and_the_live_buttons() {
-    let v = controls_view(&two_controllers(), 4);
+    let bindings = Bindings::new(wangan_core::input::default_pad_map());
+    let v = controls_view(&two_controllers(), 4, &bindings);
     assert_eq!(v.lines, [("Gear".to_string(), "4".to_string())]);
     assert_eq!(v.devices[0].name, "Logitech G29 Driving Force Racing Wheel");
     assert!(
@@ -912,6 +922,56 @@ fn the_controls_page_shows_the_pad_layout_and_the_live_buttons() {
     );
     assert!(v.buttons.iter().any(|b| b.key == "intrude" && b.pressed));
     assert!(v.buttons.iter().any(|b| b.key == "view" && !b.pressed));
+}
+
+/// The Controls page with a fake pad whose held input is `held`.
+fn hold(h: &mut Hub, held: Option<PadInput>) {
+    h.state_mut().backend_mut().fake.snapshot = Some(Snapshot {
+        held,
+        ..Snapshot::default()
+    });
+    h.run_steps(2);
+}
+
+#[test]
+fn testing_the_pad_never_leaves_the_controls_page() {
+    // #1: pressing the pad's buttons to test them switched the page
+    let t = tempfile::tempdir().unwrap();
+    let mut h = hub(t.path(), SIZE_720, &[]);
+    open_tab(&mut h, Tab::Controls);
+    hold(&mut h, None);
+    assert!(says(&h, "only light up here"));
+    for nav in [pad::RIGHT_SHOULDER, pad::B, pad::START, pad::LEFT_SHOULDER] {
+        h.state_mut().backend_mut().fake.snapshot = Some(Snapshot {
+            nav,
+            ..Snapshot::default()
+        });
+        h.run_steps(2);
+        hold(&mut h, None);
+        assert_eq!(at(&h).0, Page::Controls, "{nav:#x}");
+    }
+}
+
+#[test]
+fn a_changed_button_is_saved_and_read_at_the_next_start() {
+    let t = tempfile::tempdir().unwrap();
+    let mut h = hub(t.path(), SIZE_720, &[]);
+    open_tab(&mut h, Tab::Controls);
+    hold(&mut h, None);
+    click_button(&mut h, "View change: Y. Change");
+    assert!(says(&h, "Press the pad button or trigger for View change"));
+    hold(&mut h, Some(PadInput::B));
+    hold(&mut h, None);
+    assert!(says(&h, "View change: B. Saved."));
+    let paths = paths_in(t.path());
+    let text = std::fs::read_to_string(paths.controls_file()).unwrap();
+    assert!(text.contains("pad_view = b"), "{text}");
+    let next = crate::input::bindings(&paths, |w| panic!("{w}"));
+    assert!(next.layout().contains(&("View change".into(), "B".into())));
+    click_button(&mut h, "Reset");
+    assert!(says(&h, "Back to the launcher's pad layout. Saved."));
+    let back = crate::input::bindings(&paths, |w| panic!("{w}"));
+    assert!(!back.changed());
 }
 
 #[test]

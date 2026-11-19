@@ -14,11 +14,12 @@ use std::time::Duration;
 use eframe::egui::Color32;
 use rea_launcher::catalog::{Host, Support};
 use rea_launcher::cfg::OptionSpec;
+use rea_launcher::hub::bindings::Bindings;
 use rea_launcher::hub::{HubConfig, HubPaths, Input, Need, display_path, expand_home};
 use rea_launcher::library::{Found as Known, HashCache, Scan};
 use rea_launcher::log::Log;
 use rea_launcher::pad::PadNav;
-use rea_launcher::wheel::{Action, Control};
+use rea_launcher::wheel::{Control, PadInput};
 use rea_launcher_native::feeder::{Command, InputService, Snapshot};
 use rea_launcher_ui::hub::{
     self, ButtonView, Check, ControlsView, Device, ExtraPage, Found, HubBackend, HubGame,
@@ -26,7 +27,7 @@ use rea_launcher_ui::hub::{
 };
 use wangan_core::catalog::{self, GAMES, Game};
 use wangan_core::firmware::{self, FileState, FirmwareSet};
-use wangan_core::input::{Button, Translator, default_pad_map};
+use wangan_core::input::{Button, Translator};
 use wangan_core::settings::Settings;
 
 use crate::paths;
@@ -82,7 +83,11 @@ pub fn spec(paths: HubPaths) -> HubSpec {
 
 /// Opens the window.
 pub fn run(paths: HubPaths) -> Result<(), String> {
-    let backend = Wangan::new(paths.clone(), Some(crate::input::service()));
+    let log = Log::new(paths.log());
+    let bindings = crate::input::bindings(&paths, |w| log.warn(w));
+    let service = crate::input::service(&bindings);
+    let mut backend = Wangan::new(paths.clone(), Some(service));
+    backend.bindings = bindings;
     hub::run(spec(paths), backend)
 }
 
@@ -125,6 +130,8 @@ pub struct Wangan {
     pad: PadNav,
     /// The cabinet's gear, for the Controls page.
     shifter: RefCell<Translator>,
+    /// The player's pad layout (`controls.cfg`).
+    bindings: Bindings<Button>,
     /// The tests' controllers, scan and next session.
     #[cfg(test)]
     fake: tests::Fake,
@@ -143,6 +150,7 @@ impl Wangan {
             input,
             pad: PadNav::with_repeat(Duration::from_millis(400), Duration::from_millis(120)),
             shifter: RefCell::default(),
+            bindings: Bindings::new(wangan_core::input::default_pad_map()),
             #[cfg(test)]
             fake: tests::Fake::default(),
             paths,
@@ -169,6 +177,21 @@ impl Wangan {
     /// couldn't read go to `launcher.log`.
     fn settings(&self, i: usize, screen: Option<(u32, u32)>) -> Result<Settings, String> {
         crate::load_settings(&self.paths, &GAMES[i], screen, |w| self.log.warn(w))
+    }
+
+    /// Hands the changed pad layout to the input thread; what the
+    /// Controls page says (a save that failed also goes to `launcher.log`).
+    fn bindings_changed(&self, done: Result<String, String>) -> Note {
+        if let Some(i) = &self.input {
+            i.set_pad_map(self.bindings.map().clone());
+        }
+        match done {
+            Ok(said) => Note::ok(said),
+            Err(e) => {
+                self.log.error(&e);
+                Note::error(e)
+            }
+        }
     }
 
     fn snapshot(&self) -> Snapshot {
@@ -226,23 +249,6 @@ impl Wangan {
     }
 }
 
-/// The pad layout the Controls page lists.
-fn pad_layout() -> Vec<(String, String)> {
-    let map = default_pad_map();
-    let mut rows: Vec<(String, String)> = vec![
-        ("Steer".into(), "Left stick".into()),
-        ("Gas".into(), map.describe(Action::Accelerate)),
-        ("Brake".into(), map.describe(Action::Brake)),
-    ];
-    for b in Button::ALL {
-        let keys = map.describe(Action::Press(*b));
-        if keys != "-" {
-            rows.push((b.label().to_string(), keys));
-        }
-    }
-    rows
-}
-
 /// A button's name on the live check (the full one is in the pad layout).
 fn short_label(b: Button) -> &'static str {
     match b {
@@ -261,8 +267,8 @@ fn short_label(b: Button) -> &'static str {
 }
 
 /// What the Controls page shows of the input thread's `snap`, with the
-/// cabinet's current `gear`.
-fn controls_view(snap: &Snapshot, gear: u8) -> ControlsView {
+/// cabinet's current `gear` and the player's pad layout.
+fn controls_view(snap: &Snapshot, gear: u8, bindings: &Bindings<Button>) -> ControlsView {
     let c = snap.controls;
     ControlsView {
         error: snap.error.clone(),
@@ -275,7 +281,7 @@ fn controls_view(snap: &Snapshot, gear: u8) -> ControlsView {
             })
             .collect(),
         driver: snap.driver,
-        layout: pad_layout(),
+        layout: bindings.layout(),
         layout_note: "A wheel steers with its wheel and pedals, and its paddles shift.".into(),
         steer: c.steer,
         accel: c.accel,
@@ -427,12 +433,33 @@ impl HubBackend for Wangan {
     fn controls(&self) -> ControlsView {
         let snap = self.snapshot();
         let gear = self.shifter.borrow_mut().step(&snap.controls).gear;
-        controls_view(&snap, gear)
+        controls_view(&snap, gear, &self.bindings)
     }
 
     fn pad(&mut self) -> Vec<Input> {
         let bits = self.snapshot().nav;
         Input::from_pad(&mut self.pad, bits)
+    }
+
+    fn pad_now(&self) -> Option<(u16, Option<PadInput>)> {
+        let snap = self.snapshot();
+        Some((snap.nav, snap.held))
+    }
+
+    fn rebindable(&self) -> Vec<usize> {
+        self.bindings.rebindable()
+    }
+
+    fn rebind(&mut self, row: usize, input: PadInput) -> Note {
+        let file = self.paths.controls_file();
+        let done = self.bindings.rebind_saved(row, input, &file);
+        self.bindings_changed(done)
+    }
+
+    fn reset_bindings(&mut self) -> Note {
+        let file = self.paths.controls_file();
+        let done = self.bindings.reset_saved(&file);
+        self.bindings_changed(done)
     }
 
     fn extra(&self, game: usize) -> Option<ExtraPage> {

@@ -3,15 +3,16 @@ Label = "Controls"
 Label = "Turn the wheel or move the stick, press the pedals and buttons: the bars should follow."
 Label = "Controllers can't be read: controllers unavailable: no SDL. Plug the controller in again, then restart the launcher."
 Label = "Steer: Left stick"
-Label = "Gas: RT"
-Label = "Brake: LT"
-Label = "Shift up: RB"
-Label = "Shift down: LB"
-Label = "View change: Y"
-Label = "Intrude (accept a challenger): X"
-Label = "Insert card: BACK"
-Label = "Test menu enter: A"
-Label = "Insert coin: START"
+Button "Gas: RT. Change" @76,460 231x24
+Button "Brake: LT. Change" @76,488 231x24
+Button "Shift up: RB. Change" @76,516 231x24
+Button "Shift down: LB. Change" @76,544 231x24
+Button "View change: Y. Change" @76,572 231x24
+Button "Intrude (accept a challenger): X. Change" @319,432 231x24
+Button "Insert card: BACK. Change" @319,460 231x24
+Button "Test menu enter: A. Change" @319,488 231x24
+Button "Insert coin: START. Change" @319,516 231x24
+Button "Reset" @442,598 120x38
 Meter "Steering" = "0%" #0
 Meter "Gas" = "0%" #0
 Meter "Brake" = "0%" #0
@@ -27,6 +28,8 @@ Label = "Menu up: released"
 Label = "Menu down: released"
 Label = "Enter: released"
 Label = "Insert coin: released"
+Button "Test the pad" (The pad is being tested.) [disabled] @626,598 190x38
+Label = "Your pad's buttons only light up here now. Press Back and Start together to move through the menu with it."
 Tab "Games" [off] @326,17 78x38
 Tab "Controls" [on] @412,17 91x38
 Tab "Settings" [off] @511,17 91x38
@@ -36,15 +39,16 @@ Label = "Controls"
 Label = "Turn the wheel or move the stick, press the pedals and buttons: the bars should follow."
 Label = "Controllers can't be read: controllers unavailable: no SDL. Plug the controller in again, then restart the launcher."
 Label = "Steer: Left stick"
-Label = "Gas: RT"
-Label = "Brake: LT"
-Label = "Shift up: RB"
-Label = "Shift down: LB"
-Label = "View change: Y"
-Label = "Intrude (accept a challenger): X"
-Label = "Insert card: BACK"
-Label = "Test menu enter: A"
-Label = "Insert coin: START"
+Button "Gas: RT. Change" @84,511 224x27
+Button "Brake: LT. Change" @84,542 224x27
+Button "Shift up: RB. Change" @84,573 224x27
+Button "Shift down: LB. Change" @84,604 224x27
+Button "View change: Y. Change" @84,636 224x27
+Button "Intrude (accept a challenger): X. Change" @322,480 224x27
+Button "Insert card: BACK. Change" @322,511 224x27
+Button "Test menu enter: A. Change" @322,542 224x27
+Button "Insert coin: START. Change" @322,573 224x27
+Button "Reset" @426,664 133x42
 Meter "Steering" = "0%" #0
 Meter "Gas" = "0%" #0
 Meter "Brake" = "0%" #0
@@ -60,6 +64,8 @@ Label = "Menu up: released"
 Label = "Menu down: released"
 Label = "Enter: released"
 Label = "Insert coin: released"
+Button "Test the pad" (The pad is being tested.) [disabled] @630,664 211x42
+Label = "Your pad's buttons only light up here now. Press Back and Start together to move through the menu with it."
 Tab "Games" [off] @362,19 86x42
 Tab "Controls" [on] @457,19 101x42
 Tab "Settings" [off] @568,19 101x42
