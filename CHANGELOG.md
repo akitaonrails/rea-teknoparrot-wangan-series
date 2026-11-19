@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.5.0 - 2026-11-19
+
 ### Added
 
 - Cards and saves now live in one backup-friendly folder per game
