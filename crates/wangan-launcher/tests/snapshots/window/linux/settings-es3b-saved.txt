@@ -16,7 +16,9 @@ Button "Sharpness: next" @818,397 28x40
 Button "Fullscreen" = "On" (Fill the whole screen, or play in a window.) @60,446 796x58
 Button "Fullscreen: previous" @572,455 28x40
 Button "Fullscreen: next" @818,455 28x40
-Button "Game render size" = "1360 × 768" (This game draws at its own size; the upscaler sizes it to your screen.) [disabled] @60,504 796x58
+Button "Game render size" = "1920 × 1080 (1080p)" (The size the game draws at. Bigger is sharper and needs a stronger GPU.) @60,504 796x58
+Button "Game render size: previous" @572,513 28x40
+Button "Game render size: next" @818,513 28x40
 Button "Dead zone" = "6%" (How far a controller stick moves before the car starts to steer.) @60,562 796x58
 Button "Dead zone: previous" @572,571 28x40
 Button "Dead zone: next" @818,571 28x40
@@ -47,7 +49,9 @@ Button "Sharpness: next" @767,441 31x44
 Button "Fullscreen" = "On" (Fill the whole screen, or play in a window.) @67,496 742x64
 Button "Fullscreen: previous" @493,506 31x44
 Button "Fullscreen: next" @767,506 31x44
-Button "Game render size" = "1360 × 768" (This game draws at its own size; the upscaler sizes it to your screen.) [disabled] @67,560 742x64
+Button "Game render size" = "1920 × 1080 (1080p)" (The size the game draws at. Bigger is sharper and needs a stronger GPU.) @67,560 742x64
+Button "Game render size: previous" @493,570 31x44
+Button "Game render size: next" @767,570 31x44
 Button "Dead zone" = "6%" (How far a controller stick moves before the car starts to steer.) @67,624 742x64
 Button "Dead zone: previous" @493,634 31x44
 Button "Dead zone: next" @767,634 31x44

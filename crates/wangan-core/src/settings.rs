@@ -87,13 +87,20 @@ impl Look {
             .and_then(display::landscape)
             .map_or(Size::new(1920, 1080), |(w, h)| Size::new(w, h));
         let native = game.native;
+        // 6RR's cabinet panel is 1360x768 (approx 16:9), so fit against 16:9
+        // for Recommended / Steam Deck to avoid odd widths like 3825x2160.
+        let aspect = if game.id == crate::catalog::GameId::Mt6rr {
+            Size::new(16, 9)
+        } else {
+            native
+        };
         let (render, output, upscaler) = match self {
             Look::Original => (native, screen, Upscaler::Linear),
-            Look::Recommended => (fit(native, screen), screen, Upscaler::Fsr),
+            Look::Recommended => (fit(aspect, screen), screen, Upscaler::Fsr),
             Look::SteamDeck => {
                 let (w, h) = display::STEAM_DECK_SCREEN;
                 let deck = Size::new(w, h);
-                (fit(native, deck), deck, Upscaler::Linear)
+                (fit(aspect, deck), deck, Upscaler::Linear)
             }
         };
         s.render = (!game.render_fixed()).then_some(render);
@@ -455,7 +462,24 @@ mod tests {
         );
         assert_eq!(s.look, Some(Look::Original));
         Look::Recommended.apply(&mut s, game(GameId::Mt6), Some((2560, 1440)));
-        assert_eq!(s.render, None, "an ES3B game draws at its own size");
+        assert_eq!(
+            s.render, None,
+            "an ES3B game without a patch draws at its own size"
+        );
+        Look::Recommended.apply(&mut s, game(GameId::Mt6rr), Some((3840, 2160)));
+        assert_eq!(
+            (s.render, s.output, s.upscaler),
+            (
+                Some(Size::new(3840, 2160)),
+                Size::new(3840, 2160),
+                Upscaler::Fsr
+            ),
+            "6RR draws at 4K on a 4K screen via OpenParrot_WMMT"
+        );
+        Look::Original.apply(&mut s, game(GameId::Mt6rr), Some((3840, 2160)));
+        assert_eq!(s.render, Some(Size::new(1360, 768)));
+        Look::SteamDeck.apply(&mut s, game(GameId::Mt6rr), Some((3840, 2160)));
+        assert_eq!(s.render, Some(Size::new(1280, 720)));
         assert_eq!(Look::recommended(Some((800, 1280))), Look::SteamDeck);
         assert_eq!(Look::recommended(None), Look::Recommended);
     }

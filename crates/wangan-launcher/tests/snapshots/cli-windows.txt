@@ -820,42 +820,43 @@ render = 1920x1080
 deadzone = 0.12
 
 $ wangan-launcher --game mt6rr --render native --deadzone 0
-exit Some(2)
+exit Some(0)
 -- stdout
 -- stderr
-mt6rr doesn't take --render: it has no such setting
-
-wangan-launcher — Wangan Midnight arcade series
-
-  wangan-launcher                          open the window (games, settings, controls)
-  wangan-launcher --library <folder>       add a folder with your games (repeatable)
-  wangan-launcher --list                   list the games found and their state
-  wangan-launcher --check [<game>]         check a game (or all) can start, without starting
-  wangan-launcher --play <game> [options]  start a game (wangan-r, mt1, mt3, mt3dxp, mt5, mt5dxp, mt6, mt6r, mt6rr)
-  wangan-launcher --set <game> <options>   save options for a game without starting it (also --game)
-
-Options (saved in that game's settings):
-  --look original|recommended|steam_deck  Look
-  --output <WxH>                          Output size (Linux helper)
-  --upscaler fsr|nis|linear|nearest       Upscaler (Linux helper)
-  --sharpness <0-20>                      Sharpness (Linux helper)
-  --fullscreen on|off                     Fullscreen (Linux helper)
-  --render <WxH|native>                   Game render size
-  --deadzone <0.00-0.30>                  Dead zone
-
-Test options for --play:
-  --headless               run in an invisible display
-  --no-input               no controller input
-  --input-script <file>    timed inputs, into the input block (not Wangan R)
-  --seconds <n>            stop the game after n seconds
-
-  wangan-launcher --help                   this text
-
-Board files:
-  wangan-launcher --add-files <path>  look in a folder or zip for the files Wangan Midnight R and Maximum Tune need
-
 
 == <tmp>/data/settings/mt6rr.cfg
+# Settings for one game of the Wangan Midnight launcher.
+# Every key is also a command-line option: render = 2560x1440 is --set
+# <game> --render 2560x1440 (or --play <game> --render 2560x1440).
+
+# Sets the picture at once: the game's own, sharper for your screen, or for
+# the Steam Deck. Options set after it win.
+# Values: original, recommended or steam_deck.
+#look =
+
+# The size of the picture on your screen. Pick your screen's size.
+# Values: WIDTHxHEIGHT.
+#output = 3840x2160
+
+# How the game's picture is stretched to the output size.
+# Values: fsr, nis, linear or nearest.
+#upscaler =
+
+# How crisp the upscaler makes edges. 0 is the sharpest.
+# Values: 0 to 20.
+#sharpness =
+
+# Fill the whole screen, or play in a window.
+# Values: on or off.
+#fullscreen =
+
+# The size the game draws at. Bigger is sharper and needs a stronger GPU.
+# Values: WIDTHxHEIGHT or native.
+render = native
+
+# How far a controller stick moves before the car starts to steer.
+# Values: 0.00 to 0.30.
+deadzone = 0.00
 
 $ wangan-launcher --game mt5 --render 1920x1080
 exit Some(2)

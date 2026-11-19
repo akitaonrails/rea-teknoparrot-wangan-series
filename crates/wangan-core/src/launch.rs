@@ -94,6 +94,44 @@ fn teknoparrot_ini(id: GameId) -> Option<&'static str> {
     })
 }
 
+/// The render size an ES3B game draws at. Only 6RR (OpenParrot_WMMT's
+/// `[Resolution]` patch) honours a custom size; the other ES3B titles stay
+/// at 1360×768.
+fn es3b_render(game: &Game, s: &Settings, host: &Host) -> Size {
+    if game.render_fixed() {
+        return ES3B_SIZE;
+    }
+    match host {
+        Host::Linux { .. } => s.render.unwrap_or(s.output),
+        Host::Windows => s.render.unwrap_or(ES3B_SIZE),
+    }
+}
+
+/// `teknoparrot.ini` for an ES3B game, with 6RR's resolution keys updated
+/// to `render`.
+fn es3b_ini(id: GameId, render: Size) -> Option<String> {
+    let raw = teknoparrot_ini(id)?;
+    if id != GameId::Mt6rr {
+        return Some(raw.to_string());
+    }
+    let custom = u8::from(render != ES3B_SIZE);
+    Some(
+        raw.replace(
+            "Use Custom Resolution=0",
+            &format!("Use Custom Resolution={custom}"),
+        )
+        .replace(
+            "Resolution Width=1360",
+            &format!("Resolution Width={}", render.w),
+        )
+        .replace(
+            "Resolution Height=768",
+            &format!("Resolution Height={}", render.h),
+        )
+        .replace("RES=1360x768", &format!("RES={}x{}", render.w, render.h)),
+    )
+}
+
 /// WanganArcadeLoader's `config.toml`. The dongle serial is the one the
 /// loader ships in its own template.
 pub fn wal_config(render: Size, deadzone: f32) -> String {
@@ -148,7 +186,8 @@ pub const ES3B_SIZE: Size = Size::new(1360, 768);
 /// through the loader (MT6, 6RR), then the game through the loader. Full
 /// paths, because Windows looks for a program beside the launcher, not in
 /// the runtime. No gamescope: the game sets its own screen mode.
-fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
+fn plan_es3b_windows(game: &Game, rt: &Path, s: &Settings) -> Option<Plan> {
+    let render = es3b_render(game, s, &Host::Windows);
     let run = |program: &str, args: Vec<String>| Command {
         program: native_path(&rt.join(program)),
         args,
@@ -174,10 +213,7 @@ fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
         ));
     }
     Some(Plan {
-        files: vec![(
-            rt.join("teknoparrot.ini"),
-            teknoparrot_ini(game.id)?.to_string(),
-        )],
+        files: vec![(rt.join("teknoparrot.ini"), es3b_ini(game.id, render)?)],
         helpers,
         game: run(
             "OpenParrotLoader64.exe",
@@ -188,7 +224,7 @@ fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
         ),
         picture: None,
         wine_prefix: None,
-        game_size: ES3B_SIZE,
+        game_size: render,
     })
 }
 
@@ -206,7 +242,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
         Host::Linux { wine, wine_env } => (wine.as_str(), wine_env.as_slice()),
         Host::Windows => {
             return match game.route {
-                Route::Es3b => plan_es3b_windows(game, rt),
+                Route::Es3b => plan_es3b_windows(game, rt, s),
                 // Linux programs (catalog::N2_LINUX_ONLY), and the blocked routes
                 _ => None,
             };
@@ -214,6 +250,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
     };
     match game.route {
         Route::Es3b => {
+            let render = es3b_render(game, s, host);
             let exe = es3b_exe(game.id);
             let mut wine_env = vec![
                 (
@@ -250,10 +287,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                 });
             }
             Some(Plan {
-                files: vec![(
-                    rt.join("teknoparrot.ini"),
-                    teknoparrot_ini(game.id)?.to_string(),
-                )],
+                files: vec![(rt.join("teknoparrot.ini"), es3b_ini(game.id, render)?)],
                 helpers,
                 game: Command {
                     program: wine.into(),
@@ -265,9 +299,9 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
                     env: wine_env,
                     cwd: rt.to_path_buf(),
                 },
-                picture: Some(s.picture(ES3B_SIZE)),
+                picture: Some(s.picture(render)),
                 wine_prefix: Some(prefix.to_path_buf()),
-                game_size: ES3B_SIZE,
+                game_size: render,
             })
         }
         Route::NativeN2 => {
@@ -425,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn six_rr_also_starts_amauthd_first() {
+    fn six_rr_also_starts_amauthd_first_and_writes_its_render_size() {
         let p = plan(
             game(GameId::Mt6rr),
             Path::new("/rt/mt6rr"),
@@ -435,7 +469,27 @@ mod tests {
         .unwrap();
         assert_eq!(p.helpers.len(), 2);
         assert!(p.helpers[1].args[2].ends_with(r"AMCUS\AMAuthd.exe"));
-        assert!(p.files[0].1.contains("[Resolution]\nRES=1360x768"));
+        // unset render follows output (3840x2160 by default)
+        assert_eq!(p.game_size, Size::new(3840, 2160));
+        assert!(p.files[0].1.contains("Use Custom Resolution=1"));
+        assert!(p.files[0].1.contains("Resolution Width=3840"));
+        assert!(p.files[0].1.contains("Resolution Height=2160"));
+        assert!(p.files[0].1.contains("[Resolution]\nRES=3840x2160"));
+
+        let orig = Settings {
+            render: Some(ES3B_SIZE),
+            ..Settings::default()
+        };
+        let p_orig = plan(
+            game(GameId::Mt6rr),
+            Path::new("/rt/mt6rr"),
+            Path::new("/pfx"),
+            &orig,
+        )
+        .unwrap();
+        assert_eq!(p_orig.game_size, ES3B_SIZE);
+        assert!(p_orig.files[0].1.contains("Use Custom Resolution=0"));
+        assert!(p_orig.files[0].1.contains("[Resolution]\nRES=1360x768"));
     }
 
     #[test]

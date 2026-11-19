@@ -6,6 +6,13 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Added
+
+- Maximum Tune 6RR now draws at your chosen render size (4K on a 4K
+  screen with the Recommended look, or any size you pick in Settings /
+  `--render`) through OpenParrot_WMMT's `[Resolution]` patch instead of
+  staying at 1360×768 and relying on gamescope upscaling.
+
 ## 0.4.1 - 2026-11-19
 
 ### Fixed

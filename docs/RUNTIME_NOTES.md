@@ -370,3 +370,19 @@ the MT6 run), box gamescope 3.17 on an RTX 5090:
 
 The `SIGSEGV` in both exit statuses is gamescope's own crash on its way
 out after the TERM (see above), not the game.
+
+## 6RR native 4K (2026-11-19)
+
+Headless, silent (PipeWire null sink), `WanganLauncher-0.4.1-linux-x86_64`
+components on the RTX 5090:
+
+- **6RR** (`OpenParrot_WMMT`, `[Resolution] RES=3840x2160` +
+  `[Graphics] Use Custom Resolution=1`, gamescope `-w 3840 -h 2160 -W 3840 -H 2160`):
+  DXVK reports `Setting display mode: 3840x2160@60` and swapchain
+  `Buffer size: 3840x2160`; `wangan-io` polled steadily for 35 s, clean
+  exit, 0 leftover processes.
+- **6R** (upstream `OpenParrot`, same `Use Custom Resolution=1` /
+  `[Resolution] RES=3840x2160`): DXVK still reports `Setting display mode:
+  1368x768@60` (upstream OpenParrot has no resolution patch for 6R).
+  6R–5 stay at 1360×768 with gamescope upscaling; `render` is wired for
+  6RR (and the N2 games).
