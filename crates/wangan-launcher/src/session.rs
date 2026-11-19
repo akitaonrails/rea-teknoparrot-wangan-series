@@ -33,6 +33,7 @@ use rea_launcher_native::supervise::{self, Feed, Hold, Log, Options, Outcome, Wa
 use wangan_core::catalog::{self, Game, Route, Support};
 use wangan_core::launch::{self, Host, Plan};
 use wangan_core::runtime;
+use wangan_core::saves;
 use wangan_core::settings::Settings;
 use wangan_core::sys246;
 use wangan_jvs::controls::Cabinet;
@@ -141,6 +142,18 @@ pub fn prepare(
     )
     .with_context(|| format!("reading {}", entry.dir.display()))?;
     linkfarm::apply(&rt, &ops, Occupied::Keep).context("building the runtime folder")?;
+    let saves_dir = paths::saves(paths, game.slug);
+    let synced =
+        saves::sync_before(game, &rt, &saves_dir).context("syncing card and save files")?;
+    if !synced.is_empty() {
+        say_launcher(
+            paths,
+            &format!(
+                "saves ({}): -> runtime {:?}, -> saves {:?}",
+                game.slug, synced.to_runtime, synced.to_saves
+            ),
+        );
+    }
     #[cfg(unix)]
     if game.route == Route::NativeN2 {
         let libso = runtime::plan_libso(&entry.dir.join("libso"), &rt.join("libso"))?;
@@ -191,13 +204,16 @@ fn prepare_sys246(paths: &HubPaths, game: &Game, entry: &Entry<Game>, rt: &Path)
             fsx::write_atomic(&to, fs::read(fw.join(f.name))?)?;
         }
     }
-    let zip = entry.dir.join(game.main_file);
-    let card = sys246::dongle_from_zip(&zip)
-        .with_context(|| format!("making the dongle card from {}", zip.display()))?;
     let card_file = data
         .join("memcards")
         .join(format!("{}.ps2", sys246::GAME_ID));
-    Ok(fsx::write_atomic(&card_file, card)?)
+    if !card_file.is_file() {
+        let zip = entry.dir.join(game.main_file);
+        let card = sys246::dongle_from_zip(&zip)
+            .with_context(|| format!("making the dongle card from {}", zip.display()))?;
+        fsx::write_atomic(&card_file, card)?;
+    }
+    Ok(())
 }
 
 /// How this launcher starts the Windows games: directly on Windows; on
@@ -531,6 +547,19 @@ pub fn run(
         None => run_direct(p, &file, feed, options(stop, &log, sink), &log)?,
     };
     say_launcher(paths, &format!("{} ended: {}", game.slug, outcome.status));
+    let saves_dir = paths::saves(paths, game.slug);
+    match saves::sync_after(game, &p.runtime, &saves_dir) {
+        Ok(copied) if !copied.is_empty() => {
+            say_launcher(paths, &format!("saved ({}): {:?}", game.slug, copied));
+        }
+        Ok(_) => {}
+        Err(e) => {
+            say_launcher(
+                paths,
+                &format!("warning: couldn't sync saves for {}: {e}", game.slug),
+            );
+        }
+    }
     if let Some(why) = didnt_start(&outcome, &fs::read_to_string(&log_path).unwrap_or_default()) {
         bail!("{why}");
     }

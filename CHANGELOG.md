@@ -8,6 +8,12 @@ All notable changes to this launcher. The format follows
 
 ### Added
 
+- Cards and saves now live in one backup-friendly folder per game
+  (`saves/<game>/` inside the data folder), mirrored with each game's
+  runtime before launch and after exit (older backups restored into
+  `saves/<game>/` are kept, crashes recover on next launch, and
+  `card.ini` is seeded once for ES3B titles; Wangan Midnight R's card
+  is preserved across launches instead of reset).
 - Maximum Tune 6RR now draws at your chosen render size (4K on a 4K
   screen with the Recommended look, or any size you pick in Settings /
   `--render`) through OpenParrot_WMMT's `[Resolution]` patch instead of

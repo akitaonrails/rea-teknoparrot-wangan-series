@@ -2,8 +2,9 @@
 //!
 //! - data (`$WANGAN_DATA`, else on Linux `$XDG_DATA_HOME/rea-wangan` or
 //!   `~/.local/share/rea-wangan`, on Windows `%LOCALAPPDATA%\rea-wangan`):
-//!   `launcher.cfg`, `settings/`, `runtimes/` (one per game, saves
-//!   included), `firmware/` (the board files the player added), `prefix/`
+//!   `launcher.cfg`, `settings/`, `saves/` (one folder per game with cards
+//!   and saves, mirrored with its runtime), `runtimes/` (one per game),
+//!   `firmware/` (the board files the player added), `prefix/`
 //!   (Wine, Linux only), `launcher.log` and each game's `<game>.log`;
 //! - components (`$WANGAN_COMPONENTS`, else `components/` beside the
 //!   program): `openparrot/`, `openparrot-6rr/`, `dxvk/`, `io/`, `wal/`,
@@ -38,6 +39,11 @@ pub fn config(p: &HubPaths) -> std::io::Result<HubConfig> {
 /// The shared Wine prefix (Linux).
 pub fn prefix(p: &HubPaths) -> PathBuf {
     p.data.join("prefix")
+}
+
+/// The player's backup-friendly card and save folder for `slug`.
+pub fn saves(p: &HubPaths, slug: &str) -> PathBuf {
+    wangan_core::saves::dir(&p.data, slug)
 }
 
 pub fn components(p: &HubPaths) -> Components {

@@ -165,7 +165,8 @@ window is open), `--check [<game>]` (what could start, without starting),
 | What | Linux | Windows |
 |---|---|---|
 | Settings, logs (`launcher.log`, `<game>.log`) | `~/.local/share/rea-wangan/` | `%LOCALAPPDATA%\rea-wangan\` |
-| Each game's private folder, saves included | `rea-wangan/runtimes/<game>/` | same |
+| Cards and saves (back up this folder) | `rea-wangan/saves/<game>/` | same |
+| Each game's private runtime folder | `rea-wangan/runtimes/<game>/` | same |
 | The board files you added | `rea-wangan/firmware/` | same |
 | Wine prefix | `rea-wangan/prefix/` | — |
 
@@ -200,7 +201,7 @@ window is open), `--check [<game>]` (what could start, without starting),
 ## Uninstall
 
 Delete the launcher's folder, then `~/.local/share/rea-wangan/` (on Windows
-`%LOCALAPPDATA%\rea-wangan\`). Copy `runtimes/` first if you want to keep
+`%LOCALAPPDATA%\rea-wangan\`). Copy `saves/` first if you want to keep
 your card data and records.
 
 ## For developers
