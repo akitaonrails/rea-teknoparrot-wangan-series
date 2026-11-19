@@ -352,3 +352,21 @@ processes followed by ancestry while it ran:
 The earlier runs pointed `PULSE_SERVER` nowhere instead; a game falling
 back to ALSA could then still reach the default output, so the null sink
 is the rule now.
+
+## Gamescope WSI layer kept out (SDK v0.11.2, 2026-11-19)
+
+The SDK's `gamescope::CommandLine` now starts the game with
+`env ENABLE_GAMESCOPE_WSI=0 DISABLE_GAMESCOPE_WSI=1`: on NVIDIA under
+Wayland, gamescope 3.17 crashed (`SIGSEGV` 3 to 6 s in) when 32-bit DXVK
+presented through its Vulkan WSI layer (seen by the Sega launcher with the
+same windowsarcadeloader + DXVK setup). Release build, headless, fresh data
+folder, sound into a private PipeWire's null sink (one stream there during
+the MT6 run), box gamescope 3.17 on an RTX 5090:
+
+| Game | Stop (`--seconds`) | `[Gamescope WSI]` lines | Left |
+|---|---|---|---|
+| MT3DX+ (WanganArcadeLoader, OpenGL) | 70 s | 0 | 0 |
+| MT6 (OpenParrot under Wine, DXVK 3.1.1 presenting, swapchain recreated once) | 100 s (79 s of game) | 0 | 0 |
+
+The `SIGSEGV` in both exit statuses is gamescope's own crash on its way
+out after the TERM (see above), not the game.

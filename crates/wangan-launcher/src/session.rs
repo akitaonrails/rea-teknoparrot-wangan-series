@@ -926,14 +926,18 @@ mod tests {
         );
         assert!(
             screen.ends_with(
-                " -f -- bwrap --dev-bind / / --ro-bind-try /games /games --ro-bind-try /more games \
-                 /more games sh /rt/mt6/session.sh"
+                " -f -- env ENABLE_GAMESCOPE_WSI=0 DISABLE_GAMESCOPE_WSI=1 bwrap --dev-bind / / \
+                 --ro-bind-try /games /games --ro-bind-try /more games /more games sh \
+                 /rt/mt6/session.sh"
             ),
             "{screen}"
         );
         let headless = command_line(picture, Display::Headless, None, &none, script).join(" ");
         assert!(
-            headless.ends_with("-F linear --backend headless -- sh /rt/mt6/session.sh"),
+            headless.ends_with(
+                "-F linear --backend headless -- env ENABLE_GAMESCOPE_WSI=0 \
+                 DISABLE_GAMESCOPE_WSI=1 sh /rt/mt6/session.sh"
+            ),
             "{headless}"
         );
     }

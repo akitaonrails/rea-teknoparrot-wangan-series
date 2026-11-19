@@ -6,6 +6,18 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- Linux: on an NVIDIA card under Wayland, gamescope 3.17 could crash a
+  few seconds into a game (the window closed, often right as a race
+  loaded). The game no longer goes through gamescope's Vulkan WSI layer;
+  it shows through gamescope's own Xwayland instead.
+
+### Changed
+
+- Updated rea-launcher-sdk to v0.11.2: gamescope's WSI layer stays out
+  of the game on Linux.
+
 ## 0.4.0 - 2026-11-19
 
 ### Added
