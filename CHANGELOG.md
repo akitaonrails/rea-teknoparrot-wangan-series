@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.4.0 - 2026-11-19
+
 ### Added
 
 - Controls: change a button. Choose a row of the pad layout (Gas,
