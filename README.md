@@ -32,7 +32,8 @@ player runs into, especially on Linux, and what the launcher does about it
 | Maximum Tune 6 crashes right after the card prompt under Wine. | A small OpenParrot patch zeroes the thread field only Wine reads. |
 | 6RR stops at its boot checks (a steering board and a card unit), then shows E0551. | It gets first-boot settings without them, plus 6R's terminal-wait skip. |
 | MT3/3DX+ are Linux programs that lost their library links and execute bit. | They run natively in WanganArcadeLoader (patched); the links are rebuilt inside the private runtime, never in your dump. |
-| Controls are set up per game, by device. | One input path for every game: pads and wheels through SDL, analog steering and pedals, sequential shifting on shoulder buttons or paddles. |
+| Controls are set up per game, by device. | One input path for every game: pads and wheels through SDL, analog steering and pedals, sequential shifting on shoulder buttons or paddles, and per-button pad rebinding. |
+| Card data and saves are mixed into each game's runtime folder. | Every game's cards, progress files and cabinet records are mirrored into one clean `saves/<game>/` folder for easy backup and restore. |
 | Wangan R and Maximum Tune need firmware that isn't in the dumps. | **Add files** looks through a folder or zip you name and keeps only the files whose size and SHA-1 match MAME's records. |
 
 ## Screenshots
@@ -63,7 +64,7 @@ player runs into, especially on Linux, and what the launcher does about it
   | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | played under Wine |
   | Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
   | Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
-  | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
+  | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays, up to 4K (on credits) | not yet run |
   | Maximum Tune (3.07 Rev B) | Sega Chihiro | TeknoParrot's Cxbx-Reloaded under Wine; needs the four Chihiro media-board files | not yet: freezes in most runs | not yet run |
   | Wangan Midnight R | Namco System 246 | pcsx2x6 (bundled); needs the System 246 BIOS | plays, up to 4K | not yet |
 
@@ -105,7 +106,8 @@ downloads them. `wangan-launcher --add-files <folder>` does the same.
 - **Games**: a tile per game, its picture, edition, folder and state, and
   **Play** (or **Add files**). A game that can't start yet says why.
 - **Controls**: the wheels and pads the launcher sees, which one drives the
-  car, the pad layout, and a live check of steering, pedals and buttons.
+  car, the pad layout (choose any row to rebind a button or trigger, saved
+  in `controls.cfg`), and a live check of steering, pedals, gear and buttons.
 - **Settings**: the selected game's options, saved as you change them,
   plus your game folders.
 
@@ -114,8 +116,8 @@ stick moves (holding it repeats), A chooses, B goes back, Start plays, Y
 opens Settings, the shoulder buttons change tabs. While a game runs the pad
 belongs to the game, and the window offers **Stop**; closing the window
 stops the game first. Options a game can't use here are shown greyed out
-with the whole reason (on Windows: the look and gamescope's rows; for the
-ES3B games and Wangan R: the render size).
+with the whole reason (on Windows: the look and gamescope's rows; for
+MT5–6R and Wangan R: the render size).
 
 ## Gamepad
 
@@ -135,6 +137,27 @@ RT/LT, RB/LB and Y as above, Back inserts a coin, Start is Start, Escape
 quits. Keyboard: arrows to drive, 5 coin, 1 Start, E/Q shift, V view. The
 dead zone and wheel handling don't apply to it yet.
 
+## Cards and saves
+
+Every game's cards, progress files and cabinet records are mirrored into
+one clean folder per game under `~/.local/share/rea-wangan/saves/` (Windows:
+`%LOCALAPPDATA%\rea-wangan\saves\`), kept separate from symlinks, DLLs and
+logs:
+
+- **Back up everything at once**: copy the `saves/` folder.
+- **Restore an older backup**: copy your files back into `saves/<game>/`;
+  the launcher tracks each sync by state, so an older backup replaces the
+  runtime copy on the next start instead of being overwritten.
+- **Crash recovery**: if a game or the launcher stops before exit, the next
+  launch copies any updated runtime save back into `saves/<game>/`.
+
+| Games | What is saved in `saves/<game>/` | Card progress status |
+|---|---|---|
+| **MT3, MT3DX+** | `card.bin` (magnetic card) | Works offline: create a card in-game, then press **Back** to insert it on later runs. |
+| **MT5, MT5DX+** | `card.ini`, `openprogress.sav`, `mileage.sav`, `stars.bin`, `card_*.bin`, `F*/G*.lua.gz`, `TP/` | Works offline via OpenParrot's local save files. |
+| **Wangan Midnight R** | `memcards/NM00005.ps2`, `bios/*.nvm` | Cabinet records and NVRAM preserved across launches (BIOS ROM is not duplicated here). |
+| **MT6, MT6R, MT6RR** | `card.ini`, `F*/G*.lua.gz`, `TP/`, `TeknoParrot/` | Cabinet settings and a stable Banapass card ID (`card.ini`) are kept. Full Banapass garage saving needs a local Bayshore server (not bundled yet); 6R and 6RR play as a guest for now. |
+
 ## Options
 
 Each game keeps its own options. Every option is a line in that game's
@@ -147,7 +170,7 @@ settings file and a flag for `--play <game>` or `--set <game>`:
 | Upscaler | `--upscaler fsr\|nis\|linear\|nearest` | How the picture is stretched to the output size (Linux) |
 | Sharpness | `--sharpness 0-20` | FSR and NVIDIA Image Scaling sharpness, 0 is sharpest (Linux) |
 | Fullscreen | `--fullscreen on\|off` | Full screen or a window (Linux) |
-| Game render size | `--render <WxH>\|native` | The size MT3/3DX+ draw at (native: the output size) |
+| Game render size | `--render <WxH>\|native` | The size MT3, MT3DX+ and 6RR draw at (native: the output size on Linux, 1360×768 on Windows) |
 | Dead zone | `--deadzone 0.00-0.30` | How far a stick moves before the car steers |
 
 Until you choose a picture, a game uses the Recommended look for your
