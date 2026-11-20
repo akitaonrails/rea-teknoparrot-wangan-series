@@ -6,6 +6,17 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.6.1 - 2026-11-20
+
+### Fixed
+
+- Windows: Maximum Tune 3.07 (`mt1`) now explains that no Chihiro emulator
+  is bundled on Windows yet instead of blaming Wine (#2).
+- Windows: updated `rea-launcher-sdk` to v0.12.2 so dumps on mapped network
+  drives (`T:\...`) and UNC shares link cleanly via directory symlinks (or
+  fall back to copying with a notice) instead of creating broken junctions
+  (rea-launcher-sdk#2).
+
 ## 0.6.0 - 2026-11-20
 
 ### Added

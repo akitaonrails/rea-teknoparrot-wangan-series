@@ -39,8 +39,12 @@ pub enum Route {
 }
 
 /// A game whose board files are in, but whose emulator the launcher
-/// doesn't start yet.
+/// doesn't start yet on Linux (under Wine).
 pub const EMULATOR_PENDING: &str = "Your board files are in. Under Wine the Chihiro emulator freezes in most runs of this game, so Play stays off for now.";
+
+/// Why Chihiro games (`mt1`) stay blocked on Windows: no Chihiro emulator is
+/// bundled for Windows in this launcher yet (never blame Wine on Windows).
+pub const EMULATOR_PENDING_WINDOWS: &str = "Your board files are in. No Chihiro emulator is bundled for this game on Windows yet, so Play stays off for now.";
 
 /// Why Wangan R is not offered on Windows yet.
 pub const SYS246_LINUX_ONLY: &str =
@@ -81,6 +85,9 @@ impl Game {
             (Support::Ready, Route::NativeN2, Host::Windows) => Support::Blocked(N2_LINUX_ONLY),
             (Support::Ready, Route::System246, Host::Windows) => {
                 Support::Blocked(SYS246_LINUX_ONLY)
+            }
+            (Support::Blocked(_), Route::Chihiro, Host::Windows) => {
+                Support::Blocked(EMULATOR_PENDING_WINDOWS)
             }
             (s, _, _) => s,
         }
@@ -345,10 +352,14 @@ mod tests {
             Support::Blocked(N2_LINUX_ONLY)
         );
         assert_eq!(game(GameId::Mt3dxp).support_on(Host::Linux), Support::Ready);
-        // a game blocked everywhere keeps its own reason
+        // mt1 is blocked on both platforms, with a Windows-specific reason (never blaming Wine on Windows)
+        assert_eq!(
+            game(GameId::Mt1).support_on(Host::Linux),
+            Support::Blocked(EMULATOR_PENDING)
+        );
         assert_eq!(
             game(GameId::Mt1).support_on(Host::Windows),
-            game(GameId::Mt1).support
+            Support::Blocked(EMULATOR_PENDING_WINDOWS)
         );
     }
 
