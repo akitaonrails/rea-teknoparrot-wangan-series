@@ -1,6 +1,7 @@
 == 1280x720
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Not in your library"
 Label = "Not found in your game folders. Add its folder in Settings, then choose Rescan."
 Button "Play" (Not found in your game folders.) [disabled] @56,472 170x50
@@ -22,6 +23,7 @@ Label = "Controller: No controller"
 == 1280x800
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Not in your library"
 Label = "Not found in your game folders. Add its folder in Settings, then choose Rescan."
 Button "Play" (Not found in your game folders.) [disabled] @62,524 189x56

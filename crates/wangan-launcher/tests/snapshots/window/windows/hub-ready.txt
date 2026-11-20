@@ -1,6 +1,7 @@
 == 1280x720
 Label = "Wangan Midnight Maximum Tune 5"
 Label = "Namco ES3B · 2014 · 5.00 (Japan)"
+Label = "Rebuilt on Windows-based ES3B hardware with Banapassport IC cards, 60-chapter Story Mode, Extreme VS and Mt. Taikan."
 Label = "Ready"
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight Maximum Tune 5 [TP]"
 Button "Play" @56,454 170x50
@@ -22,6 +23,7 @@ Label = "Controller: No controller"
 == 1280x800
 Label = "Wangan Midnight Maximum Tune 5"
 Label = "Namco ES3B · 2014 · 5.00 (Japan)"
+Label = "Rebuilt on Windows-based ES3B hardware with Banapassport IC cards, 60-chapter Story Mode, Extreme VS and Mt. Taikan."
 Label = "Ready"
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight Maximum Tune 5 [TP]"
 Button "Play" @62,504 189x56

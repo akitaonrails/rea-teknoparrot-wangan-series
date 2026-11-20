@@ -1,6 +1,7 @@
 == 1280x720
 Label = "Wangan Midnight Maximum Tune"
 Label = "Sega Chihiro · 2004 · 3.07 Rev B (Export)"
+Label = "The first Maximum Tune, built with Genki on Xbox-based Chihiro hardware. Introduced Story Mode, 800 HP tuning and magnetic cards."
 Label = "Needs board files"
 Label = "Also needs the Sega Chihiro media-board files."
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight Maximum Tune [TP]"
@@ -23,6 +24,7 @@ Label = "Controller: No controller"
 == 1280x800
 Label = "Wangan Midnight Maximum Tune"
 Label = "Sega Chihiro · 2004 · 3.07 Rev B (Export)"
+Label = "The first Maximum Tune, built with Genki on Xbox-based Chihiro hardware. Introduced Story Mode, 800 HP tuning and magnetic cards."
 Label = "Needs board files"
 Label = "Also needs the Sega Chihiro media-board files."
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight Maximum Tune [TP]"

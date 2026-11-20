@@ -1,6 +1,7 @@
 == 1280x720
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Looking for your games…"
 Button "Play" (Still looking for your games.) [disabled] @56,454 170x50
 Button "Settings" @242,454 170x50
@@ -21,6 +22,7 @@ Label = "Controller: No controller"
 == 1280x800
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Looking for your games…"
 Button "Play" (Still looking for your games.) [disabled] @62,504 189x56
 Button "Settings" @269,504 189x56

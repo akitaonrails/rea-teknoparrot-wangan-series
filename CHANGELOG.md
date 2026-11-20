@@ -6,6 +6,19 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.6.0 - 2026-11-20
+
+### Added
+
+- Games page: short trivia card over the top-right quarter of each game's
+  hero art with release context and what sets each entry apart (5DX+, 6,
+  6R, 6RR, etc.).
+
+### Changed
+
+- Updated rea-launcher-sdk to v0.12.1 (`HubBackend::blurb` hero trivia card
+  and `Frame::dpad` support).
+
 ## 0.5.1 - 2026-11-19
 
 ### Fixed

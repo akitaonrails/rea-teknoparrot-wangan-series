@@ -360,6 +360,10 @@ impl HubBackend for Wangan {
         })
     }
 
+    fn blurb(&self, game: usize) -> Option<&str> {
+        Some(GAMES[game].blurb)
+    }
+
     fn scanner(&self) -> Scanner<Scan<Game>> {
         #[cfg(test)]
         if let Some(s) = self.fake.scanner.borrow_mut().take() {

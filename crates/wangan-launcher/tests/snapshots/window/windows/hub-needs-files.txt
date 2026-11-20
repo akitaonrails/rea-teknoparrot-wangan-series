@@ -1,6 +1,7 @@
 == 1280x720
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002 · WMR1 Ver. A"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Needs board files"
 Label = "Also needs the Namco System 246 BIOS."
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight R [TP]"
@@ -23,6 +24,7 @@ Label = "Controller: No controller"
 == 1280x800
 Label = "Wangan Midnight R"
 Label = "Namco System 246 · 2002 · WMR1 Ver. A"
+Label = "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began."
 Label = "Needs board files"
 Label = "Also needs the Namco System 246 BIOS."
 Label = "Folder: \\srv\\games\\Wangan\\Wangan Midnight R [TP]"

@@ -59,6 +59,8 @@ pub struct Game {
     pub short: &'static str,
     pub year: u16,
     pub board: &'static str,
+    /// Short trivia/context shown over the top-right quarter of the hero art.
+    pub blurb: &'static str,
     pub route: Route,
     /// The file that identifies the edition, relative to the game folder.
     pub main_file: &'static str,
@@ -115,6 +117,7 @@ pub const GAMES: &[Game] = &[
         short: "R",
         year: 2002,
         board: "Namco System 246",
+        blurb: "Arcade follow-up to 2001's Wangan Midnight on PS2-based System 246 hardware — the last entry before Maximum Tune began.",
         route: Route::System246,
         main_file: "wanganmr.zip",
         editions: &[Edition::sha256(
@@ -133,6 +136,7 @@ pub const GAMES: &[Game] = &[
         short: "MT",
         year: 2004,
         board: "Sega Chihiro",
+        blurb: "The first Maximum Tune, built with Genki on Xbox-based Chihiro hardware. Introduced Story Mode, 800 HP tuning and magnetic cards.",
         route: Route::Chihiro,
         main_file: "V307.xbe",
         editions: &[Edition::sha256(
@@ -151,6 +155,7 @@ pub const GAMES: &[Game] = &[
         short: "MT3",
         year: 2007,
         board: "Namco N2",
+        blurb: "Moved the series to Linux-based N2 cabinets with widescreen 720p, Ghost Battles and the 6-speed gearbox.",
         route: Route::NativeN2,
         main_file: "main",
         editions: &[Edition::sha256(
@@ -169,6 +174,7 @@ pub const GAMES: &[Game] = &[
         short: "MT3DX+",
         year: 2010,
         board: "Namco N2",
+        blurb: "Final N2 release and last magnetic-card cabinet. Added the R35 GT-R, Fukuoka Urban Expressway and expanded Ghost Battles.",
         route: Route::NativeN2,
         main_file: "main",
         editions: &[Edition::sha256(
@@ -187,6 +193,7 @@ pub const GAMES: &[Game] = &[
         short: "MT5",
         year: 2014,
         board: "Namco ES3B",
+        blurb: "Rebuilt on Windows-based ES3B hardware with Banapassport IC cards, 60-chapter Story Mode, Extreme VS and Mt. Taikan.",
         route: Route::Es3b,
         main_file: "wmn5r.exe",
         editions: &[Edition::sha256(
@@ -205,6 +212,7 @@ pub const GAMES: &[Game] = &[
         short: "MT5DX+",
         year: 2017,
         board: "Namco ES3B",
+        blurb: "Final 5-series update: added Hiroshima Expressway, Lamborghini and Honda (NSX, S2000), and tuning up to 830 HP.",
         route: Route::Es3b,
         main_file: "wmn5r.exe",
         editions: &[Edition::sha256(
@@ -223,6 +231,7 @@ pub const GAMES: &[Game] = &[
         short: "MT6",
         year: 2018,
         board: "Namco ES3B",
+        blurb: "Major overhaul: 100-chapter Story Mode, 840 HP cap, 4-player Ghost Battles, Porsche joining the roster, and a new terminal system.",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
         editions: &[Edition::sha256(
@@ -241,6 +250,7 @@ pub const GAMES: &[Game] = &[
         short: "MT6R",
         year: 2020,
         board: "Namco ES3B",
+        blurb: "Revision of 6 that refreshed the roster (GR Supra, Silvia Spec-R), rebalanced physics and tuning, and updated the soundtrack.",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
         editions: &[Edition::sha256(
@@ -259,6 +269,7 @@ pub const GAMES: &[Game] = &[
         short: "MT6RR",
         year: 2022,
         board: "Namco ES3B",
+        blurb: "Latest 6-series update over 6R: adds the Bingo Challenge, new Dress-Up parts, Time Attack rankings, and modern cars like the GR Yaris.",
         route: Route::Es3b,
         main_file: "wmn6r.exe",
         editions: &[Edition::sha256(
