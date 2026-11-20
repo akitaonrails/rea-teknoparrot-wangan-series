@@ -836,11 +836,11 @@ exit Some(0)
 
 # The size of the picture on your screen. Pick your screen's size.
 # Values: WIDTHxHEIGHT.
-#output = 3840x2160
+output = 1024x768
 
 # How the game's picture is stretched to the output size.
 # Values: fsr, nis, linear or nearest.
-#upscaler =
+upscaler = fsr
 
 # How crisp the upscaler makes edges. 0 is the sharpest.
 # Values: 0 to 20.
