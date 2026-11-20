@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.6.2 - 2026-11-20
+
 ### Fixed
 
 - Windows tests: expect the Windows-specific `mt1` pending reason in UI tests.
