@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.5.1 - 2026-11-19
+
 ### Fixed
 
 - Maximum Tune 6RR: reverted native custom resolution (`RES=3840x2160`)
