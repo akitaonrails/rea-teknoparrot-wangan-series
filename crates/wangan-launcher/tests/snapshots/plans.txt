@@ -1093,266 +1093,24 @@ game: /data/runtimes/mt6r/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6
 file /data/runtimes/mt6r/teknoparrot.ini
 (same text as in mt6r / linux, wine from PATH / defaults)
 == mt6rr / linux, wine from PATH / defaults
-size 3840x2160
-gamescope -w 3840 -h 2160 -W 3840 -H 2160 -r 60 -F fsr --sharpness 5 -f
-wine prefix /data/prefix
-helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-file /data/runtimes/mt6rr/teknoparrot.ini
-[GlobalHotkeys]
-ExitKey=0x1B
-PauseKey=0x13
-[General]
-TerminalMode=0
-WhiteScreenFix=0
-NetworkAdapterIP=
-Input API=DirectInput
-Terminal Mode=0
-Terminal Emu=1
-FreePlay=1
-Windowed=0
-Add Event Cars To Menu=0
-Use Keyboard/Button For Axis=0
-Keyboard/Button Axis Wheel Sensitivity=10
-Keyboard/Button Axis Pedal Sensitivity=10
-OnlineID=
-[Terminal Emu]
-Wins and Remains=1
-Event Mode=0
-Event Mode 2on2=0
-Event Mode Double Distance=0
-Event Mode Player Count=4
-Coins per Credit=1
-Credits per Card=3
-Credits per Game=2
-Credits per Continue=2
-Credits per Full Course=4
-[Graphics]
-Use Custom Resolution=1
-Resolution Width=3840
-Resolution Height=2160
-MSAA Level=0x
-[FFB Blaster]
-Enable=0
-[Network]
-Override Network Adapter=0
-NetworkIp=192.168.1.1
-[Resolution]
-RES=3840x2160
-== mt6rr / linux, wine from PATH / custom
-size 1920x1080
-gamescope -w 1920 -h 1080 -W 2560 -H 1440 -r 60 -F nis --sharpness 7
-wine prefix /data/prefix
-helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-file /data/runtimes/mt6rr/teknoparrot.ini
-[GlobalHotkeys]
-ExitKey=0x1B
-PauseKey=0x13
-[General]
-TerminalMode=0
-WhiteScreenFix=0
-NetworkAdapterIP=
-Input API=DirectInput
-Terminal Mode=0
-Terminal Emu=1
-FreePlay=1
-Windowed=0
-Add Event Cars To Menu=0
-Use Keyboard/Button For Axis=0
-Keyboard/Button Axis Wheel Sensitivity=10
-Keyboard/Button Axis Pedal Sensitivity=10
-OnlineID=
-[Terminal Emu]
-Wins and Remains=1
-Event Mode=0
-Event Mode 2on2=0
-Event Mode Double Distance=0
-Event Mode Player Count=4
-Coins per Credit=1
-Credits per Card=3
-Credits per Game=2
-Credits per Continue=2
-Credits per Full Course=4
-[Graphics]
-Use Custom Resolution=1
-Resolution Width=1920
-Resolution Height=1080
-MSAA Level=0x
-[FFB Blaster]
-Enable=0
-[Network]
-Override Network Adapter=0
-NetworkIp=192.168.1.1
-[Resolution]
-RES=1920x1080
-== mt6rr / linux, wine from PATH / smooth-720p
-size 1280x720
-gamescope -w 1280 -h 720 -W 1280 -H 720 -r 60 -F linear -f
-wine prefix /data/prefix
-helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-file /data/runtimes/mt6rr/teknoparrot.ini
-[GlobalHotkeys]
-ExitKey=0x1B
-PauseKey=0x13
-[General]
-TerminalMode=0
-WhiteScreenFix=0
-NetworkAdapterIP=
-Input API=DirectInput
-Terminal Mode=0
-Terminal Emu=1
-FreePlay=1
-Windowed=0
-Add Event Cars To Menu=0
-Use Keyboard/Button For Axis=0
-Keyboard/Button Axis Wheel Sensitivity=10
-Keyboard/Button Axis Pedal Sensitivity=10
-OnlineID=
-[Terminal Emu]
-Wins and Remains=1
-Event Mode=0
-Event Mode 2on2=0
-Event Mode Double Distance=0
-Event Mode Player Count=4
-Coins per Credit=1
-Credits per Card=3
-Credits per Game=2
-Credits per Continue=2
-Credits per Full Course=4
-[Graphics]
-Use Custom Resolution=1
-Resolution Width=1280
-Resolution Height=720
-MSAA Level=0x
-[FFB Blaster]
-Enable=0
-[Network]
-Override Network Adapter=0
-NetworkIp=192.168.1.1
-[Resolution]
-RES=1280x720
-== mt6rr / linux, bundled wine / defaults
-size 3840x2160
-gamescope -w 3840 -h 2160 -W 3840 -H 2160 -r 60 -F fsr --sharpness 5 -f
-wine prefix /data/prefix
-helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-file /data/runtimes/mt6rr/teknoparrot.ini
-(same text as in mt6rr / linux, wine from PATH / defaults)
-== mt6rr / linux, bundled wine / custom
-size 1920x1080
-gamescope -w 1920 -h 1080 -W 2560 -H 1440 -r 60 -F nis --sharpness 7
-wine prefix /data/prefix
-helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-file /data/runtimes/mt6rr/teknoparrot.ini
-(same text as in mt6rr / linux, wine from PATH / custom)
-== mt6rr / linux, bundled wine / smooth-720p
-size 1280x720
-gamescope -w 1280 -h 720 -W 1280 -H 720 -r 60 -F linear -f
-wine prefix /data/prefix
-helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
-  cwd /data/runtimes/mt6rr
-  env WINEPREFIX=/data/prefix
-  env WINEDEBUG=-all
-  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
-  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
-file /data/runtimes/mt6rr/teknoparrot.ini
-(same text as in mt6rr / linux, wine from PATH / smooth-720p)
-== mt6rr / windows / defaults
 size 1360x768
-gamescope 
-helper 0: /data/runtimes/mt6rr/wangan-io.exe --block /data/runtimes/mt6rr/input.block --log /data/runtimes/mt6rr/wangan-io.log
+gamescope -w 1360 -h 768 -W 3840 -H 2160 -r 60 -F fsr --sharpness 5 -f
+wine prefix /data/prefix
+helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
   cwd /data/runtimes/mt6rr
-helper 1: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
   cwd /data/runtimes/mt6rr
-game: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/wmn6r.exe
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
   cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
 file /data/runtimes/mt6rr/teknoparrot.ini
 [GlobalHotkeys]
 ExitKey=0x1B
@@ -1394,8 +1152,122 @@ Override Network Adapter=0
 NetworkIp=192.168.1.1
 [Resolution]
 RES=1360x768
-== mt6rr / windows / custom
-size 1920x1080
+== mt6rr / linux, wine from PATH / custom
+size 1360x768
+gamescope -w 1360 -h 768 -W 2560 -H 1440 -r 60 -F nis --sharpness 7
+wine prefix /data/prefix
+helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / linux, wine from PATH / smooth-720p
+size 1360x768
+gamescope -w 1360 -h 768 -W 1280 -H 720 -r 60 -F linear -f
+wine prefix /data/prefix
+helper 0: wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+helper 1: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+game: wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / linux, bundled wine / defaults
+size 1360x768
+gamescope -w 1360 -h 768 -W 3840 -H 2160 -r 60 -F fsr --sharpness 5 -f
+wine prefix /data/prefix
+helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / linux, bundled wine / custom
+size 1360x768
+gamescope -w 1360 -h 768 -W 2560 -H 1440 -r 60 -F nis --sharpness 7
+wine prefix /data/prefix
+helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / linux, bundled wine / smooth-720p
+size 1360x768
+gamescope -w 1360 -h 768 -W 1280 -H 720 -r 60 -F linear -f
+wine prefix /data/prefix
+helper 0: /pkg/components/wine/bin/wine wangan-io.exe --block Z:/data/runtimes/mt6rr/input.block --log Z:/data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+helper 1: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+game: /pkg/components/wine/bin/wine OpenParrotLoader64.exe OpenParrot64 Z:/data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+  env WINEPREFIX=/data/prefix
+  env WINEDEBUG=-all
+  env WINEDLLOVERRIDES=d3d11,dxgi=n,b
+  env LD_LIBRARY_PATH=/pkg/components/wine/lib/ffmpeg:/usr/lib
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / windows / defaults
+size 1360x768
 gamescope 
 helper 0: /data/runtimes/mt6rr/wangan-io.exe --block /data/runtimes/mt6rr/input.block --log /data/runtimes/mt6rr/wangan-io.log
   cwd /data/runtimes/mt6rr
@@ -1404,7 +1276,18 @@ helper 1: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtime
 game: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/wmn6r.exe
   cwd /data/runtimes/mt6rr
 file /data/runtimes/mt6rr/teknoparrot.ini
-(same text as in mt6rr / linux, wine from PATH / custom)
+(same text as in mt6rr / linux, wine from PATH / defaults)
+== mt6rr / windows / custom
+size 1360x768
+gamescope 
+helper 0: /data/runtimes/mt6rr/wangan-io.exe --block /data/runtimes/mt6rr/input.block --log /data/runtimes/mt6rr/wangan-io.log
+  cwd /data/runtimes/mt6rr
+helper 1: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/AMCUS/AMAuthd.exe
+  cwd /data/runtimes/mt6rr
+game: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/wmn6r.exe
+  cwd /data/runtimes/mt6rr
+file /data/runtimes/mt6rr/teknoparrot.ini
+(same text as in mt6rr / linux, wine from PATH / defaults)
 == mt6rr / windows / smooth-720p
 size 1360x768
 gamescope 
@@ -1415,4 +1298,4 @@ helper 1: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtime
 game: /data/runtimes/mt6rr/OpenParrotLoader64.exe OpenParrot64 /data/runtimes/mt6rr/wmn6r.exe
   cwd /data/runtimes/mt6rr
 file /data/runtimes/mt6rr/teknoparrot.ini
-(same text as in mt6rr / windows / defaults)
+(same text as in mt6rr / linux, wine from PATH / defaults)

@@ -6,6 +6,13 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- Maximum Tune 6RR: reverted native custom resolution (`RES=3840x2160`)
+  back to 1360×768 upscaled by gamescope. OpenParrot_WMMT's `[Resolution]`
+  patch resized the swapchain and 2D text but left the 3D scene stuck in
+  the top-left corner.
+
 ## 0.5.0 - 2026-11-19
 
 ### Added

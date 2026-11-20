@@ -278,16 +278,12 @@ mod tests {
     }
 
     #[test]
-    fn render_size_is_for_n2_and_6rr_games() {
+    fn render_size_is_only_for_n2_games() {
         let mut f = n2();
         assert_eq!(f.value("render"), "Same as output, 3840 × 2160 (4K)");
         assert!(f.adjust("render", 1, false));
         assert_eq!(f.value("render"), "1280 × 720");
-        let mut six_rr = Form::on(Settings::default(), game(GameId::Mt6rr), None, Host::Linux);
-        assert_eq!(six_rr.disabled("render"), None);
-        assert_eq!(six_rr.value("render"), "Same as output, 3840 × 2160 (4K)");
-        assert!(six_rr.adjust("render", 1, false));
-        let mut es3b = Form::on(Settings::default(), game(GameId::Mt6), None, Host::Linux);
+        let mut es3b = Form::on(Settings::default(), game(GameId::Mt6rr), None, Host::Linux);
         assert_eq!(es3b.disabled("render").as_deref(), Some(RENDER_FIXED));
         assert!(!es3b.adjust("render", 1, false));
         assert_eq!(es3b.value("render"), "1360 × 768");

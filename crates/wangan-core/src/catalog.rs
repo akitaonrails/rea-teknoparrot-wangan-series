@@ -85,10 +85,9 @@ impl Game {
     }
 
     /// Whether the game draws at its own size whatever the settings say
-    /// (WanganArcadeLoader for N2 and OpenParrot_WMMT's `[Resolution]`
-    /// patch for 6RR take a render size).
+    /// (only WanganArcadeLoader takes a render size).
     pub fn render_fixed(&self) -> bool {
-        self.route != Route::NativeN2 && self.id != GameId::Mt6rr
+        self.route != Route::NativeN2
     }
 }
 
@@ -358,13 +357,13 @@ mod tests {
     }
 
     #[test]
-    fn only_n2_and_6rr_take_a_render_size() {
+    fn only_the_n2_games_take_a_render_size() {
         let takes: Vec<_> = GAMES
             .iter()
             .filter(|g| !g.render_fixed())
             .map(|g| g.slug)
             .collect();
-        assert_eq!(takes, ["mt3", "mt3dxp", "mt6rr"]);
+        assert_eq!(takes, ["mt3", "mt3dxp"]);
     }
 
     #[test]

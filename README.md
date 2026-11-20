@@ -64,7 +64,7 @@ player runs into, especially on Linux, and what the launcher does about it
   | Maximum Tune 5DX+ (Export) | Namco ES3B | same | plays | played under Wine |
   | Maximum Tune 6 (1.03.04, Export) | Namco ES3B | same, with this project's OpenParrot fixes | plays | played under Wine |
   | Maximum Tune 6R (Japan) | Namco ES3B | same | plays | not yet run |
-  | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays, up to 4K (on credits) | not yet run |
+  | Maximum Tune 6RR (3.05.03, Japan) | Namco ES3B | OpenParrot_WMMT (patched) + the I/O board | plays (on credits) | not yet run |
   | Maximum Tune (3.07 Rev B) | Sega Chihiro | TeknoParrot's Cxbx-Reloaded under Wine; needs the four Chihiro media-board files | not yet: freezes in most runs | not yet run |
   | Wangan Midnight R | Namco System 246 | pcsx2x6 (bundled); needs the System 246 BIOS | plays, up to 4K | not yet |
 
@@ -116,8 +116,8 @@ stick moves (holding it repeats), A chooses, B goes back, Start plays, Y
 opens Settings, the shoulder buttons change tabs. While a game runs the pad
 belongs to the game, and the window offers **Stop**; closing the window
 stops the game first. Options a game can't use here are shown greyed out
-with the whole reason (on Windows: the look and gamescope's rows; for
-MT5–6R and Wangan R: the render size).
+with the whole reason (on Windows: the look and gamescope's rows; for the
+ES3B games and Wangan R: the render size).
 
 ## Gamepad
 
@@ -170,7 +170,7 @@ settings file and a flag for `--play <game>` or `--set <game>`:
 | Upscaler | `--upscaler fsr\|nis\|linear\|nearest` | How the picture is stretched to the output size (Linux) |
 | Sharpness | `--sharpness 0-20` | FSR and NVIDIA Image Scaling sharpness, 0 is sharpest (Linux) |
 | Fullscreen | `--fullscreen on\|off` | Full screen or a window (Linux) |
-| Game render size | `--render <WxH>\|native` | The size MT3, MT3DX+ and 6RR draw at (native: the output size on Linux, 1360×768 on Windows) |
+| Game render size | `--render <WxH>\|native` | The size MT3/3DX+ draw at (native: the output size) |
 | Dead zone | `--deadzone 0.00-0.30` | How far a stick moves before the car steers |
 
 Until you choose a picture, a game uses the Recommended look for your
