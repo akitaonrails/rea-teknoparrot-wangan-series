@@ -833,7 +833,12 @@ fn a_game_whose_board_files_are_in_but_whose_emulator_is_pending_is_locked() {
     let mut h = hub(t.path(), SIZE_720, &["mt1"]);
     h.state_mut().backend_mut().files_ok[index("mt1")] = true;
     select(&mut h, "mt1");
-    assert!(says(&h, catalog::EMULATOR_PENDING));
+    let expected = if cfg!(windows) {
+        catalog::EMULATOR_PENDING_WINDOWS
+    } else {
+        catalog::EMULATOR_PENDING
+    };
+    assert!(says(&h, expected));
     assert!(says(&h, "Not supported yet"));
 }
 
