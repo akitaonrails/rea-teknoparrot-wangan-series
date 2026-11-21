@@ -2650,7 +2650,7 @@ dependencies = [
 
 [[package]]
 name = "wangan-core"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "rea-launcher",
  "sha1",
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "wangan-io"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "wangan-jvs",
  "windows-sys 0.61.2",
@@ -2669,11 +2669,11 @@ dependencies = [
 
 [[package]]
 name = "wangan-jvs"
-version = "0.7.3"
+version = "0.7.4"
 
 [[package]]
 name = "wangan-launcher"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "anyhow",
  "eframe",
