@@ -1999,6 +1999,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "rea-launcher-build"
+version = "0.12.4"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.4#94cc5b11330c746fd681f04f8dbe0f9fa3bb4bdf"
+
+[[package]]
 name = "rea-launcher-native"
 version = "0.12.4"
 source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.4#94cc5b11330c746fd681f04f8dbe0f9fa3bb4bdf"
@@ -2673,6 +2678,7 @@ dependencies = [
  "anyhow",
  "eframe",
  "rea-launcher",
+ "rea-launcher-build",
  "rea-launcher-native",
  "rea-launcher-ui",
  "rea-launcher-win32",

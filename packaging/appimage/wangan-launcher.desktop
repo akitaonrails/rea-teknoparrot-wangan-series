@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Wangan Midnight
+Comment=One launcher for the Wangan Midnight arcade series
+Exec=wangan-launcher
+Icon=wangan-launcher
+Terminal=false
+Categories=Game;ArcadeGame;

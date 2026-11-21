@@ -6,6 +6,17 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Added
+
+- Desktop shortcut icon: custom high-contrast 256×256 Wangan Midnight icon
+  embedded in `wangan-launcher.exe` via `rea-launcher-build` and bundled with
+  `wangan-launcher.desktop` in the Linux package.
+- Weekly upstream component watch workflow (`watch-upstream.yml`).
+
+### Fixed
+
+- Windows unit test path separator in `wangan_r_runs_pcsx2x6_on_its_acgame_upscaled_for_the_window`.
+
 ## 0.7.0 - 2026-11-21
 
 ### Added

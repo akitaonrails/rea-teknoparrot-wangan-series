@@ -1,0 +1,9 @@
+# Components the weekly watch-upstream workflow checks, one per line:
+#   name owner/repo asset-name-prefix
+openparrot-x64 teknogods/OpenParrot OpenParrotx64.zip
+dxvk doitsujin/dxvk dxvk-3.1.1.tar.gz
+wal-dist vixen256/WanganArcadeLoader0.5 dist.zip
+wine Kron4ek/Wine-Builds wine-11.21-amd64-wow64.tar.xz
+pcsx2x6 PS2Homebrew-arcade/pcsx2x6 pcsx2x6-v0.2.22-linux-appimage-x64-Qt.AppImage
+pcsx2x6-win PS2Homebrew-arcade/pcsx2x6 pcsx2x6-v0.2.22-windows-x64-Qt.7z
+proverb PS2Homebrew-arcade/proverb proverb.zip

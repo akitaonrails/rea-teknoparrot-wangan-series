@@ -1,6 +1,8 @@
 # Every file of the Linux package (sdk/packaging/smoke-package.sh): anything
 # else fails the check, so no game file or stray build output can ship.
 wangan-launcher x
+wangan-launcher.png
+wangan-launcher.desktop
 lib/*.so* optional
 README.txt
 licenses/*

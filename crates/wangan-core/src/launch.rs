@@ -418,7 +418,10 @@ mod tests {
             &Host::Windows,
         )
         .unwrap();
-        assert_eq!(wp.game.program, at("pcsx2x6/pcsx2-qt.exe"));
+        assert_eq!(
+            wp.game.program,
+            rt.join("pcsx2x6").join("pcsx2-qt.exe").to_string_lossy()
+        );
         assert_eq!(
             wp.game.args,
             [

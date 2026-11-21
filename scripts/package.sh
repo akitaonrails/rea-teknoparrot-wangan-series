@@ -79,6 +79,8 @@ cp "$root/assets/fonts/OFL.txt" "$out/licenses/Barlow-OFL.txt"
 if [ "$os" = linux ]; then
 	cp "$lin/wangan-launcher" "$out/wangan-launcher"
 	chmod 755 "$out/wangan-launcher"
+	cp "$root/packaging/appimage/wangan-launcher.png" "$out/wangan-launcher.png"
+	cp "$root/packaging/appimage/wangan-launcher.desktop" "$out/wangan-launcher.desktop"
 	if [ -d "$lin/lib" ]; then
 		mkdir -p "$out/lib"
 		cp -L "$lin"/lib/*.so* "$out/lib/"

@@ -23,6 +23,9 @@ signal-hook = "0.3"
 wangan-core = { path = "../wangan-core" }
 wangan-jvs = { path = "../wangan-jvs" }
 
+[build-dependencies]
+rea-launcher-build.workspace = true
+
 [dev-dependencies]
 rea-launcher-ui = { workspace = true, features = ["testing"] }
 tempfile = "3"
