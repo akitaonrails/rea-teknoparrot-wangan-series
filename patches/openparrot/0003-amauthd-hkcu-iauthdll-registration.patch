@@ -1,0 +1,49 @@
+diff --git a/OpenParrot/src/Functions/Games/ES3X/AmAuthGame64.cpp b/OpenParrot/src/Functions/Games/ES3X/AmAuthGame64.cpp
+index 7a22b72..ce6eb8c 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/AmAuthGame64.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/AmAuthGame64.cpp
+@@ -258,25 +258,31 @@ typedef HRESULT(__stdcall* DllRegisterServerFunc)();
+ 
+ static void dllreg()
+ {
+-	//iauthdll.dll
++	// Register iauthdll.dll per-user (HKCU\Software\Classes) so unelevated
++	// Windows launches succeed without Administrator privileges or a blocking
++	// MessageBox (COM merges HKCU\Software\Classes over HKLM\Software\Classes).
+ 	HMODULE hModule = LoadLibrary(L"iauthdll.dll");
++	if (!hModule) return;
+ 	DllRegisterServerFunc DllRegisterServer = (DllRegisterServerFunc)GetProcAddress(hModule, "DllRegisterServer");
++	if (!DllRegisterServer) return;
++	HKEY hUserClasses = NULL;
++	bool overridden = false;
++	if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Classes", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hUserClasses, NULL) == ERROR_SUCCESS)
++	{
++		overridden = (RegOverridePredefKey(HKEY_CLASSES_ROOT, hUserClasses) == ERROR_SUCCESS);
++	}
+ 	HRESULT hr = DllRegisterServer();
+-	if (SUCCEEDED(hr))
++	if (overridden)
+ 	{
+-#ifdef DEBUG
+-		īnfo(true, "iauthdll.dll registered successfully!");
+-#endif
++		RegOverridePredefKey(HKEY_CLASSES_ROOT, NULL);
+ 	}
+-	else
++	if (hUserClasses)
++	{
++		RegCloseKey(hUserClasses);
++	}
++	if (FAILED(hr))
+ 	{
+-		int msgboxID = MessageBox(
+-			NULL,
+-			(LPCWSTR)L"There was an error registering a DLL needed for WMMT6 online.",
+-			(LPCWSTR)L"WMMT6 Banapass Setup",
+-			MB_ICONWARNING | MB_OK
+-		);
+-		// There was an error
++		OutputDebugStringA("AMAuthd: iauthdll.dll DllRegisterServer failed\n");
+ 	}
+ }
+ 

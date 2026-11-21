@@ -1,0 +1,45 @@
+diff --git a/OpenParrot/src/Functions/Games/ES3X/AMAuthd.cpp b/OpenParrot/src/Functions/Games/ES3X/AMAuthd.cpp
+index 38ab57c..bca2828 100644
+--- a/OpenParrot/src/Functions/Games/ES3X/AMAuthd.cpp
++++ b/OpenParrot/src/Functions/Games/ES3X/AMAuthd.cpp
+@@ -996,23 +996,27 @@ static int WINAPI GetRTTAndHopCountStubAM(_In_ uint32_t DestIpAddress, _Out_ PUL
+ typedef HRESULT(__stdcall* DllRegisterServerFunc)();
+ 
+ static void dllreg() {
+-	//iauthdll.dll
++	// Register iauthdll.dll per-user (HKCU\Software\Classes) so unelevated
++	// Windows launches succeed without Administrator privileges or a blocking
++	// MessageBox (COM merges HKCU\Software\Classes over HKLM\Software\Classes).
+ 	HMODULE hModule = LoadLibrary(L"iauthdll.dll");
++	if (!hModule) return;
+ 	DllRegisterServerFunc DllRegisterServer = (DllRegisterServerFunc)GetProcAddress(hModule, "DllRegisterServer");
++	if (!DllRegisterServer) return;
++	HKEY hUserClasses = NULL;
++	bool overridden = false;
++	if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Classes", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hUserClasses, NULL) == ERROR_SUCCESS) {
++		overridden = (RegOverridePredefKey(HKEY_CLASSES_ROOT, hUserClasses) == ERROR_SUCCESS);
++	}
+ 	HRESULT hr = DllRegisterServer();
+-	if (SUCCEEDED(hr)) {
+-#ifdef DEBUG
+-		īnfo(true, "iauthdll.dll registered successfully!");
+-#endif
++	if (overridden) {
++		RegOverridePredefKey(HKEY_CLASSES_ROOT, NULL);
+ 	}
+-	else {
+-		int msgboxID = MessageBox(
+-			NULL,
+-			(LPCWSTR)L"iauthdll.dll register failure.",
+-			(LPCWSTR)L"ALL.Net Online Auth Service Error",
+-			MB_ICONWARNING | MB_OK
+-		);
+-		// There was an error
++	if (hUserClasses) {
++		RegCloseKey(hUserClasses);
++	}
++	if (FAILED(hr)) {
++		OutputDebugStringA("AMAuthd: iauthdll.dll DllRegisterServer failed\n");
+ 	}
+ }
+ 

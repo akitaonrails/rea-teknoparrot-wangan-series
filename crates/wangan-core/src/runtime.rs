@@ -129,7 +129,7 @@ pub fn plan(
             ops.extend(n2_components(src, rt, c));
             ops
         }
-        (Route::System246, Host::Linux) => plan_sys246(src, rt, c),
+        (Route::System246, _) => plan_sys246(src, rt, c),
         _ => vec![],
     })
 }
@@ -371,7 +371,7 @@ mod tests {
         }));
         assert!(ops.contains(&Op::Dir(rt.join("config").join("PCSX2x6").join("memcards"))));
         let windows = plan(wr, src, rt, &comps(c), Host::Windows, &none).unwrap();
-        assert!(windows.is_empty());
+        assert_eq!(windows, ops);
     }
 
     #[test]

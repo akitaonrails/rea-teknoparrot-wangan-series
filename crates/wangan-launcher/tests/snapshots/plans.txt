@@ -177,11 +177,32 @@ file /data/runtimes/wangan-r/game/NM00005.acgame
 file /data/runtimes/wangan-r/config/PCSX2x6/inis/PCSX2.ini
 (same text as in wangan-r / linux, wine from PATH / smooth-720p)
 == wangan-r / windows / defaults
-no plan
+size 3840x2160
+gamescope 
+game: /data/runtimes/wangan-r/pcsx2x6/pcsx2-qt.exe -nogui -batch -fullscreen -datapath /data/runtimes/wangan-r/config /data/runtimes/wangan-r/game/NM00005.acgame
+  cwd /data/runtimes/wangan-r
+file /data/runtimes/wangan-r/game/NM00005.acgame
+(same text as in wangan-r / linux, wine from PATH / defaults)
+file /data/runtimes/wangan-r/config/PCSX2x6/inis/PCSX2.ini
+(same text as in wangan-r / linux, wine from PATH / defaults)
 == wangan-r / windows / custom
-no plan
+size 1920x1080
+gamescope 
+game: /data/runtimes/wangan-r/pcsx2x6/pcsx2-qt.exe -nogui -batch -fullscreen -datapath /data/runtimes/wangan-r/config /data/runtimes/wangan-r/game/NM00005.acgame
+  cwd /data/runtimes/wangan-r
+file /data/runtimes/wangan-r/game/NM00005.acgame
+(same text as in wangan-r / linux, wine from PATH / defaults)
+file /data/runtimes/wangan-r/config/PCSX2x6/inis/PCSX2.ini
+(same text as in wangan-r / linux, wine from PATH / custom)
 == wangan-r / windows / smooth-720p
-no plan
+size 1280x720
+gamescope 
+game: /data/runtimes/wangan-r/pcsx2x6/pcsx2-qt.exe -nogui -batch -fullscreen -datapath /data/runtimes/wangan-r/config /data/runtimes/wangan-r/game/NM00005.acgame
+  cwd /data/runtimes/wangan-r
+file /data/runtimes/wangan-r/game/NM00005.acgame
+(same text as in wangan-r / linux, wine from PATH / defaults)
+file /data/runtimes/wangan-r/config/PCSX2x6/inis/PCSX2.ini
+(same text as in wangan-r / linux, wine from PATH / smooth-720p)
 == mt1 / linux, wine from PATH / defaults
 no plan
 == mt1 / linux, wine from PATH / custom

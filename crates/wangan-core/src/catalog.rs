@@ -83,9 +83,6 @@ impl Game {
     pub fn support_on(&self, host: Host) -> Support {
         match (self.support, self.route, host) {
             (Support::Ready, Route::NativeN2, Host::Windows) => Support::Blocked(N2_LINUX_ONLY),
-            (Support::Ready, Route::System246, Host::Windows) => {
-                Support::Blocked(SYS246_LINUX_ONLY)
-            }
             (Support::Blocked(_), Route::Chihiro, Host::Windows) => {
                 Support::Blocked(EMULATOR_PENDING_WINDOWS)
             }
@@ -345,7 +342,7 @@ mod tests {
         };
         assert_eq!(
             ready_on(Host::Windows),
-            ["mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
+            ["wangan-r", "mt5", "mt5dxp", "mt6", "mt6r", "mt6rr"]
         );
         assert_eq!(
             game(GameId::Mt3).support_on(Host::Windows),

@@ -14,3 +14,5 @@ components/openparrot-6rr/OpenParrot64.dll
 components/openparrot-6rr/OpenParrotLoader64.exe
 components/openparrot-6rr/iDmacDrv64.dll
 components/openparrot-6rr/bngrw.dll
+components/pcsx2x6/NM00005/boot.elf
+components/pcsx2x6/app/* empty

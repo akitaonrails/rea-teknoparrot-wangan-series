@@ -6,6 +6,28 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+### Added
+
+- Windows: unlocked **Wangan Midnight R** (`wangan-r`, Namco System 246) by
+  bundling the official `pcsx2x6` v0.2.22 Windows x64 Qt build and Proverb
+  `boot.elf`, launched with `-datapath` pointed at the game's isolated runtime.
+
+### Fixed
+
+- Windows: fixed `iauthdll.dll register failure` when launching `mt6` and
+  `mt6rr` unelevated (#3). `patches/openparrot/0003-amauthd-hkcu-iauthdll-registration.patch`
+  and `patches/openparrot-wmmt/0002-amauthd-hkcu-iauthdll-registration.patch`
+  redirect `HKEY_CLASSES_ROOT` to `HKCU\Software\Classes` via
+  `RegOverridePredefKey` during `DllRegisterServer()` and remove the blocking
+  modal `MessageBox` on failure so `AMAuthd.exe` initializes cleanly without
+  Administrator privileges.
+- Windows: `end_helpers` now kills surviving helper groups before reaping them
+  so a stuck helper cannot block session cleanup indefinitely, and `--check`
+  no longer blocks on the single-instance lock when read-only (#4).
+- Updated `rea-launcher-sdk` to v0.12.4 so wheel buttons (Start, Coin, face
+  buttons) map automatically from `PadMap` and pedals re-guess on live axis
+  state (rea-launcher-sdk#3).
+
 ## 0.6.2 - 2026-11-20
 
 ### Fixed

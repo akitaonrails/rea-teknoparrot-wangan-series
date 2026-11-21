@@ -131,6 +131,15 @@ else
 	cp "$win/wangan-launcher.exe" "$out/wangan-launcher.exe"
 	cp "$win/SDL2.dll" "$out/"
 	[ ! -f "$win/SDL2-LICENSE.txt" ] || cp "$win/SDL2-LICENSE.txt" "$out/licenses/"
+
+	# pcsx2x6 (Wangan R): Windows x64 Qt archive unpacked, Proverb's boot.elf for NM00005
+	mkdir -p "$c/pcsx2x6/app" "$c/pcsx2x6/NM00005"
+	7z x -y -o"$c/pcsx2x6/app" "$(fetch pcsx2x6-win)" >/dev/null
+	[ -f "$c/pcsx2x6/app/pcsx2-qt.exe" ] || die "the pcsx2x6 Windows archive has no pcsx2-qt.exe"
+	unzip -q -o -j "$(fetch proverb)" bin/NM00005/boot.elf -d "$c/pcsx2x6/NM00005"
+	mkdir -p "$out/licenses/proverb"
+	unzip -q -o -j "$(fetch proverb)" LICENSE -d "$out/licenses/proverb"
+
 	(cd "$root/dist/pkg" && rm -f "$name.zip" && zip -q -r -X "$name.zip" "$name")
 	echo "package: $root/dist/pkg/$name.zip"
 fi

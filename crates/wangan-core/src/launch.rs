@@ -192,6 +192,39 @@ fn plan_es3b_windows(game: &Game, rt: &Path) -> Option<Plan> {
     })
 }
 
+/// Wangan Midnight R on Windows: pcsx2x6's Qt binary directly, pointed at
+/// the runtime's isolated data folder via `-datapath`.
+fn plan_sys246_windows(rt: &Path, s: &Settings) -> Plan {
+    let window = s.render.unwrap_or(s.output);
+    let data = rt.join("config");
+    Plan {
+        files: vec![
+            (sys246_acgame(rt), crate::sys246::acgame()),
+            (
+                sys246_ini(rt),
+                crate::sys246::pcsx2_ini(crate::sys246::upscale_for(window.h), false),
+            ),
+        ],
+        helpers: vec![],
+        game: Command {
+            program: native_path(&rt.join("pcsx2x6").join("pcsx2-qt.exe")),
+            args: vec![
+                "-nogui".into(),
+                "-batch".into(),
+                "-fullscreen".into(),
+                "-datapath".into(),
+                native_path(&data),
+                native_path(&sys246_acgame(rt)),
+            ],
+            env: vec![],
+            cwd: rt.to_path_buf(),
+        },
+        picture: None,
+        wine_prefix: None,
+        game_size: window,
+    }
+}
+
 fn native_path(p: &Path) -> String {
     p.to_string_lossy().into_owned()
 }
@@ -207,6 +240,7 @@ pub fn plan_on(game: &Game, rt: &Path, prefix: &Path, s: &Settings, host: &Host)
         Host::Windows => {
             return match game.route {
                 Route::Es3b => plan_es3b_windows(game, rt),
+                Route::System246 => Some(plan_sys246_windows(rt, s)),
                 // Linux programs (catalog::N2_LINUX_ONLY), and the blocked routes
                 _ => None,
             };
@@ -376,16 +410,27 @@ mod tests {
         assert_eq!(p.files[1].0, sys246_ini(rt));
         assert!(p.files[1].1.contains("upscale_multiplier = 6\n"));
         assert!(p.wine_prefix.is_none() && p.helpers.is_empty());
-        assert!(
-            plan_on(
-                game(GameId::WanganR),
-                rt,
-                Path::new("/pfx"),
-                &s,
-                &Host::Windows
-            )
-            .is_none()
+        let wp = plan_on(
+            game(GameId::WanganR),
+            rt,
+            Path::new("/pfx"),
+            &s,
+            &Host::Windows,
+        )
+        .unwrap();
+        assert_eq!(wp.game.program, at("pcsx2x6/pcsx2-qt.exe"));
+        assert_eq!(
+            wp.game.args,
+            [
+                "-nogui".to_string(),
+                "-batch".into(),
+                "-fullscreen".into(),
+                "-datapath".into(),
+                at("config"),
+                sys246_acgame(rt).to_string_lossy().into_owned(),
+            ]
         );
+        assert!(wp.picture.is_none() && wp.wine_prefix.is_none());
     }
 
     #[test]
@@ -619,8 +664,8 @@ mod tests {
     }
 
     #[test]
-    fn windows_has_no_n2_or_wangan_r_plan() {
-        for id in [GameId::Mt3, GameId::Mt3dxp, GameId::WanganR] {
+    fn windows_has_no_n2_plan() {
+        for id in [GameId::Mt3, GameId::Mt3dxp] {
             assert!(
                 plan_on(
                     game(id),

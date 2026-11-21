@@ -276,10 +276,16 @@ pub fn check_components(game: &Game, paths: &HubPaths) -> Result<()> {
             v
         }
         Route::NativeN2 => vec![c.wal.join("libwal_3dxp.so"), c.wal.join("libopenal.so")],
-        Route::System246 => vec![
-            c.pcsx2x6.join("app").join("AppRun"),
-            c.pcsx2x6.join(sys246::GAME_ID).join("boot.elf"),
-        ],
+        Route::System246 => {
+            let bin = match host {
+                Host::Linux { .. } => "AppRun",
+                Host::Windows => "pcsx2-qt.exe",
+            };
+            vec![
+                c.pcsx2x6.join("app").join(bin),
+                c.pcsx2x6.join(sys246::GAME_ID).join("boot.elf"),
+            ]
+        }
         Route::Chihiro => vec![],
     };
     let missing: Vec<String> = need
@@ -742,6 +748,7 @@ fn end_helpers(helpers: Vec<Group>, rt: &Path, log: &Log) {
     #[cfg(not(windows))]
     let _ = (rt, log);
     for h in helpers {
+        h.kill();
         let _ = h.finish();
     }
 }

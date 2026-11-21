@@ -189,22 +189,26 @@ fn main() -> ExitCode {
         };
         rea_launcher_ui::hub::fatal(&ui::THEME, &log, text, Some(link), says);
     };
-    // --list only reads: it works while the window is open; what writes
-    // (a library folder, board files) takes the lock
+    // --list and --check only read: they work even while the window is open;
+    // what writes (a library folder, board files) takes the lock
     let writes = !inv.libraries.is_empty() || add_files.is_some();
-    let _instance = if inv.mode == Mode::List && !writes {
+    let _instance = if matches!(inv.mode, Mode::List | Mode::Check(_)) && !writes {
         None
     } else {
         match rea_launcher::instance::single(INSTANCE) {
             Ok(guard) => Some(guard),
             Err(running) if inv.is_action() || writes => {
                 fail(
-                    "The Wangan Midnight launcher is already open. Close it first, then try again.",
+                    "The Wangan Midnight launcher is already open. Close it first (or end it \
+                     from Task Manager if it isn't responding), then try again.",
                 );
                 return ExitCode::from(running.exit_code() as u8);
             }
             Err(_) => {
-                eprintln!("The Wangan Midnight launcher is already open.");
+                eprintln!(
+                    "The Wangan Midnight launcher is already open (end it from Task Manager if \
+                     it isn't responding)."
+                );
                 return ExitCode::from(OK);
             }
         }

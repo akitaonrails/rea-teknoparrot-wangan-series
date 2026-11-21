@@ -136,6 +136,14 @@ refresh /data/runtimes/mt6rr/d3d11.dll <- /pkg/components/dxvk/d3d11.dll
 refresh /data/runtimes/mt6rr/dxgi.dll <- /pkg/components/dxvk/dxgi.dll
 refresh /data/runtimes/mt6rr/wangan-io.exe <- /pkg/components/io/wangan-io.exe
 == wangan-r on Windows
+dir /data/runtimes/wangan-r
+link /data/runtimes/wangan-r/pcsx2x6 -> /pkg/components/pcsx2x6/app
+dir /data/runtimes/wangan-r/game/NM00005
+link /data/runtimes/wangan-r/game/NM00005/NM00005.chd -> /games/wangan-r/wanganmr/wmr1-a.chd
+refresh /data/runtimes/wangan-r/game/NM00005/boot.elf <- /pkg/components/pcsx2x6/NM00005/boot.elf
+dir /data/runtimes/wangan-r/config/PCSX2x6/bios
+dir /data/runtimes/wangan-r/config/PCSX2x6/memcards
+dir /data/runtimes/wangan-r/config/PCSX2x6/inis
 == mt1 on Windows
 == mt3 on Windows
 == mt3dxp on Windows
