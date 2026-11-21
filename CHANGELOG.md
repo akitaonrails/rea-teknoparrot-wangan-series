@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.7.1 - 2026-11-21
+
 ### Added
 
 - Desktop shortcut icon: custom high-contrast 256×256 Wangan Midnight icon
