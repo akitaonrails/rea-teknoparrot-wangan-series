@@ -6,6 +6,8 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.7.0 - 2026-11-21
+
 ### Added
 
 - Windows: unlocked **Wangan Midnight R** (`wangan-r`, Namco System 246) by
