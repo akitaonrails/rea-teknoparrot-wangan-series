@@ -10,7 +10,7 @@ new file mode 100644
 index 0000000..60dbd39
 --- /dev/null
 +++ b/src/block.rs
-@@ -0,0 +1,122 @@
+@@ -0,0 +1,126 @@
 +//! Cabinet controls from a launcher's 64-byte input block.
 +//!
 +//! When `WANGAN_INPUT_BLOCK=<path>` is set, the controls are read from that
@@ -56,6 +56,8 @@ index 0000000..60dbd39
 +	pub service: bool,
 +	pub menu_up: bool,
 +	pub menu_down: bool,
++	pub enter: bool,
++	pub coins: u16,
 +}
 +
 +/// The gear lever bits back to the gear number (inverse of the launcher's
@@ -88,6 +90,7 @@ index 0000000..60dbd39
 +	}
 +	let special = b[8];
 +	let p1 = &b[9..13];
++	let coins = u16::from_le_bytes([b[17], b[18]]);
 +	let analog = &b[25..57];
 +	Some(Controls {
 +		wheel: wheel(analog[0]),
@@ -101,6 +104,8 @@ index 0000000..60dbd39
 +		service: p1[0] & 0x40 != 0,
 +		menu_up: p1[0] & 0x20 != 0,
 +		menu_down: p1[0] & 0x10 != 0,
++		enter: p1[0] & 0x02 != 0,
++		coins,
 +	})
 +}
 +
@@ -137,17 +142,19 @@ diff --git a/src/jamma.rs b/src/jamma.rs
 index a42fccd..1b419f1 100644
 --- a/src/jamma.rs
 +++ b/src/jamma.rs
-@@ -4,6 +4,9 @@ pub static mut SDL_STATE: Option<poll::PollState> = None;
+@@ -4,6 +4,11 @@ pub static mut SDL_STATE: Option<poll::PollState> = None;
  
  static mut GEAR_INDEX: u8 = 0;
  
 +static mut BLOCK: Option<block::Block> = None;
 +static mut BLOCK_CARD_WAS_DOWN: bool = false;
++static mut BLOCK_LAST_COINS: u16 = 0;
++static mut BLOCK_COIN_PULSE: u8 = 0;
 +
  const GEAR_LEFT: u32 = 1;
  const GEAR_RIGHT: u32 = 2;
  const GEAR_UP: u32 = 4;
-@@ -21,7 +24,71 @@ fn set_gear_bits(index: u8) -> u32 {
+@@ -21,7 +26,80 @@ fn set_gear_bits(index: u8) -> u32 {
  	}
  }
  
@@ -171,14 +178,20 @@ index a42fccd..1b419f1 100644
 +	}
 +	BLOCK_CARD_WAS_DOWN = c.card;
 +
++	if c.coins != BLOCK_LAST_COINS {
++		BLOCK_LAST_COINS = c.coins;
++		BLOCK_COIN_PULSE = 10;
++	}
++
 +	data.byte_add(0x24).write(0);
 +
 +	let mut bits = set_gear_bits(c.gear);
 +	if c.test {
 +		bits |= 0x20000000;
 +	}
-+	if c.service {
++	if c.service || BLOCK_COIN_PULSE > 0 {
 +		bits |= 0x80000000;
++		BLOCK_COIN_PULSE = BLOCK_COIN_PULSE.saturating_sub(1);
 +	}
 +	if c.view {
 +		bits |= 0x40;
@@ -189,7 +202,8 @@ index a42fccd..1b419f1 100644
 +	if c.brake > 0.0 {
 +		bits |= 0x20;
 +	}
-+	if c.gas > 0.0 {
++	let gas = if c.enter && c.gas == 0.0 { 1.0 } else { c.gas };
++	if gas > 0.0 {
 +		bits |= 0x10;
 +	}
 +	// Test menu navigation, like the GEAR_UP/GEAR_DOWN keys.
@@ -206,8 +220,8 @@ index a42fccd..1b419f1 100644
 +		.byte_add(0x1A8)
 +		.write((i16::MAX as f32 + c.wheel * i16::MAX as f32) as u16);
 +	data.byte_add(0x20).write(c.wheel.to_bits());
-+	n2jvio.byte_add(0x1AA).write((c.gas * i16::MAX as f32) as u16);
-+	data.byte_add(0x30).write(c.gas.to_bits());
++	n2jvio.byte_add(0x1AA).write((gas * i16::MAX as f32) as u16);
++	data.byte_add(0x30).write(gas.to_bits());
 +	n2jvio.byte_add(0x1AC).write((c.brake * i16::MAX as f32) as u16);
 +	data.byte_add(0x34).write(c.brake.to_bits());
 +}
@@ -219,7 +233,7 @@ index a42fccd..1b419f1 100644
  	if adm::WINDOW_HANDLE.is_none() {
  		return;
  	};
-@@ -34,13 +101,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
+@@ -34,13 +112,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
  	sdl.update();
  
  	if sdl.is_tapped(&keyconfig.card_insert) {
@@ -234,7 +248,7 @@ index a42fccd..1b419f1 100644
  	}
  
  	data.byte_add(0x24).write(0);
-@@ -130,6 +191,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
+@@ -130,6 +202,7 @@ unsafe extern "C" fn handle_inputs(data: *mut u32) {
  }
  
  pub unsafe fn init() {

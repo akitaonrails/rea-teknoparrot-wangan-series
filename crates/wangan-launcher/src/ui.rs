@@ -85,7 +85,7 @@ pub fn spec(paths: HubPaths) -> HubSpec {
 pub fn run(paths: HubPaths) -> Result<(), String> {
     let log = Log::new(paths.log());
     let bindings = crate::input::bindings(&paths, |w| log.warn(w));
-    let service = crate::input::service(&bindings);
+    let service = crate::input::service(&paths, &bindings);
     let mut backend = Wangan::new(paths.clone(), Some(service));
     backend.bindings = bindings;
     hub::run(spec(paths), backend)

@@ -468,8 +468,12 @@ fn play(
             stop.store(true, Ordering::SeqCst);
         });
     }
-    let devices = (!inv.test.no_input && inv.test.script.is_none())
-        .then(|| input::service(&input::bindings(paths, |w| Log::new(paths.log()).warn(w))));
+    let devices = (!inv.test.no_input && inv.test.script.is_none()).then(|| {
+        input::service(
+            paths,
+            &input::bindings(paths, |w| Log::new(paths.log()).warn(w)),
+        )
+    });
     let feed = if let Some(f) = &inv.test.script {
         Input::Script(read_script(f)?)
     } else if let Some(i) = &devices {

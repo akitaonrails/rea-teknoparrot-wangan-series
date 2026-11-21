@@ -36,11 +36,12 @@ pub fn bindings(paths: &HubPaths, warn: impl FnOnce(&str)) -> Bindings<Button> {
 }
 
 /// The input thread with the player's pad layout `bindings`; a wheel's
-/// paddles shift.
-pub fn service(bindings: &Bindings<Button>) -> InputService {
-    InputService::start(
+/// paddles shift. Prefers a saved `wheel.ini` in the data folder when present.
+pub fn service(paths: &HubPaths, bindings: &Bindings<Button>) -> InputService {
+    InputService::start_with_wheel_file(
         bindings.map().clone(),
         Some((Button::GearUp, Button::GearDown)),
+        Some(paths.wheel_file()),
     )
 }
 
