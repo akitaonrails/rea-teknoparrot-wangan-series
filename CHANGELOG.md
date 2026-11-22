@@ -6,6 +6,15 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.7.5 - 2026-11-22
+
+### Fixed
+
+- Upgraded to `rea-launcher-sdk v0.12.7`: automatically falls back to the
+  shared `wheel.ini` profile (`%LOCALAPPDATA%\rea\wheel.ini` on Windows,
+  `~/.local/share/rea/wheel.ini` on Linux) when no per-launcher `wheel.ini`
+  exists.
+
 ## 0.7.4 - 2026-11-21
 
 ### Fixed

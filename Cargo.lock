@@ -1991,8 +1991,8 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "rea-launcher"
-version = "0.12.6"
-source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.6#bb3f2989333b3332929f642a3eefd77a30e97a61"
+version = "0.12.7"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.7#d4ef79463dc57988b3370637fc5974b73b947dd7"
 dependencies = [
  "junction",
  "sha2",
@@ -2000,13 +2000,13 @@ dependencies = [
 
 [[package]]
 name = "rea-launcher-build"
-version = "0.12.6"
-source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.6#bb3f2989333b3332929f642a3eefd77a30e97a61"
+version = "0.12.7"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.7#d4ef79463dc57988b3370637fc5974b73b947dd7"
 
 [[package]]
 name = "rea-launcher-native"
-version = "0.12.6"
-source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.6#bb3f2989333b3332929f642a3eefd77a30e97a61"
+version = "0.12.7"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.7#d4ef79463dc57988b3370637fc5974b73b947dd7"
 dependencies = [
  "libc",
  "rea-launcher",
@@ -2016,8 +2016,8 @@ dependencies = [
 
 [[package]]
 name = "rea-launcher-ui"
-version = "0.12.6"
-source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.6#bb3f2989333b3332929f642a3eefd77a30e97a61"
+version = "0.12.7"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.7#d4ef79463dc57988b3370637fc5974b73b947dd7"
 dependencies = [
  "eframe",
  "egui_kittest",
@@ -2028,8 +2028,8 @@ dependencies = [
 
 [[package]]
 name = "rea-launcher-win32"
-version = "0.12.6"
-source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.6#bb3f2989333b3332929f642a3eefd77a30e97a61"
+version = "0.12.7"
+source = "git+https://github.com/akitaonrails/rea-launcher-sdk?tag=v0.12.7#d4ef79463dc57988b3370637fc5974b73b947dd7"
 dependencies = [
  "rea-launcher",
  "windows-sys 0.61.2",
@@ -2650,7 +2650,7 @@ dependencies = [
 
 [[package]]
 name = "wangan-core"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "rea-launcher",
  "sha1",
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "wangan-io"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "wangan-jvs",
  "windows-sys 0.61.2",
@@ -2669,11 +2669,11 @@ dependencies = [
 
 [[package]]
 name = "wangan-jvs"
-version = "0.7.4"
+version = "0.7.5"
 
 [[package]]
 name = "wangan-launcher"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "anyhow",
  "eframe",
