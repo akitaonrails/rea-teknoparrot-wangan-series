@@ -43,8 +43,8 @@ upstream/ffmpeg/           FFmpeg 4.4.5 source as released (configure line:
                            launcher/scripts/build-ffmpeg.sh)
 
 OpenParrot is built with MSVC (premake5 vs2022, msbuild Release x64),
-WanganArcadeLoader with launcher/scripts/build-wal.sh. Wine 11.21 is an
-unmodified WineHQ release: https://dl.winehq.org/wine/source/11.x/wine-11.21.tar.xz
+WanganArcadeLoader with launcher/scripts/build-wal.sh. Wine 11.22 is an
+unmodified WineHQ release: https://dl.winehq.org/wine/source/11.x/wine-11.22.tar.xz
 TXT
 
 tar -C "$w" -czf "$root/dist/pkg/$name.tar.gz" "$name"

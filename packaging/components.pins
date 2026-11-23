@@ -15,9 +15,9 @@ dxvk https://github.com/doitsujin/dxvk/releases/download/v3.1.1/dxvk-3.1.1.tar.g
 # and the tmp/ template (Linux package only; libwal_3dxp.so is built from source).
 wal-dist https://github.com/vixen256/WanganArcadeLoader0.5/releases/download/0.5.1/dist.zip 3b04a845015caecbac610ec530cc35bd26ab4a1d2da718c9392fbb92bcbe66c1 mirror
 
-# Wine 11.21 (LGPL-2.1+), Kron4ek's portable WoW64 build of the unmodified
+# Wine 11.22 (LGPL-2.1+), Kron4ek's portable WoW64 build of the unmodified
 # WineHQ sources: the SDK's Wine pin (sdk/packaging/appimage/tools.pins).
-wine https://github.com/Kron4ek/Wine-Builds/releases/download/11.21/wine-11.21-amd64-wow64.tar.xz 33f3c5b56b1deb8f6725539ea006f27b5d781b3b4ae6a8a1f492d8af4fb9dc83
+wine https://github.com/Kron4ek/Wine-Builds/releases/download/11.22/wine-11.22-amd64-wow64.tar.xz e2967393d203121195cba94159efe9b575a6fa8fad2815c557036e69285093d8
 
 # FFmpeg 4.4.5 source (LGPL-2.1+): that Wine's movie demuxer (winedmo) links
 # against the FFmpeg 4 libraries (libavformat.so.58), which current
@@ -33,4 +33,4 @@ pcsx2x6-win https://github.com/PS2Homebrew-arcade/pcsx2x6/releases/download/v0.2
 # Proverb (AFL-3.0), pcsx2x6's homebrew boot loader: only bin/NM00005/boot.elf
 # is taken (components/pcsx2x6/NM00005/boot.elf). The nightly asset may be
 # rebuilt in place, so the mirror copy is the fallback.
-proverb https://github.com/PS2Homebrew-arcade/proverb/releases/download/nightly/proverb.zip ca1a6eaae507a09c0d8737a05ecfd9365f2622059d870f9e663dd8a8f44a7ed2 https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases/download/thirdparty/proverb.zip mirror
+proverb https://github.com/PS2Homebrew-arcade/proverb/releases/download/v1.0.4/proverb.zip f62543c96a109a7fdc387c4fc8e39b565509c7220df8a3664bbd478b50e12226 https://github.com/akitaonrails/rea-teknoparrot-wangan-series/releases/download/thirdparty/proverb.zip mirror

@@ -6,6 +6,13 @@ All notable changes to this launcher. The format follows
 
 ## Unreleased
 
+## 0.7.6 - 2026-11-23
+
+### Changed
+
+- Updated bundled Linux Wine from `11.21` to `11.22` (#5).
+- Updated Proverb (`boot.elf` for Wangan Midnight R) from `nightly` to pinned release `v1.0.4` (#8).
+
 ## 0.7.5 - 2026-11-22
 
 ### Fixed

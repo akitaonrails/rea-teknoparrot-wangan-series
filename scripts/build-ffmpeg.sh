@@ -3,7 +3,7 @@
 #
 #   scripts/build-ffmpeg.sh <out_dir>
 #
-# Kron4ek's Wine 11.21 build links winedmo.so (Media Foundation's FFmpeg
+# Kron4ek's Wine 11.22 build links winedmo.so (Media Foundation's FFmpeg
 # source, used with DisableGstByteStreamHandler for the MT5/MT6 movies,
 # docs/RUNTIME_NOTES.md) against libavformat.so.58, libavcodec.so.58 and
 # libavutil.so.56, which current distributions no longer ship. This builds

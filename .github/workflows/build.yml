@@ -39,7 +39,7 @@ jobs:
   # The Windows code (the direct game session, the runtime junctions) is
   # linted for its target and its tests run under Wine, headless
   # (STANDARDS: Windows code is run, not only linted), with the pinned SDL2
-  # MinGW package linked in. The Wine the Linux package ships (11.21):
+  # MinGW package linked in. The Wine the Linux package ships (11.22):
   # Ubuntu's Wine 9 does not follow directory junctions.
   windows-tests:
     # ubuntu-24.04: 26.04's wine package keeps wineserver off PATH
@@ -67,7 +67,7 @@ jobs:
         run: |
           export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS="-C link-arg=-fuse-ld=lld -L $SDL2_LIB"
           cargo clippy --workspace --all-targets --locked --target x86_64-pc-windows-gnu -- -D warnings
-      - name: Wine 11.21 (pinned)
+      - name: Wine 11.22 (pinned)
         run: |
           . sdk/packaging/pins.sh
           PIN_FILE=packaging/components.pins
